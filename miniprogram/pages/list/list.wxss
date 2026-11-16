@@ -32,8 +32,52 @@
   margin: 16rpx 0 12rpx;
 }
 
+.quick {
+  display: flex;
+  padding: 18rpx 24rpx;
+}
+
+.quick-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  color: #4a4a46;
+}
+
+.quick-item + .quick-item {
+  border-left: 1rpx solid #ecece8;
+}
+
+.quick-n {
+  font-size: 34rpx;
+  color: #0f6e56;
+  margin-right: 12rpx;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 20rpx -6rpx 0;
+}
+
+.chip {
+  font-size: 24rpx;
+  color: #6a6a65;
+  background: #ecece8;
+  border-radius: 999rpx;
+  padding: 10rpx 22rpx;
+  margin: 0 6rpx 12rpx;
+}
+
+.chip.on {
+  background: #0f6e56;
+  color: #ffffff;
+}
+
 .search {
-  margin-top: 16rpx;
+  margin-top: 8rpx;
 }
 
 .invoice {

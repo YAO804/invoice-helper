@@ -14,6 +14,8 @@
  * Node 端测试可通过 setEnv({ root, fileSystem }) 注入内存文件系统。
  */
 
+const category = require('./category')
+
 const LEDGER_DIR = 'ledger'
 const FILES_DIR = 'files'
 const INDEX_NAME = 'index.json'
@@ -181,6 +183,7 @@ function listInvoices(filter) {
   const seller = (filter.seller || '').trim().toLowerCase()
 
   const out = all.filter(function (inv) {
+    if (filter.category && (inv.category || '未分类') !== filter.category) return false
     if (filter.status && inv.status !== filter.status) return false
     if (seller && String(inv.seller_name || '').toLowerCase().indexOf(seller) < 0) return false
     if (filter.minCent !== undefined && Number(inv.total_cent) < Number(filter.minCent)) return false
@@ -239,6 +242,7 @@ function normalize(inv, idx) {
   out.invoice_code = out.invoice_code || ''
   out.issue_date = out.issue_date || ''
   out.status = out.status || 'unknown'
+  out.category = out.category || '未分类'
   out.source = out.source || 'manual'
   out.confidence = out.confidence === undefined ? 1 : out.confidence
   out.qr_integrity = out.qr_integrity || 'n/a'
@@ -341,6 +345,13 @@ function months(basis) {
   return Object.keys(set).sort().reverse()
 }
 
+/** 待复核：有异常标记，或还没有发票号码的草稿 */
+function reviewList() {
+  return listInvoices({ sortBy: getBasis() }).filter(function (inv) {
+    return !inv.invoice_no || (inv.anomaly || []).length > 0
+  })
+}
+
 /* ---------- 换算与结构化 ---------- */
 
 /** 金额字符串 → 整数分。保留原始精度到分，不做浮点累加。 */
@@ -404,6 +415,7 @@ function fromParsed(parsed, extra) {
     tax_cent: toCents(parsed.amount && parsed.amount.tax),
     total_cent: toCents(parsed.amount && parsed.amount.withTax),
     tax_rate: items.length ? items[0].tax_rate : null,
+    category: category.guess(items[0] && items[0].name, items, parsed.seller && parsed.seller.name),
     source: extra.source || 'xml',
     confidence: 1,
     files: extra.files || [],
@@ -443,6 +455,7 @@ function fromQr(qr, extra) {
     tax_cent: 0,
     total_cent: toCents(qr.amount),
     tax_rate: null,
+    category: '未分类',
     source: 'qr',
     confidence: 0.8,
     raw_qr: extra.raw || '',
@@ -470,6 +483,7 @@ module.exports = {
   deleteInvoice: deleteInvoice,
   monthStats: monthStats,
   months: months,
+  reviewList: reviewList,
   toCents: toCents,
   yuan: yuan,
   validate: validate,

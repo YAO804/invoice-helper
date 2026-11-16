@@ -1,21 +1,19 @@
 const store = require('../../utils/store')
-const collect = require('../../utils/collect')
-const batch = require('../../utils/batch')
+const category = require('../../utils/category')
+const labels = require('../../utils/labels')
 
-function sourceName(src) {
-  return { xml: 'XML', ofd: 'OFD', pdf: 'PDF', qr: '扫码', manual: '手录' }[src] || '其他'
-}
-
-function importedText(ms) {
-  const d = new Date(Number(ms))
-  if (isNaN(d.getTime())) return '导入时间未知'
-  const p = function (n) { return n < 10 ? '0' + n : '' + n }
-  return '导入 ' + (d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes())
+function categoryChips(active) {
+  return ['全部'].concat(category.CATEGORIES).map(function (name) {
+    const value = name === '全部' ? '' : name
+    return { name: name, value: value, on: value === active }
+  })
 }
 
 Page({
   data: {
     basis: 'created',
+    categoryChips: categoryChips(''),
+    categoryFilter: '',
     months: [],
     monthOptions: ['全部月份'],
     monthIndex: 0,
@@ -25,19 +23,12 @@ Page({
     totalCount: 0,
     totalText: '0.00',
     taxText: '0.00',
+    reviewCount: 0,
     currentMonthText: '全部月份'
   },
 
-  onLoad() {
-    const basis = store.getBasis()
-    this.setData({ basis: basis })
-    this.loadMonths()
-  },
-
-  onShow() {
-    this.loadMonths()
-    this.refresh()
-  },
+  onLoad() { this.setData({ basis: store.getBasis() }); this.loadMonths() },
+  onShow() { this.loadMonths(); this.refresh() },
 
   loadMonths() {
     const months = store.months(this.data.basis)
@@ -53,6 +44,12 @@ Page({
     this.refresh()
   },
 
+  onCategoryChange(e) {
+    const value = e.currentTarget.dataset.value
+    this.setData({ categoryFilter: value === '全部' ? '' : value })
+    this.refresh()
+  },
+
   onMonthChange(e) {
     const i = Number(e.detail.value)
     const name = i === 0 ? '' : this.data.months[i - 1]
@@ -65,22 +62,25 @@ Page({
     this.refresh()
   },
 
-  query() {
-    return { month: this.data.month, monthBasis: this.data.basis, sortBy: this.data.basis }
-  },
-
   refresh() {
-    const q = this.query()
-    const list = store.listInvoices(Object.assign({}, q, { keyword: this.data.keyword }))
-    const statList = store.listInvoices(q)
+    const filter = {
+      month: this.data.month,
+      monthBasis: this.data.basis,
+      sortBy: this.data.basis,
+      category: this.data.categoryFilter
+    }
+    const list = store.listInvoices(Object.assign({}, filter, { keyword: this.data.keyword }))
+    const statList = store.listInvoices(filter)
     const sum = function (key) {
       return statList.reduce(function (s, inv) { return s + (Number(inv[key]) || 0) }, 0)
     }
     this.setData({
       invoices: list.map(toCard),
+      categoryChips: categoryChips(this.data.categoryFilter),
       totalCount: statList.length,
       totalText: store.yuan(sum('total_cent')),
-      taxText: store.yuan(sum('tax_cent'))
+      taxText: store.yuan(sum('tax_cent')),
+      reviewCount: store.reviewList().length
     })
   },
 
@@ -88,57 +88,28 @@ Page({
     wx.navigateTo({ url: '/pages/detail/detail?id=' + e.currentTarget.dataset.id })
   },
 
+  onReview() {
+    wx.navigateTo({ url: '/pages/review/review' })
+  },
+
   onAdd() {
     wx.navigateTo({ url: '/pages/edit/edit' })
-  },
-
-  onScan() {
-    const that = this
-    collect.scanDrafts().then(function (r) { that.commit(r.drafts) })
-  },
-
-  onImport() {
-    const that = this
-    collect.fileDrafts().then(function (r) {
-      if (!r.ok) return wx.showToast({ title: r.message, icon: 'none', duration: 2500 })
-      const drafts = r.results.filter(function (x) { return x.ok }).map(function (x) { return x.draft })
-      that.commit(drafts)
-    })
-  },
-
-  commit(drafts) {
-    const that = this
-    if (!drafts || !drafts.length) {
-      return wx.showToast({ title: '没有可保存的内容', icon: 'none' })
-    }
-    const report = batch.saveAll(drafts)
-    wx.showModal({
-      title: '导入完成',
-      content: batch.describe(report),
-      showCancel: false,
-      success() { that.refresh() }
-    })
-  },
-
-  onExport() {
-    wx.navigateTo({ url: '/pages/export/export' })
-  },
-
-  onM0() {
-    wx.navigateTo({ url: '/pages/index/index' })
   }
 })
 
 function toCard(inv) {
+  const cat = inv.category || '未分类'
   return {
     id: inv.id,
     title: inv.seller_name || '未填销方',
     no: inv.invoice_no || '无号码',
     date: inv.issue_date || '日期待补',
-    importText: importedText(inv.created_at),
+    importText: labels.importText(inv.created_at),
     amountText: store.yuan(inv.total_cent),
-    sourceText: sourceName(inv.source),
+    sourceText: labels.sourceName(inv.source),
     sourceClass: inv.source === 'xml' || inv.source === 'ofd' ? '' : 'badge-grey',
+    categoryText: cat,
+    categoryClass: cat === '未分类' ? 'badge-grey' : '',
     anomaly: (inv.anomaly || []).length,
     statusText: inv.status === 'manually_verified' ? '已核验' : '待核验'
   }

@@ -1,0 +1,24 @@
+.sort-bar {
+  background: #ecece8;
+  border-radius: 10rpx;
+  padding: 6rpx;
+}
+
+.sort-btn {
+  flex: 1;
+  text-align: center;
+  font-size: 24rpx;
+  color: #6a6a65;
+  padding: 14rpx 0;
+  border-radius: 8rpx;
+}
+
+.sort-btn.on {
+  background: #ffffff;
+  color: #0f6e56;
+  font-weight: 500;
+}
+
+.tech {
+  padding: 16rpx 24rpx;
+}

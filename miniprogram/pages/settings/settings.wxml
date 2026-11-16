@@ -1,0 +1,28 @@
+<view class="page">
+
+  <view class="card">
+    <view class="card-t">台账排序与归月</view>
+    <view class="tiny muted" style="margin:8rpx 0 18rpx">影响台账列表、月份筛选和导出顺序，只是看账口径，不改原始数据。</view>
+    <view class="row sort-bar">
+      <view class="sort-btn {{basis === 'created' ? 'on' : ''}}" data-basis="created" bindtap="onBasisChange" hover-class="btn-hover">按导入时间</view>
+      <view class="sort-btn {{basis === 'issued' ? 'on' : ''}}" data-basis="issued" bindtap="onBasisChange" hover-class="btn-hover">按开票日期</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-t">数据与备份</view>
+    <view class="btn btn-ghost btn-block" style="margin-top:16rpx" bindtap="onExport" hover-class="btn-hover">导出与备份</view>
+    <view class="btn btn-grey btn-block" style="margin-top:16rpx" bindtap="onReview" hover-class="btn-hover">待复核（{{reviewCount}}）</view>
+    <view class="tiny muted" style="margin-top:14rpx">数据只存在这台手机的私有目录，不上传云端。原件默认保留 30 天，清理前请先导出留底。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-t">关于</view>
+    <view class="tiny muted" style="margin-top:10rpx;line-height:1.8">攒票小匣：个人自用的发票信息采集与本地归档辅助。不自动查验、不判断真伪，真伪以国家税务总局查验平台结果为准。</view>
+  </view>
+
+  <view class="card tech">
+    <view class="small muted" bindtap="onM0" hover-class="btn-hover">M0 技术验证 ›</view>
+  </view>
+
+</view>

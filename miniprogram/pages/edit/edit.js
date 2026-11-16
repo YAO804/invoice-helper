@@ -1,5 +1,6 @@
 const store = require('../../utils/store')
 const batch = require('../../utils/batch')
+const category = require('../../utils/category')
 
 const EMPTY = {
   invoice_no: '',
@@ -12,6 +13,7 @@ const EMPTY = {
   excl: '',
   tax: '',
   tax_rate: '',
+  category: '未分类',
   note: ''
 }
 
@@ -39,6 +41,7 @@ function formFromRecord(rec) {
     excl: rec.amount_excl_tax_cent ? store.yuan(rec.amount_excl_tax_cent) : '',
     tax: rec.tax_cent ? store.yuan(rec.tax_cent) : '',
     tax_rate: rec.tax_rate || '',
+    category: rec.category || '未分类',
     note: rec.note || ''
   }
 }
@@ -48,6 +51,7 @@ Page({
     isEdit: false,
     id: null,
     hint: '',
+    categories: category.CATEGORIES,
     form: Object.assign({}, EMPTY),
     dateText: '请选择开票日期'
   },
@@ -93,6 +97,10 @@ Page({
     this.setData(patch)
   },
 
+  onCategoryChange(e) {
+    this.setData({ 'form.category': category.CATEGORIES[Number(e.detail.value)] })
+  },
+
   onDateChange(e) {
     this.setData({ 'form.issue_date': e.detail.value, dateText: e.detail.value })
   },
@@ -121,6 +129,7 @@ Page({
       amount_excl_tax_cent: store.toCents(f.excl),
       tax_cent: store.toCents(f.tax),
       tax_rate: f.tax_rate.trim() || null,
+      category: f.category || '未分类',
       note: f.note.trim()
     })
     record.anomaly = store.validate(record)

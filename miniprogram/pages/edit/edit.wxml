@@ -28,6 +28,13 @@
     </view>
 
     <view class="field">
+      <view class="field-label">分类</view>
+      <picker mode="selector" range="{{categories}}" bindchange="onCategoryChange">
+        <view class="picker-box">{{form.category}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
       <view class="field-label">销方名称</view>
       <input class="input" placeholder="开票单位" value="{{form.seller_name}}" data-field="seller_name" bindinput="onInput" />
     </view>

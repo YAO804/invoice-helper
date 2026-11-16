@@ -189,13 +189,17 @@ invoice-helper/
 │       ├── archive.js           # M3 原件复制到私有目录 + 摘要
 │       ├── collect.js           # M2/M3 扫码与文件导入草稿
 │       ├── csv.js / export.js   # M5 CSV 拼装、导出、到期提醒
+│       ├── category.js          # P0 消费场景预填规则（只预填，不强制）
+│       ├── labels.js            # P0 来源/时间等枚举 → 页面文案
+│       ├── stats.js / review.js # P0 统计聚合、待复核原因汇总
 ├── test/
 │   ├── einvoice.test.js         # 真实 XML 树 1:1 回归，60 项断言
 │   ├── zip.test.js              # 手工构造 zip + S4 真机结构回归，14 项
 │   ├── fsx.test.js              # 私有目录与 TTL 清理回归，11 项
 │   ├── store.test.js            # 台账 + 排序口径 + 批量落库 + 来源升级回归，72 项（内存 FS）
 │   ├── collect.test.js          # 扫码/文件导入 + 批量入口回归，35 项（模拟 wx API）
-│   └── export.test.js           # M5 CSV/导出/到期提醒回归，25 项
+│   ├── export.test.js           # M5 CSV/导出/到期提醒回归，25 项
+│   └── p0.test.js               # P0 分类/统计/待复核回归，28 项
 └── docs/
     ├── requirements.md          # 需求说明（含实测 XML 字段映射表）
     ├── miniprogram-plan.md      # 执行计划（M0 已完成）
@@ -211,9 +215,10 @@ node test/fsx.test.js
 node test/store.test.js
 node test/collect.test.js
 node test/export.test.js
+node test/p0.test.js
 ```
 
-六套共 217 项断言（60 + 14 + 11 + 72 + 35 + 25），当前全绿。
+七套共 245 项断言（60 + 14 + 11 + 72 + 35 + 25 + 28），当前全绿。
 
 ---
 

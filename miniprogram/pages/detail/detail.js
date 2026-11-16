@@ -1,8 +1,5 @@
 const store = require('../../utils/store')
-
-function sourceName(src) {
-  return { xml: 'XML 原件', ofd: 'OFD', pdf: 'PDF', qr: '扫码草稿', manual: '手动录入' }[src] || '其他'
-}
+const labels = require('../../utils/labels')
 
 Page({
   data: {
@@ -84,7 +81,7 @@ Page({
       title: inv.seller_name || '未填销方',
       no: inv.invoice_no || '无号码',
       date: inv.issue_date || '日期待补',
-      sourceText: sourceName(inv.source),
+      sourceText: labels.sourceName(inv.source, true),
       statusText: inv.status === 'manually_verified' ? '已人工核验' : '待人工核验',
       totalText: store.yuan(inv.total_cent),
       exclText: store.yuan(inv.amount_excl_tax_cent),

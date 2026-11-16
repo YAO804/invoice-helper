@@ -12,6 +12,18 @@
     </view>
   </view>
 
+  <view class="card quick">
+    <view class="quick-item" bindtap="onReview" hover-class="btn-hover">
+      <text class="quick-n">{{reviewCount}}</text>
+      <text>待复核</text>
+      <text wx:if="{{reviewCount}}" class="badge badge-warn">需处理</text>
+    </view>
+    <view class="quick-item" bindtap="onAdd" hover-class="btn-hover">
+      <text class="quick-n">＋</text>
+      <text>手动录入</text>
+    </view>
+  </view>
+
   <view class="card">
     <view class="row sort-bar">
       <view class="sort-btn {{basis === 'created' ? 'on' : ''}}" data-basis="created" bindtap="onBasisChange" hover-class="btn-hover">按导入时间</view>
@@ -23,6 +35,9 @@
         <text class="muted tiny">切换 ›</text>
       </view>
     </picker>
+    <view class="chips">
+      <view wx:for="{{categoryChips}}" wx:key="name" class="chip {{item.on ? 'on' : ''}}" data-value="{{item.value}}" bindtap="onCategoryChange" hover-class="btn-hover">{{item.name}}</view>
+    </view>
     <input class="input search" placeholder="搜索销方 / 发票号码 / 金额" value="{{keyword}}" bindinput="onKeywordInput" />
   </view>
 
@@ -37,6 +52,7 @@
     <view class="row" style="margin-top:18rpx">
       <view>
         <text class="tiny muted">{{item.importText}} · 开票 {{item.date}}</text>
+        <text class="badge {{item.categoryClass}}">{{item.categoryText}}</text>
         <text class="badge {{item.sourceClass}}">{{item.sourceText}}</text>
         <text wx:if="{{item.anomaly > 0}}" class="badge badge-warn">{{item.anomaly}} 项待核对</text>
       </view>
@@ -46,18 +62,7 @@
 
   <view wx:if="{{!invoices.length}}" class="empty">
     <view>这里还没有发票。</view>
-    <view>点下面「手动录入」记第一张。</view>
-  </view>
-
-  <view class="card">
-    <view class="card-t" style="margin-bottom:16rpx">收票</view>
-    <view class="btn btn-block" bindtap="onScan" hover-class="btn-hover">扫二维码</view>
-    <view class="btn btn-ghost btn-block" style="margin-top:16rpx" bindtap="onImport" hover-class="btn-hover">批量导入文件</view>
-    <view class="tiny muted" style="margin-top:14rpx">可一次选多个文件（最多 20 个），需先发到「文件传输助手」；支持 .xml / .ofd / .pdf</view>
-    <view class="divider"></view>
-    <view class="btn btn-grey btn-block" bindtap="onAdd" hover-class="btn-hover">＋ 手动录入</view>
-    <view class="btn btn-grey btn-block" style="margin-top:16rpx" bindtap="onExport" hover-class="btn-hover">导出与备份</view>
-    <view class="btn btn-grey btn-block" style="margin-top:16rpx" bindtap="onM0" hover-class="btn-hover">M0 技术验证页</view>
+    <view>点上面「手动录入」，或到「收票」页扫码、导入文件。</view>
   </view>
 
   <view class="foot tiny muted">本工具仅做信息采集与本地归档辅助，不查验发票真伪。真伪以国家税务总局查验平台结果为准。</view>

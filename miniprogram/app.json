@@ -1,9 +1,13 @@
 {
   "pages": [
     "pages/list/list",
+    "pages/stats/stats",
+    "pages/collect/collect",
+    "pages/settings/settings",
     "pages/detail/detail",
     "pages/edit/edit",
     "pages/export/export",
+    "pages/review/review",
     "pages/index/index"
   ],
   "window": {
@@ -12,6 +16,18 @@
     "navigationBarTextStyle": "black",
     "backgroundColor": "#f6f6f4",
     "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#7a7a75",
+    "selectedColor": "#0f6e56",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/list/list", "text": "台账" },
+      { "pagePath": "pages/stats/stats", "text": "统计" },
+      { "pagePath": "pages/collect/collect", "text": "收票" },
+      { "pagePath": "pages/settings/settings", "text": "设置" }
+    ]
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json"
