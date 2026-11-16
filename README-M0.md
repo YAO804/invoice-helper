@@ -202,7 +202,7 @@ invoice-helper/
 │   ├── fsx.test.js              # 私有目录与 TTL 清理回归，11 项
 │   ├── store.test.js            # 台账 + 排序口径 + 批量落库 + 来源升级回归，72 项（内存 FS）
 │   ├── collect.test.js          # 扫码/文件导入 + 批量入口回归，35 项（模拟 wx API）
-│   ├── export.test.js           # M5 CSV/导出/到期提醒回归，25 项
+│   ├── export.test.js           # M5 CSV/导出/到期提醒回归，30 项
 │   ├── p0.test.js               # P0 分类/统计/待复核回归，28 项
 │   ├── scanbatch.test.js        # 批量连续扫码回归，11 项
 │   └── exportsel.test.js        # 导出范围/勾选/逐个转发回归，15 项
@@ -226,7 +226,7 @@ node test/scanbatch.test.js
 node test/exportsel.test.js
 ```
 
-九套共 271 项断言（60 + 14 + 11 + 72 + 35 + 25 + 28 + 11 + 15），当前全绿。
+九套共 276 项断言（60 + 14 + 11 + 72 + 35 + 30 + 28 + 11 + 15），当前全绿。
 
 ---
 

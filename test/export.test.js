@@ -72,12 +72,26 @@ const list = [
   }
 ]
 const ledger = exporter.ledgerCsv(list)
-check('表头含价税合计', ledger.indexOf('价税合计') > 0, true)
+const header = ledger.split('\r\n')[0]
+check('表头含价税合计', header.indexOf('价税合计') > 0, true)
 check('金额转成元', ledger.indexOf('147.00') > 0, true)
 check('销方逗号被转义', ledger.indexOf('"宁波,顺渝公司"') > 0, true)
-check('多个异常用分号连接', ledger.indexOf('金额勾稽不符；号码位数异常') > 0, true)
-check('创建时间为可读格式', /\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(ledger), true)
-check('不含英文星期/时区串', ledger.indexOf('GMT+0800') < 0, true)
+check('XML 不含税金额保留', ledger.indexOf('138.68') > 0, true)
+check('XML 税额保留', ledger.indexOf('8.32') > 0, true)
+check('不导出内部状态列', ['状态', '异常提示', '备注', '创建时间'].every(function (h) { return header.indexOf(h) < 0 }), true)
+
+const qrLedger = exporter.ledgerCsv([{
+  invoice_no: '26327000000459915366', invoice_type: '数电票',
+  issue_date: '2026-03-05', total_cent: 29500,
+  source: 'qr', anomaly: ['字段待补录'], note: '扫码草稿',
+  status: 'unknown', created_at: Date.now()
+}])
+const qrCells = qrLedger.split('\r\n')[1].split(',')
+check('扫码草稿不含税金额留空', qrCells[8], '')
+check('扫码草稿税额留空', qrCells[9], '')
+check('扫码草稿价税合计保留', qrCells[10], '295.00')
+check('扫码草稿来源保留', qrCells[12], 'qr')
+check('内部信息不进 CSV', ['unknown', '字段待补录', '扫码草稿'].every(function (s) { return qrLedger.indexOf(s) < 0 }), true)
 
 console.log('\n--- 原件清单 CSV ---')
 const manifest = exporter.manifestCsv(list)
