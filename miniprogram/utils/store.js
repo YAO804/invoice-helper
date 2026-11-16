@@ -183,6 +183,7 @@ function listInvoices(filter) {
   const seller = (filter.seller || '').trim().toLowerCase()
 
   const out = all.filter(function (inv) {
+    if (filter.batchId && inv.batch_id !== filter.batchId) return false
     if (filter.category && (inv.category || '未分类') !== filter.category) return false
     if (filter.status && inv.status !== filter.status) return false
     if (seller && String(inv.seller_name || '').toLowerCase().indexOf(seller) < 0) return false
@@ -242,6 +243,7 @@ function normalize(inv, idx) {
   out.invoice_code = out.invoice_code || ''
   out.issue_date = out.issue_date || ''
   out.status = out.status || 'unknown'
+  out.batch_id = out.batch_id || ''
   out.category = out.category || '未分类'
   out.source = out.source || 'manual'
   out.confidence = out.confidence === undefined ? 1 : out.confidence

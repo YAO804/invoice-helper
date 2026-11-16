@@ -193,6 +193,9 @@ invoice-helper/
 │       ├── labels.js            # P0 来源/时间等枚举 → 页面文案
 │       ├── stats.js / review.js # P0 统计聚合、待复核原因汇总
 │       ├── scanbatch.js         # 批量连续扫码（扫到取消为止）
+│       ├── batchmark.js         # 记住最后一次批量扫码标记
+│       ├── exportsel.js         # 导出范围/内容选择解析
+│       ├── exportflow.js        # 按勾选顺序逐个转发
 ├── test/
 │   ├── einvoice.test.js         # 真实 XML 树 1:1 回归，60 项断言
 │   ├── zip.test.js              # 手工构造 zip + S4 真机结构回归，14 项
@@ -201,7 +204,8 @@ invoice-helper/
 │   ├── collect.test.js          # 扫码/文件导入 + 批量入口回归，35 项（模拟 wx API）
 │   ├── export.test.js           # M5 CSV/导出/到期提醒回归，25 项
 │   ├── p0.test.js               # P0 分类/统计/待复核回归，28 项
-│   └── scanbatch.test.js        # 批量连续扫码回归，11 项
+│   ├── scanbatch.test.js        # 批量连续扫码回归，11 项
+│   └── exportsel.test.js        # 导出范围/勾选/逐个转发回归，15 项
 └── docs/
     ├── requirements.md          # 需求说明（含实测 XML 字段映射表）
     ├── miniprogram-plan.md      # 执行计划（M0 已完成）
@@ -219,9 +223,10 @@ node test/collect.test.js
 node test/export.test.js
 node test/p0.test.js
 node test/scanbatch.test.js
+node test/exportsel.test.js
 ```
 
-八套共 256 项断言（60 + 14 + 11 + 72 + 35 + 25 + 28 + 11），当前全绿。
+九套共 271 项断言（60 + 14 + 11 + 72 + 35 + 25 + 28 + 11 + 15），当前全绿。
 
 ---
 

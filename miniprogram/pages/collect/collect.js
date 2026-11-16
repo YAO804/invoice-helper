@@ -2,6 +2,7 @@ const store = require('../../utils/store')
 const collect = require('../../utils/collect')
 const batch = require('../../utils/batch')
 const scanbatch = require('../../utils/scanbatch')
+const batchmark = require('../../utils/batchmark')
 
 Page({
   data: {
@@ -30,10 +31,13 @@ Page({
     const that = this
     scanbatch.scanBatch().then(function (r) {
       if (!r.drafts.length) return wx.showToast({ title: '没有扫到发票', icon: 'none' })
-      const report = batch.saveAll(r.drafts)
+      const batchId = 'b' + Date.now()
+      const marked = r.drafts.map(function (d) { return Object.assign({}, d, { batch_id: batchId }) })
+      const report = batch.saveAll(marked)
+      batchmark.set(batchId)
       wx.showModal({
         title: '批量扫码完成',
-        content: batch.describe(report) + '\n\n共扫 ' + r.drafts.length + ' 张。现在导出到电脑？',
+        content: batch.describe(report) + '\n\n共扫 ' + r.drafts.length + ' 张，导出页默认选中本次扫码。现在导出到电脑？',
         confirmText: '去导出',
         cancelText: '稍后',
         success(res) {
