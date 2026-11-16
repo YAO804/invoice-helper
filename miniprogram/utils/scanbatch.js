@@ -4,6 +4,7 @@
  */
 
 const collect = require('./collect')
+const store = require('./store')
 
 const SKIPPABLE = /无法识别|链接型|字段不足/
 const CONFIRM_EVERY = 10
@@ -21,7 +22,7 @@ function modal(options) {
 function notice() {
   return modal({
     title: '批量扫码',
-    content: '扫码时点左上角 × 或手机返回键即可结束。每扫 ' + CONFIRM_EVERY + ' 张会问一次是否继续。',
+    content: '点左上角 × 或手机返回键即可结束。扫到重复票会弹窗提醒，每扫 ' + CONFIRM_EVERY + ' 张会问一次是否继续。',
     confirmText: '开始扫码',
     cancelText: '不扫了'
   })
@@ -37,6 +38,16 @@ function askContinue(count) {
   })
 }
 
+/** 重复由用户定夺：号码+日期+金额相同也可能只是某次扫错 */
+function askDuplicate(where) {
+  return modal({
+    title: '这张票可能重复',
+    content: '和' + where + '的票一样（号码 + 日期 + 金额）。要收下，还是跳过？',
+    confirmText: '仍然收下',
+    cancelText: '跳过'
+  })
+}
+
 function isCancel(message) {
   return /cancel/i.test(message || '')
 }
@@ -46,32 +57,65 @@ function feedback(count) {
   if (wx.vibrateShort) wx.vibrateShort({ type: 'light', fail: function () {} })
 }
 
-function done(drafts, cancelled) {
-  return { ok: true, drafts: drafts, cancelled: !!cancelled }
+function done(drafts, cancelled, duplicates) {
+  return { ok: true, drafts: drafts, cancelled: !!cancelled, duplicates: duplicates }
+}
+
+/** 本批次还没落库，重复要靠 seen 记；台账里的重复靠 store 查 */
+function accept(draft, seen) {
+  if (!draft.invoice_no) return { keep: true, where: '' }
+  const key = store.dedupeKey(draft)
+  if (seen[key]) return { keep: false, where: '本批次前面' }
+  if (store.findDuplicate(draft)) return { keep: false, where: '台账里' }
+  seen[key] = true
+  return { keep: true, where: '' }
 }
 
 /** 无法识别的票提示后继续；相机等真失败停下来，避免死循环 */
 function scanBatch() {
   const drafts = []
+  const seen = {}
+  let duplicates = 0
+
+  function handle(draft) {
+    const r = accept(draft, seen)
+    if (r.keep) {
+      drafts.push(draft)
+      return Promise.resolve(true)
+    }
+    duplicates++
+    return askDuplicate(r.where).then(function (keep) {
+      if (keep) {
+        seen[store.dedupeKey(draft)] = true
+        drafts.push(draft)
+      } else {
+        wx.showToast({ title: '已跳过重复票', icon: 'none' })
+      }
+      return keep
+    })
+  }
+
   function next() {
     return collect.scanDraft().then(function (r) {
       if (r.ok) {
-        drafts.push(r.draft)
-        feedback(drafts.length)
-        if (drafts.length % CONFIRM_EVERY === 0) {
-          return askContinue(drafts.length).then(function (go) {
-            return go ? next() : done(drafts, true)
-          })
-        }
-        return next()
+        return handle(r.draft).then(function (kept) {
+          if (!kept) return next()
+          feedback(drafts.length)
+          if (drafts.length % CONFIRM_EVERY === 0) {
+            return askContinue(drafts.length).then(function (go) {
+              return go ? next() : done(drafts, true, duplicates)
+            })
+          }
+          return next()
+        })
       }
-      if (isCancel(r.message)) return done(drafts, true)
+      if (isCancel(r.message)) return done(drafts, true, duplicates)
       if (SKIPPABLE.test(r.message || '')) {
         wx.showToast({ title: r.message, icon: 'none' })
         return next()
       }
       wx.showToast({ title: r.message, icon: 'none', duration: 2500 })
-      return done(drafts, false)
+      return done(drafts, false, duplicates)
     })
   }
   return next()

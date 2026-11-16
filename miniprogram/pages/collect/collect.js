@@ -37,14 +37,18 @@ Page({
 
   finishBatch(r) {
     const that = this
-    if (!r.drafts.length) return wx.showToast({ title: '没有扫到发票', icon: 'none' })
+    if (!r.drafts.length) {
+      const tip = r.duplicates ? '扫到的 ' + r.duplicates + ' 张都与已有票重复，已跳过' : '没有扫到发票'
+      return wx.showToast({ title: tip, icon: 'none', duration: 2500 })
+    }
     const batchId = 'b' + Date.now()
     const marked = r.drafts.map(function (d) { return Object.assign({}, d, { batch_id: batchId }) })
     const report = batch.saveAll(marked)
     batchmark.set(batchId)
+    const repeatTip = r.duplicates ? '\n扫码时跳过重复 ' + r.duplicates + ' 张。' : ''
     wx.showModal({
       title: '批量扫码完成',
-      content: batch.describe(report) + '\n\n共扫 ' + r.drafts.length + ' 张，导出页默认选中本次扫码。现在导出到电脑？',
+      content: batch.describe(report) + repeatTip + '\n\n本次收下 ' + r.drafts.length + ' 张，导出页默认选中本次扫码。现在导出到电脑？',
       confirmText: '去导出',
       cancelText: '稍后',
       success(res) {

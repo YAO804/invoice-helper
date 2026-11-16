@@ -481,6 +481,7 @@ module.exports = {
   listInvoices: listInvoices,
   getInvoice: getInvoice,
   findDuplicate: findDuplicate,
+  dedupeKey: dedupeKey,
   upsertInvoice: upsertInvoice,
   deleteInvoice: deleteInvoice,
   monthStats: monthStats,
