@@ -205,7 +205,7 @@ invoice-helper/
 │   ├── export.test.js           # M5 CSV/导出/到期提醒回归，30 项
 │   ├── p0.test.js               # P0 分类/统计/待复核回归，28 项
 │   ├── scanbatch.test.js        # 批量扫码交互与重复提示回归，27 项
-│   └── exportsel.test.js        # 导出范围/勾选/逐个转发回归，15 项
+│   └── exportsel.test.js        # 导出范围/勾选/逐个转发回归，19 项
 └── docs/
     ├── requirements.md          # 需求说明（含实测 XML 字段映射表）
     ├── miniprogram-plan.md      # 执行计划（M0 已完成）
@@ -226,7 +226,7 @@ node test/scanbatch.test.js
 node test/exportsel.test.js
 ```
 
-九套共 292 项断言（60 + 14 + 11 + 72 + 35 + 30 + 28 + 27 + 15），当前全绿。
+九套共 296 项断言（60 + 14 + 11 + 72 + 35 + 30 + 28 + 27 + 19），当前全绿。
 
 ---
 

@@ -17,6 +17,8 @@ const dirs = {}
 const storage = {}
 let shared = []
 let failNext = false
+let modalAnswers = []
+const modals = []
 
 const fs = {
   accessSync(p) { if (!files[p] && !dirs[p]) throw new Error('ENOENT ' + p) },
@@ -36,9 +38,14 @@ global.wx = {
   getFileSystemManager() { return fs },
   getStorageSync(k) { return storage[k] },
   setStorageSync(k, v) { storage[k] = v },
+  showModal(opts) {
+    modals.push(opts)
+    const answer = modalAnswers.length ? modalAnswers.shift() : true
+    return opts.success && opts.success({ confirm: answer })
+  },
   shareFileMessage(opts) {
     shared.push(opts)
-    if (failNext) return opts.fail && opts.fail({ errMsg: 'shareFileMessage:fail cancel' })
+    if (failNext) return opts.fail && opts.fail({ errMsg: 'shareFileMessage:fail can not share' })
     return opts.success && opts.success()
   }
 }
@@ -75,29 +82,43 @@ batchmark.set('b1')
 console.log('--- 勾选态 ---')
 check('卡片勾选态', exportsel.toCards([a, b], [a.id]).map(function (x) { return x.checked }), [true, false])
 
-console.log('--- 逐个转发 ---')
+function twoTasks() {
+  return [
+    { kind: 'csv', name: '台账.csv', text: 'a,b\n' },
+    { kind: 'file', path: '/usr/x.xml', name: 'x.xml' }
+  ]
+}
+
+console.log('--- 逐个转发（每次先确认）---')
 shared = []
+modals.length = 0
+modalAnswers = []
 failNext = false
-exportflow.run([
-  { kind: 'csv', name: '台账.csv', text: 'a,b\n' },
-  { kind: 'file', path: '/usr/x.xml', name: 'x.xml' }
-]).then(function (r) {
+exportflow.run(twoTasks()).then(function (r) {
   check('转发两个文件', shared.length, 2)
   check('首个是 CSV', shared[0].fileName, '台账.csv')
   check('第二个是原件', shared[1].fileName, 'x.xml')
   check('结果成功', r.ok, true)
+  check('每次都先确认', modals.length, 2)
+  check('确认带序号', modals[1].title, '发送文件 2/2')
 
-  console.log('--- 取消即停 ---')
+  console.log('--- 转发失败即停 ---')
   shared = []
   failNext = true
-  return exportflow.run([
-    { kind: 'csv', name: '台账.csv', text: 'a,b\n' },
-    { kind: 'file', path: '/usr/x.xml', name: 'x.xml' }
-  ])
+  return exportflow.run(twoTasks())
+}).then(function (r) {
+  check('转发失败', r.ok, false)
+  check('只转发一个', shared.length, 1)
+  check('后续未执行', r.cancelled, false)
+
+  console.log('--- 用户点结束时即停 ---')
+  shared = []
+  failNext = false
+  modalAnswers = [false]
+  return exportflow.run(twoTasks())
 }).then(function (r) {
   check('用户取消', r.cancelled, true)
-  check('只转发一个', shared.length, 1)
-  check('后续未执行', r.ok, false)
+  check('没有转发', shared.length, 0)
 
   console.log('\n' + (failCount ? 'FAIL ' + failCount + ' 项' : '全部通过'))
   process.exit(failCount ? 1 : 0)
