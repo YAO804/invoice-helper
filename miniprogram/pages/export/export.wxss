@@ -1,0 +1,9 @@
+.warn-card {
+  background: #fef0c7;
+  color: #b54708;
+}
+
+.foot {
+  padding: 10rpx 8rpx;
+  line-height: 1.7;
+}

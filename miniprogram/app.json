@@ -1,0 +1,18 @@
+{
+  "pages": [
+    "pages/list/list",
+    "pages/detail/detail",
+    "pages/edit/edit",
+    "pages/export/export",
+    "pages/index/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "攒票小匣",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f6f6f4",
+    "enablePullDownRefresh": false
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

@@ -1,0 +1,157 @@
+page {
+  background: #f6f6f4;
+}
+
+.page {
+  padding: 20rpx 24rpx 60rpx;
+}
+
+.hdr {
+  padding: 8rpx 4rpx 20rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.hdr-t {
+  font-size: 34rpx;
+  font-weight: 500;
+  color: #1f1f1d;
+  line-height: 1.5;
+}
+
+.hdr-s {
+  font-size: 24rpx;
+  color: #7a7a75;
+  margin-top: 6rpx;
+}
+
+.env {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.env-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 6rpx 0;
+}
+
+.env-k {
+  font-size: 22rpx;
+  color: #9a9a94;
+  flex: 0 0 130rpx;
+}
+
+.env-v {
+  font-size: 22rpx;
+  color: #4a4a46;
+  flex: 1;
+  word-break: break-all;
+  text-align: right;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.card-hd {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.badge {
+  font-size: 20rpx;
+  font-weight: 500;
+  color: #ffffff;
+  background: #0f6e56;
+  border-radius: 6rpx;
+  padding: 4rpx 10rpx;
+  margin-right: 12rpx;
+}
+
+.card-t {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #1f1f1d;
+}
+
+.card-d {
+  display: block;
+  font-size: 24rpx;
+  color: #7a7a75;
+  line-height: 1.6;
+  margin-bottom: 18rpx;
+}
+
+.btns {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-size: 26rpx;
+  color: #ffffff;
+  background: #0f6e56;
+  border-radius: 10rpx;
+  padding: 16rpx 32rpx;
+  margin-right: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.btn-ghost {
+  color: #0f6e56;
+  background: #e1f5ee;
+}
+
+.btn-hover {
+  opacity: 0.7;
+}
+
+.res-wrap {
+  margin-top: 8rpx;
+}
+
+.res {
+  background: #f6f6f4;
+  border-radius: 10rpx;
+  padding: 16rpx;
+  height: 320rpx;
+  box-sizing: border-box;
+}
+
+.res-tall {
+  height: 520rpx;
+}
+
+.res-t {
+  font-size: 22rpx;
+  color: #2c2c2a;
+  line-height: 1.55;
+  font-family: Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.copy {
+  font-size: 24rpx;
+  color: #185fa5;
+  text-align: center;
+  padding: 14rpx 0 4rpx;
+}
+
+.foot {
+  padding: 10rpx 8rpx;
+}
+
+.foot-t {
+  font-size: 22rpx;
+  color: #9a9a94;
+  line-height: 1.7;
+}

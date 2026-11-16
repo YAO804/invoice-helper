@@ -1,0 +1,85 @@
+<view class="page" wx:if="{{inv}}">
+
+  <view class="card">
+    <view class="row">
+      <text class="card-t grow">{{title}}</text>
+      <text class="badge">{{sourceText}}</text>
+    </view>
+    <view class="row" style="margin-top:12rpx" bindtap="onCopyNo">
+      <text class="tiny muted mono grow">{{no}}</text>
+      <text class="tiny muted">点击复制</text>
+    </view>
+    <view class="tiny muted" style="margin-top:8rpx">{{date}} · {{statusText}}</view>
+    <view wx:if="{{verifiedText}}" class="tiny muted">核验时间 {{verifiedText}}</view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <text class="small muted">价税合计</text>
+      <text class="amount-xl">¥{{totalText}}</text>
+    </view>
+    <view class="divider"></view>
+    <view class="row small">
+      <text class="muted">不含税金额</text><text>¥{{exclText}}</text>
+    </view>
+    <view class="row small" style="margin-top:12rpx">
+      <text class="muted">税额</text><text>¥{{taxText}}</text>
+    </view>
+    <view class="row small" style="margin-top:12rpx">
+      <text class="muted">税率</text><text>{{taxRate}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{anomaly.length}}" class="card">
+    <view class="small strong warn" style="margin-bottom:12rpx">离线勾稽提示（≠ 真伪判断）</view>
+    <view wx:for="{{anomaly}}" wx:key="*this" class="tiny warn" style="line-height:1.7">· {{item}}</view>
+  </view>
+
+  <view class="card">
+    <view class="small strong" style="margin-bottom:16rpx">票面信息</view>
+    <view class="row small"><text class="muted">销方</text><text class="grow right">{{sellerName}}</text></view>
+    <view class="row small" style="margin-top:10rpx"><text class="muted">销方税号</text><text class="grow right mono tiny">{{sellerTaxId}}</text></view>
+    <view class="row small" style="margin-top:10rpx"><text class="muted">买方</text><text class="grow right">{{buyerName}}</text></view>
+    <view class="row small" style="margin-top:10rpx" wx:if="{{buyerTaxId !== '—'}}"><text class="muted">买方税号</text><text class="grow right mono tiny">{{buyerTaxId}}</text></view>
+    <view class="row small" style="margin-top:10rpx" wx:if="{{note}}"><text class="muted">备注</text><text class="grow right">{{note}}</text></view>
+  </view>
+
+  <view class="card" wx:if="{{items.length}}">
+    <view class="small strong" style="margin-bottom:16rpx">明细（{{items.length}} 行）</view>
+    <view wx:for="{{items}}" wx:key="line_no" class="item">
+      <view class="small">{{item.name}}</view>
+      <view class="row tiny muted" style="margin-top:8rpx">
+        <text>金额 ¥{{item.amountText}} · 税额 ¥{{item.taxText}}</text>
+        <text>¥{{item.totalText}}</text>
+      </view>
+      <view class="tiny muted">税率 {{item.taxRate}}</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{meta.rows.length}}">
+    <view class="row" style="margin-bottom:16rpx">
+      <text class="small strong">原始文件信息</text>
+      <text wx:if="{{meta.hasSignature}}" class="badge">含税务签名</text>
+    </view>
+    <view wx:for="{{meta.rows}}" wx:key="k" class="row small meta-row">
+      <text class="muted tiny">{{item.k}}</text>
+      <text class="grow right tiny">{{item.v}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{rawQr}}">
+    <view class="small strong" style="margin-bottom:10rpx">二维码原文</view>
+    <view class="tiny muted mono" style="word-break:break-all">{{rawQr}}</view>
+  </view>
+
+  <view class="card">
+    <view class="btn btn-ghost btn-block" bindtap="onEdit" hover-class="btn-hover">编辑这张票</view>
+    <view class="btn btn-grey btn-block" style="margin-top:16rpx" bindtap="onVerify" hover-class="btn-hover">
+      {{statusText === '已人工核验' ? '取消核验标记' : '标记已人工核验'}}
+    </view>
+    <view class="btn btn-danger btn-block" style="margin-top:16rpx" bindtap="onDelete" hover-class="btn-hover">删除记录</view>
+  </view>
+
+  <view class="foot tiny muted">签名节点存在只说明文件结构完整，不代表发票已验真。真伪以国家税务总局查验平台结果为准。</view>
+
+</view>

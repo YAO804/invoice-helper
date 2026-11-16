@@ -1,0 +1,65 @@
+<view class="page">
+
+  <view class="card summary">
+    <view class="row">
+      <text class="small muted">{{currentMonthText}}</text>
+      <text class="tiny muted">共 {{totalCount}} 张</text>
+    </view>
+    <view class="sum-amount">¥ {{totalText}}</view>
+    <view class="row tiny muted">
+      <text>其中税额 ¥{{taxText}}</text>
+      <text>数据仅存本机</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="row sort-bar">
+      <view class="sort-btn {{basis === 'created' ? 'on' : ''}}" data-basis="created" bindtap="onBasisChange" hover-class="btn-hover">按导入时间</view>
+      <view class="sort-btn {{basis === 'issued' ? 'on' : ''}}" data-basis="issued" bindtap="onBasisChange" hover-class="btn-hover">按开票日期</view>
+    </view>
+    <picker mode="selector" range="{{monthOptions}}" value="{{monthIndex}}" bindchange="onMonthChange">
+      <view class="picker-box row">
+        <text>月份：{{currentMonthText}}</text>
+        <text class="muted tiny">切换 ›</text>
+      </view>
+    </picker>
+    <input class="input search" placeholder="搜索销方 / 发票号码 / 金额" value="{{keyword}}" bindinput="onKeywordInput" />
+  </view>
+
+  <view wx:for="{{invoices}}" wx:key="id" class="card invoice" data-id="{{item.id}}" bindtap="onOpenDetail" hover-class="btn-hover">
+    <view class="row">
+      <view class="grow">
+        <view class="card-t ellipsis">{{item.title}}</view>
+        <view class="tiny muted mono" style="margin-top:8rpx">{{item.no}}</view>
+      </view>
+      <view class="amount-lg">¥{{item.amountText}}</view>
+    </view>
+    <view class="row" style="margin-top:18rpx">
+      <view>
+        <text class="tiny muted">{{item.importText}} · 开票 {{item.date}}</text>
+        <text class="badge {{item.sourceClass}}">{{item.sourceText}}</text>
+        <text wx:if="{{item.anomaly > 0}}" class="badge badge-warn">{{item.anomaly}} 项待核对</text>
+      </view>
+      <text class="tiny {{item.statusText === '已核验' ? '' : 'muted'}}">{{item.statusText}} ›</text>
+    </view>
+  </view>
+
+  <view wx:if="{{!invoices.length}}" class="empty">
+    <view>这里还没有发票。</view>
+    <view>点下面「手动录入」记第一张。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-t" style="margin-bottom:16rpx">收票</view>
+    <view class="btn btn-block" bindtap="onScan" hover-class="btn-hover">扫二维码</view>
+    <view class="btn btn-ghost btn-block" style="margin-top:16rpx" bindtap="onImport" hover-class="btn-hover">批量导入文件</view>
+    <view class="tiny muted" style="margin-top:14rpx">可一次选多个文件（最多 20 个），需先发到「文件传输助手」；支持 .xml / .ofd / .pdf</view>
+    <view class="divider"></view>
+    <view class="btn btn-grey btn-block" bindtap="onAdd" hover-class="btn-hover">＋ 手动录入</view>
+    <view class="btn btn-grey btn-block" style="margin-top:16rpx" bindtap="onExport" hover-class="btn-hover">导出与备份</view>
+    <view class="btn btn-grey btn-block" style="margin-top:16rpx" bindtap="onM0" hover-class="btn-hover">M0 技术验证页</view>
+  </view>
+
+  <view class="foot tiny muted">本工具仅做信息采集与本地归档辅助，不查验发票真伪。真伪以国家税务总局查验平台结果为准。</view>
+
+</view>

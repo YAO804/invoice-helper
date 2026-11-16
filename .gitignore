@@ -1,0 +1,8 @@
+# 项目记忆与本地开发配置，不进版本库
+.workbuddy/
+project.private.config.json
+
+# 通用
+node_modules/
+*.log
+.DS_Store

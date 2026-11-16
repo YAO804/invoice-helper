@@ -1,0 +1,118 @@
+<view class="page">
+
+  <view class="hdr">
+    <text class="hdr-t">M0 技术验证</text>
+    <text class="hdr-s">逐项跑完，点「复制结果」把内容发回来</text>
+  </view>
+
+  <view class="env">
+    <view class="env-row">
+      <text class="env-k">数据目录</text>
+      <text class="env-v">{{env.userDataPath}}</text>
+    </view>
+    <view class="env-row">
+      <text class="env-k">基础库</text>
+      <text class="env-v">{{env.sdk}}</text>
+    </view>
+    <view class="env-row">
+      <text class="env-k">设备</text>
+      <text class="env-v">{{env.platform}} {{env.model}}</text>
+    </view>
+  </view>
+
+  <!-- S5 放在最前：不依赖隐私接口，审核期间即可验证 -->
+  <view class="card">
+    <view class="card-hd">
+      <text class="badge">S5</text>
+      <text class="card-t">本地存储与过期清理</text>
+    </view>
+    <text class="card-d">验证私有目录可写、5MB 写入是否成功、剩余配额，以及 30 天清理逻辑。这一项不碰隐私接口，现在就能跑。</text>
+    <view class="btns">
+      <view class="btn" hover-class="btn-hover" bindtap="onStorageTest">跑存储测试</view>
+      <view class="btn btn-ghost" hover-class="btn-hover" bindtap="onCleanExpired">清理 30 天前文件</view>
+    </view>
+    <view class="res-wrap" wx:if="{{s5}}">
+      <scroll-view scroll-y class="res res-tall">
+        <text class="res-t" user-select="{{true}}">{{s5}}</text>
+      </scroll-view>
+      <view class="copy" hover-class="btn-hover" bindtap="onCopy" data-key="s5">复制结果</view>
+    </view>
+  </view>
+
+  <!-- S1 -->
+  <view class="card">
+    <view class="card-hd">
+      <text class="badge">S1</text>
+      <text class="card-t">扫码取原文</text>
+    </view>
+    <text class="card-d">分别扫：数电票打印件、老版电子普票、铁路或航空票。重点看 kind 和 raw。</text>
+    <view class="btns">
+      <view class="btn" hover-class="btn-hover" bindtap="onScan">开始扫码</view>
+    </view>
+    <view class="res-wrap" wx:if="{{s1}}">
+      <scroll-view scroll-y class="res">
+        <text class="res-t" user-select="{{true}}">{{s1}}</text>
+      </scroll-view>
+      <view class="copy" hover-class="btn-hover" bindtap="onCopy" data-key="s1">复制结果</view>
+    </view>
+  </view>
+
+  <!-- S2 -->
+  <view class="card">
+    <view class="card-hd">
+      <text class="badge">S2</text>
+      <text class="card-t">从会话选文件</text>
+    </view>
+    <text class="card-d">先把 .xml / .ofd / .pdf 发到「文件传输助手」，再从会话里选。不过滤类型。</text>
+    <view class="btns">
+      <view class="btn" hover-class="btn-hover" bindtap="onChooseFile">选择文件</view>
+    </view>
+    <view class="res-wrap" wx:if="{{s2}}">
+      <scroll-view scroll-y class="res">
+        <text class="res-t" user-select="{{true}}">{{s2}}</text>
+      </scroll-view>
+      <view class="copy" hover-class="btn-hover" bindtap="onCopy" data-key="s2">复制结果</view>
+    </view>
+  </view>
+
+  <!-- S3 -->
+  <view class="card">
+    <view class="card-hd">
+      <text class="badge">S3</text>
+      <text class="card-t">端侧解析 XML</text>
+    </view>
+    <text class="card-d">选一张真实的数电票 XML。看 extracted 里命中了哪些、missed 里缺哪些，以及 allTags 里真实的标签名。</text>
+    <view class="btns">
+      <view class="btn" hover-class="btn-hover" bindtap="onParseXml">选择 XML 并解析</view>
+    </view>
+    <view class="res-wrap" wx:if="{{s3}}">
+      <scroll-view scroll-y class="res res-tall">
+        <text class="res-t" user-select="{{true}}">{{s3}}</text>
+      </scroll-view>
+      <view class="copy" hover-class="btn-hover" bindtap="onCopy" data-key="s3">复制结果</view>
+    </view>
+  </view>
+
+  <!-- S4 -->
+  <view class="card">
+    <view class="card-hd">
+      <text class="badge">S4</text>
+      <text class="card-t">OFD 容器结构</text>
+    </view>
+    <text class="card-d">选 .ofd（或 .pdf）文件，只读文件头和解压目录，不做解压。看 hasContentXml 是否为 true。</text>
+    <view class="btns">
+      <view class="btn" hover-class="btn-hover" bindtap="onInspectOfd">选择文件并探测</view>
+    </view>
+    <view class="res-wrap" wx:if="{{s4}}">
+      <scroll-view scroll-y class="res res-tall">
+        <text class="res-t" user-select="{{true}}">{{s4}}</text>
+      </scroll-view>
+      <view class="copy" hover-class="btn-hover" bindtap="onCopy" data-key="s4">复制结果</view>
+    </view>
+  </view>
+
+  <view class="foot">
+    <text class="foot-t">全部跑完后，把 5 段结果一起发回来。S1 和 S3 决定主入口走扫码还是传文件。</text>
+  </view>
+
+</view>

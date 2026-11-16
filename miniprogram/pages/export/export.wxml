@@ -1,0 +1,41 @@
+<view class="page">
+
+  <view class="card">
+    <view class="card-t">导出与备份</view>
+    <view class="tiny muted" style="margin-top:8rpx">数据只在这台手机上。定期导出，是唯一可靠的保险。</view>
+  </view>
+
+  <view class="card">
+    <picker mode="selector" range="{{monthOptions}}" value="{{monthIndex}}" bindchange="onMonthChange">
+      <view class="picker-box row">
+        <text>导出范围：{{currentMonthText}}</text>
+        <text class="muted tiny">切换 ›</text>
+      </view>
+    </picker>
+    <view class="row small" style="margin-top:20rpx"><text class="muted">发票</text><text>{{count}} 张</text></view>
+    <view class="row small" style="margin-top:12rpx"><text class="muted">价税合计</text><text class="amount">¥{{amountText}}</text></view>
+    <view class="row small" style="margin-top:12rpx"><text class="muted">关联原件</text><text>{{fileCount}} 个</text></view>
+  </view>
+
+  <view wx:if="{{expiredTip}}" class="card warn-card">
+    <view class="small warn">{{expiredTip}}</view>
+  </view>
+
+  <view class="card">
+    <view class="card-t" style="margin-bottom:16rpx">表格</view>
+    <view class="btn btn-block" bindtap="onExportLedger" hover-class="btn-hover">导出台账 CSV</view>
+    <view class="btn btn-ghost btn-block" style="margin-top:16rpx" bindtap="onExportManifest" hover-class="btn-hover">导出原件清单 CSV</view>
+    <view class="tiny muted" style="margin-top:14rpx">转发到「文件传输助手」，在电脑上用 Excel 打开。CSV 已带 UTF-8 BOM。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-t" style="margin-bottom:16rpx">原件</view>
+    <view class="btn btn-ghost btn-block" bindtap="onShareFiles" hover-class="btn-hover">逐个转发原件（{{fileCount}}）</view>
+    <view class="tiny muted" style="margin-top:14rpx">微信一次只能转发一个文件，会依次弹出；中途取消即停止。</view>
+    <view class="divider"></view>
+    <view class="btn btn-danger btn-block" bindtap="onCleanExpired" hover-class="btn-hover">清理 30 天前原件</view>
+  </view>
+
+  <view class="foot tiny muted">清理只删原件文件，台账记录保留。原件是复核凭证，导出后再清理。</view>
+
+</view>
