@@ -196,6 +196,7 @@ invoice-helper/
 │       ├── batchmark.js         # 记住最后一次批量扫码标记
 │       ├── exportsel.js         # 导出范围/内容选择解析
 │       ├── exportflow.js        # 按勾选顺序逐个转发
+│       ├── purge.js             # 台账清理：按 id 或导入时间区间删除
 ├── test/
 │   ├── einvoice.test.js         # 真实 XML 树 1:1 回归，60 项断言
 │   ├── zip.test.js              # 手工构造 zip + S4 真机结构回归，14 项
@@ -205,7 +206,8 @@ invoice-helper/
 │   ├── export.test.js           # M5 CSV/导出/到期提醒回归，30 项
 │   ├── p0.test.js               # P0 分类/统计/待复核回归，28 项
 │   ├── scanbatch.test.js        # 批量扫码交互与重复提示回归，27 项
-│   └── exportsel.test.js        # 导出范围/勾选/逐个转发回归，19 项
+│   ├── exportsel.test.js        # 导出范围/勾选/逐个转发回归，19 项
+│   └── purge.test.js            # 台账清理：时间区间与删除回归，14 项
 └── docs/
     ├── requirements.md          # 需求说明（含实测 XML 字段映射表）
     ├── miniprogram-plan.md      # 执行计划（M0 已完成）
@@ -226,7 +228,7 @@ node test/scanbatch.test.js
 node test/exportsel.test.js
 ```
 
-九套共 296 项断言（60 + 14 + 11 + 72 + 35 + 30 + 28 + 27 + 19），当前全绿。
+十套共 310 项断言（60 + 14 + 11 + 72 + 35 + 30 + 28 + 27 + 19 + 14），当前全绿。
 
 ---
 
