@@ -204,7 +204,7 @@ invoice-helper/
 │   ├── collect.test.js          # 扫码/文件导入 + 批量入口回归，35 项（模拟 wx API）
 │   ├── export.test.js           # M5 CSV/导出/到期提醒回归，30 项
 │   ├── p0.test.js               # P0 分类/统计/待复核回归，28 项
-│   ├── scanbatch.test.js        # 批量连续扫码回归，11 项
+│   ├── scanbatch.test.js        # 批量扫码交互回归，18 项
 │   └── exportsel.test.js        # 导出范围/勾选/逐个转发回归，15 项
 └── docs/
     ├── requirements.md          # 需求说明（含实测 XML 字段映射表）
@@ -226,7 +226,7 @@ node test/scanbatch.test.js
 node test/exportsel.test.js
 ```
 
-九套共 276 项断言（60 + 14 + 11 + 72 + 35 + 30 + 28 + 11 + 15），当前全绿。
+九套共 283 项断言（60 + 14 + 11 + 72 + 35 + 30 + 28 + 18 + 15），当前全绿。
 
 ---
 
