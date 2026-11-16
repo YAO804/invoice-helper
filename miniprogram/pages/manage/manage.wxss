@@ -1,0 +1,50 @@
+.sort-bar {
+  background: #ecece8;
+  border-radius: 10rpx;
+  padding: 6rpx;
+  margin-top: 18rpx;
+}
+
+.sort-btn {
+  flex: 1;
+  text-align: center;
+  font-size: 24rpx;
+  color: #6a6a65;
+  padding: 14rpx 0;
+  border-radius: 8rpx;
+}
+
+.sort-btn.on {
+  background: #ffffff;
+  color: #0f6e56;
+  font-weight: 500;
+}
+
+.pick-row {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #ecece8;
+}
+
+.check {
+  width: 36rpx;
+  height: 36rpx;
+  line-height: 36rpx;
+  text-align: center;
+  border-radius: 8rpx;
+  border: 2rpx solid #c6c6c0;
+  color: #ffffff;
+  font-size: 24rpx;
+  flex-shrink: 0;
+}
+
+.check.on {
+  background: #0f6e56;
+  border-color: #0f6e56;
+}
+
+.foot {
+  padding: 10rpx 8rpx;
+  line-height: 1.7;
+}

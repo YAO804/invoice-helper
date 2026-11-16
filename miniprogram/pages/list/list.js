@@ -88,6 +88,42 @@ Page({
     wx.navigateTo({ url: '/pages/detail/detail?id=' + e.currentTarget.dataset.id })
   },
 
+  onLongPress(e) {
+    const that = this
+    const id = Number(e.currentTarget.dataset.id)
+    wx.showActionSheet({
+      itemList: ['查看详情', '编辑', '删除这张'],
+      success(res) {
+        if (res.tapIndex === 0) that.openDetail(id)
+        else if (res.tapIndex === 1) wx.navigateTo({ url: '/pages/edit/edit?id=' + id })
+        else if (res.tapIndex === 2) that.confirmDelete(id)
+      }
+    })
+  },
+
+  openDetail(id) {
+    wx.navigateTo({ url: '/pages/detail/detail?id=' + id })
+  },
+
+  confirmDelete(id) {
+    const that = this
+    wx.showModal({
+      title: '删除这张记录？',
+      content: '只删台账记录，不删原件文件。删除后无法恢复。',
+      confirmColor: '#b42318',
+      success(res) {
+        if (!res.confirm) return
+        store.deleteInvoice(id)
+        wx.showToast({ title: '已删除', icon: 'none' })
+        that.refresh()
+      }
+    })
+  },
+
+  onManage() {
+    wx.navigateTo({ url: '/pages/manage/manage' })
+  },
+
   onReview() {
     wx.navigateTo({ url: '/pages/review/review' })
   },

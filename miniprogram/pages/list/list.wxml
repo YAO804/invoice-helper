@@ -22,6 +22,10 @@
       <text class="quick-n">＋</text>
       <text>手动录入</text>
     </view>
+    <view class="quick-item" bindtap="onManage" hover-class="btn-hover">
+      <text class="quick-n">≡</text>
+      <text>清理台账</text>
+    </view>
   </view>
 
   <view class="card">
@@ -41,7 +45,7 @@
     <input class="input search" placeholder="搜索销方 / 发票号码 / 金额" value="{{keyword}}" bindinput="onKeywordInput" />
   </view>
 
-  <view wx:for="{{invoices}}" wx:key="id" class="card invoice" data-id="{{item.id}}" bindtap="onOpenDetail" hover-class="btn-hover">
+  <view wx:for="{{invoices}}" wx:key="id" class="card invoice" data-id="{{item.id}}" bindtap="onOpenDetail" bindlongpress="onLongPress" hover-class="btn-hover">
     <view class="row">
       <view class="grow">
         <view class="card-t ellipsis">{{item.title}}</view>
@@ -64,6 +68,8 @@
     <view>这里还没有发票。</view>
     <view>点上面「手动录入」，或到「收票」页扫码、导入文件。</view>
   </view>
+
+  <view wx:if="{{invoices.length}}" class="tiny muted" style="text-align:center;padding:0 0 16rpx">长按发票可编辑或删除</view>
 
   <view class="foot tiny muted">本工具仅做信息采集与本地归档辅助，不查验发票真伪。真伪以国家税务总局查验平台结果为准。</view>
 

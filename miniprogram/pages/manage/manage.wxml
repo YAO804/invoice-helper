@@ -1,0 +1,48 @@
+<view class="page">
+
+  <view class="card">
+    <view class="card-t">清理台账记录</view>
+    <view class="tiny muted" style="margin-top:8rpx">只删台账记录，不删原件文件。删除后无法恢复，建议先导出留底。</view>
+    <view class="row sort-bar">
+      <view class="sort-btn {{mode === 'pick' ? 'on' : ''}}" data-mode="pick" bindtap="onModeChange" hover-class="btn-hover">自定义勾选</view>
+      <view class="sort-btn {{mode === 'range' ? 'on' : ''}}" data-mode="range" bindtap="onModeChange" hover-class="btn-hover">按导入时间</view>
+    </view>
+  </view>
+
+  <view wx:if="{{mode === 'pick'}}">
+    <view class="card">
+      <view class="row small"><text class="muted">已勾选</text><text class="amount">{{selectedIds.length}} 张</text></view>
+      <view class="btn btn-danger btn-block" style="margin-top:16rpx" bindtap="onDeleteSelected" hover-class="btn-hover">删除所选（{{selectedIds.length}}）</view>
+    </view>
+    <view class="card">
+      <view wx:for="{{list}}" wx:key="id" class="pick-row" data-id="{{item.id}}" bindtap="onToggle" hover-class="btn-hover">
+        <view class="check {{item.checked ? 'on' : ''}}"><text wx:if="{{item.checked}}">✓</text></view>
+        <view class="grow" style="margin-left:16rpx">
+          <view class="small ellipsis">{{item.title}}</view>
+          <view class="tiny muted">{{item.importText}} · {{item.no}}</view>
+        </view>
+        <text class="small amount">¥{{item.amountText}}</text>
+      </view>
+      <view wx:if="{{!list.length}}" class="tiny muted" style="padding:16rpx 0">台账里还没有发票。</view>
+    </view>
+  </view>
+
+  <view wx:if="{{mode === 'range'}}">
+    <view class="card">
+      <view class="field-label">导入起始日期</view>
+      <picker mode="date" value="{{fromDate}}" bindchange="onFromChange">
+        <view class="picker-box row"><text>{{fromDate}}</text><text class="muted tiny">选择 ›</text></view>
+      </picker>
+      <view class="field-label" style="margin-top:20rpx">导入结束日期</view>
+      <picker mode="date" value="{{toDate}}" bindchange="onToChange">
+        <view class="picker-box row"><text>{{toDate}}</text><text class="muted tiny">选择 ›</text></view>
+      </picker>
+      <view class="row small" style="margin-top:20rpx"><text class="muted">该时段命中</text><text>{{rangeCount}} 张 · ¥{{rangeTotal}}</text></view>
+      <view class="btn btn-danger btn-block" style="margin-top:16rpx" bindtap="onDeleteRange" hover-class="btn-hover">删除该时段全部（{{rangeCount}}）</view>
+      <view class="tiny muted" style="margin-top:14rpx">按导入到本机的时间算，不是开票日期。会先显示命中数量再让你确认。</view>
+    </view>
+  </view>
+
+  <view class="foot tiny muted">原件文件不受影响，可到「导出与备份」转发或按 30 天规则清理。</view>
+
+</view>
