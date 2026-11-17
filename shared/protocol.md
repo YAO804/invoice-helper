@@ -1,4 +1,4 @@
-# 小程序与桌面端通信协议 v0.2
+# 小程序与桌面端通信协议 v0.3
 
 ## 基础约定
 
@@ -39,21 +39,6 @@
 }
 ```
 
-响应：
-
-```json
-{
-  "ok": true,
-  "device": {
-    "id": "mp-1763360000000-12345",
-    "name": "攒票小匣小程序",
-    "version": "1.0.0",
-    "last_seen": "2026-11-17T07:20:00Z",
-    "uploads": 0
-  }
-}
-```
-
 ## GET /api/status
 
 桌面端控制台总览。
@@ -72,78 +57,119 @@
 
 `network.addresses` 给出检测到的局域网地址。
 `mini_program.online` 表示最近 45 秒内是否收到小程序心跳。
-`stats` 包含接收文件数、接收字节、待取文件数、待取字节、今日接收数和字节。
-`events` 是最近 80 条传输/删除事件。
+`events` 是最近 80 条事件。
 
-## POST /api/files/upload
+## 文件传输接口
 
-小程序上传文件到电脑。
+```text
+POST /api/files/upload
+GET  /api/files
+GET  /api/incoming/{id}/download
+GET  /api/outgoing/{name}/download
+DELETE /api/incoming/{id}
+DELETE /api/outgoing/{name}
+```
 
-请求格式：`multipart/form-data`
-
-字段：
+上传字段：
 
 | 字段 | 必填 | 说明 |
 |---|---:|---|
 | `file` | 是 | 文件本体 |
 | `source` | 否 | 来源标记，例如 `qr`、`xml`、`web` |
-| `device_id` | 否 | 小程序设备 ID，用于设备在线和上传计数 |
+| `device_id` | 否 | 小程序设备 ID |
 
-限制：
+单文件最大 20MB。相同 SHA256 + 大小复用旧记录。
 
-- 单文件最大 20MB
-- 相同 SHA256 + 大小会复用旧记录，不重复落盘
+## 发票台账接口
 
-响应示例：
+台账文件：`desktop/data/invoices.csv`
 
-```json
-{
-  "id": "20261117064512-2cf24dba",
-  "name": "test.xml",
-  "size": 5,
-  "sha256": "2cf24dba...",
-  "path": "incoming/20261117064512-2cf24dba_test.xml",
-  "source": "web",
-  "uploaded_at": "2026-11-17T06:45:12Z"
-}
+CSV 列：
+
+```text
+发票号码,发票代码,票种,开票日期,销方名称,销方税号,买方名称,买方税号,
+不含税金额,税额,价税合计,税率,录入批次,录入时间
 ```
 
-## GET /api/files
+兼容旧版 12 列 CSV；缺少批次和录入时间时自动生成。
 
-获取两端文件列表。
+### GET /api/invoices
+
+查询发票列表。支持参数：
+
+```text
+keyword, number, code, kind, seller, buyer, batch,
+date_from, date_to, amount_min, amount_max,
+only_duplicates=1, only_need_fill=1
+```
 
 响应：
 
 ```json
 {
-  "incoming": [],
-  "outgoing": []
+  "items": [],
+  "duplicates": [],
+  "total": 0,
+  "duplicate_groups": 0,
+  "need_fill": 0
 }
 ```
 
-`incoming` 是小程序上传到电脑的文件。
-`outgoing` 是电脑放进 `desktop/data/outgoing` 的文件。
+判重口径：**发票号码相同即为重复**。
+重复记录会写入台账并高亮显示，由用户自行选择删除，不自动删除。
 
-## 下载接口
+### POST /api/invoices/import
 
-```text
-GET /api/incoming/{id}/download
-GET /api/outgoing/{name}/download
-```
+导入 CSV，字段 `file`，格式 `multipart/form-data`。
 
-`name` 必须是文件名，不包含路径分隔符。
-
-## 删除接口
+默认是预览，不写入：
 
 ```text
-DELETE /api/incoming/{id}
-DELETE /api/outgoing/{name}
+POST /api/invoices/import
 ```
 
-删除成功返回：
+预览响应包含：
 
 ```json
-{ "ok": true }
+{
+  "total": 3,
+  "new_count": 1,
+  "duplicate_count": 1,
+  "invalid_count": 1,
+  "items": []
+}
+```
+
+确认写入：
+
+```text
+POST /api/invoices/import?confirm=1
+```
+
+响应：
+
+```json
+{ "imported": 2 }
+```
+
+重复行仍会写入台账，方便用户对比后自行删除；只有缺发票号码的行会被跳过。
+
+### GET /api/invoices/export
+
+导出 CSV。可使用查询参数筛选，也可用 `ids=1,2,3` 导出选中记录。
+
+### DELETE /api/invoices
+
+请求：
+
+```json
+{ "ids": [1, 2] }
+```
+
+响应：
+
+```json
+{ "deleted": 2 }
 ```
 
 ## 数据目录
@@ -152,6 +178,8 @@ DELETE /api/outgoing/{name}
 desktop/data/
 ├── incoming/     小程序上传进来的文件
 ├── outgoing/     电脑提供给小程序下载的文件
+├── backup/       发票台账历史备份
+├── invoices.csv  发票台账主文件
 ├── index.json    上传记录索引
 └── registry.json 设备与事件记录
 ```

@@ -198,12 +198,12 @@ invoice-helper/
 │       ├── exportflow.js        # 按勾选顺序逐个转发
 │       ├── purge.js             # 台账清理：按 id 或导入时间区间删除
 ├── desktop/
-│   ├── internal/                # 电脑端 Go 模块目录：api / files / registry / config
+│   ├── internal/                # 电脑端 Go 模块目录：api / files / ledger / registry / config
 │   ├── web/                     # 本地网页静态文件
 │   ├── data/                    # 运行时数据，不提交 Git
 │   └── README.md                # 电脑端目录约定
 ├── shared/
-│   └── protocol.md              # 小程序与桌面端通信协议 v0.2
+│   └── protocol.md              # 小程序与桌面端通信协议 v0.3
 ├── test/
 │   ├── miniprogram/
 │   │   ├── einvoice.test.js     # 真实 XML 树 1:1 回归，60 项断言
@@ -247,7 +247,7 @@ go test ./...
 ```
 
 小程序十一套共 319 项断言（60 + 14 + 11 + 72 + 35 + 30 + 28 + 27 + 19 + 14 + 9），当前全绿。
-电脑端 Go 测试单独运行，覆盖文件保存、去重、删除、统计、设备心跳、状态总览、上传接口、下载接口和本地网页。
+电脑端 Go 测试单独运行，覆盖文件保存、去重、删除、统计、设备心跳、状态总览、上传接口、下载接口、发票台账 CSV、判重、搜索、导入导出和本地网页。
 
 ---
 

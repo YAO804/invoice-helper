@@ -12,99 +12,197 @@
       <h1>攒票小匣 · 桌面端</h1>
       <p>小程序与电脑之间的本地文件中转控制台</p>
     </div>
-    <button id="refreshBtn" type="button" class="secondary">刷新</button>
+    <div class="header-actions">
+      <button id="tabConsole" type="button" class="tab active">控制台</button>
+      <button id="tabLedger" type="button" class="tab">发票台账</button>
+      <button id="refreshBtn" type="button" class="secondary">刷新</button>
+    </div>
   </header>
 
   <main>
-    <section class="card">
-      <div class="card-head">
-        <h2>运行总览</h2>
-        <span id="lastRefresh" class="hint">尚未刷新</span>
-      </div>
-      <div class="grid">
-        <div class="stat">
-          <div class="stat-label">服务状态</div>
-          <div id="serviceState" class="stat-value">检查中</div>
-          <div id="serviceDetail" class="stat-sub"></div>
+    <div id="pageConsole">
+      <section class="card">
+        <div class="card-head">
+          <h2>运行总览</h2>
+          <span id="lastRefresh" class="hint">尚未刷新</span>
         </div>
-        <div class="stat">
-          <div class="stat-label">小程序连接</div>
-          <div id="miniState" class="stat-value">检查中</div>
-          <div id="miniDetail" class="stat-sub"></div>
+        <div class="grid">
+          <div class="stat">
+            <div class="stat-label">服务状态</div>
+            <div id="serviceState" class="stat-value">检查中</div>
+            <div id="serviceDetail" class="stat-sub"></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">小程序连接</div>
+            <div id="miniState" class="stat-value">检查中</div>
+            <div id="miniDetail" class="stat-sub"></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">今日接收</div>
+            <div id="todayCount" class="stat-value">—</div>
+            <div id="todayBytes" class="stat-sub"></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">电脑待取</div>
+            <div id="outgoingCount" class="stat-value">—</div>
+            <div id="outgoingBytes" class="stat-sub"></div>
+          </div>
         </div>
-        <div class="stat">
-          <div class="stat-label">今日接收</div>
-          <div id="todayCount" class="stat-value">—</div>
-          <div id="todayBytes" class="stat-sub"></div>
+      </section>
+
+      <section class="card">
+        <h2>连接小程序</h2>
+        <p class="hint">在小程序「设置 → 桌面端连接」填入任一地址。小程序打开时会自动上报在线状态。</p>
+        <div id="addressList" class="address-list"></div>
+
+        <h3 class="section-title">最近设备</h3>
+        <table>
+          <thead>
+            <tr><th>设备</th><th>版本</th><th>最近心跳</th><th>上传数</th><th>状态</th></tr>
+          </thead>
+          <tbody id="deviceBody"></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>发送到电脑</h2>
+        <div id="dropZone" class="drop-zone">
+          <strong>拖放文件到这里</strong>
+          <span class="hint">也可以点下面的按钮选择文件，支持一次选多个</span>
         </div>
-        <div class="stat">
-          <div class="stat-label">电脑待取</div>
-          <div id="outgoingCount" class="stat-value">—</div>
-          <div id="outgoingBytes" class="stat-sub"></div>
+        <div class="row">
+          <button id="chooseBtn" type="button">选择文件</button>
+          <input id="sourceInput" type="text" placeholder="来源，例如 web">
+          <input id="fileInput" type="file" multiple hidden>
         </div>
-      </div>
-    </section>
+        <div id="uploadProgress" class="progress-list"></div>
+      </section>
 
-    <section class="card">
-      <h2>连接小程序</h2>
-      <p class="hint">在小程序「设置 → 桌面端连接」填入任一地址。小程序打开时会自动上报在线状态。</p>
-      <div id="addressList" class="address-list"></div>
+      <section class="card">
+        <div class="card-head">
+          <h2>文件列表</h2>
+          <input id="searchInput" type="text" placeholder="搜索文件名">
+        </div>
 
-      <h3 class="section-title">最近设备</h3>
-      <table>
-        <thead>
-          <tr><th>设备</th><th>版本</th><th>最近心跳</th><th>上传数</th><th>状态</th></tr>
-        </thead>
-        <tbody id="deviceBody"></tbody>
-      </table>
-    </section>
+        <h3 class="section-title">小程序上传的文件</h3>
+        <table>
+          <thead>
+            <tr><th>文件名</th><th>大小</th><th>来源</th><th>上传时间</th><th>操作</th></tr>
+          </thead>
+          <tbody id="incomingBody"></tbody>
+        </table>
 
-    <section class="card">
-      <h2>发送到电脑</h2>
-      <div id="dropZone" class="drop-zone">
-        <strong>拖放文件到这里</strong>
-        <span class="hint">也可以点下面的按钮选择文件，支持一次选多个</span>
-      </div>
-      <div class="row">
-        <button id="chooseBtn" type="button">选择文件</button>
-        <input id="sourceInput" type="text" placeholder="来源，例如 web">
-        <input id="fileInput" type="file" multiple hidden>
-      </div>
-      <div id="uploadProgress" class="progress-list"></div>
-    </section>
+        <h3 class="section-title">电脑待取文件</h3>
+        <p class="hint">把文件放进 <code>desktop/data/outgoing</code>，小程序就能看到并下载。</p>
+        <table>
+          <thead>
+            <tr><th>文件名</th><th>大小</th><th>修改时间</th><th>操作</th></tr>
+          </thead>
+          <tbody id="outgoingBody"></tbody>
+        </table>
+      </section>
 
-    <section class="card">
-      <div class="card-head">
-        <h2>文件列表</h2>
-        <input id="searchInput" type="text" placeholder="搜索文件名">
-      </div>
+      <section class="card">
+        <h2>最近事件</h2>
+        <div id="eventList" class="event-list"></div>
+      </section>
+    </div>
 
-      <h3 class="section-title">小程序上传的文件</h3>
-      <table>
-        <thead>
-          <tr><th>文件名</th><th>大小</th><th>来源</th><th>上传时间</th><th>操作</th></tr>
-        </thead>
-        <tbody id="incomingBody"></tbody>
-      </table>
+    <div id="pageLedger" hidden>
+      <section class="card">
+        <div class="card-head">
+          <h2>台账总览</h2>
+          <span id="lastInvoiceRefresh" class="hint">尚未刷新</span>
+        </div>
+        <div class="grid">
+          <div class="stat">
+            <div class="stat-label">当前列表</div>
+            <div id="invTotal" class="stat-value">—</div>
+            <div class="stat-sub">张发票</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">重复组</div>
+            <div id="invDuplicates" class="stat-value warn">—</div>
+            <div class="stat-sub">按发票号码判定</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">待补录</div>
+            <div id="invNeedFill" class="stat-value warn">—</div>
+            <div class="stat-sub">关键字段缺失</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">最新批次</div>
+            <div id="invBatch" class="stat-value small">—</div>
+            <div class="stat-sub">每次导入/发送一批</div>
+          </div>
+        </div>
+      </section>
 
-      <h3 class="section-title">电脑待取文件</h3>
-      <p class="hint">把文件放进 <code>desktop/data/outgoing</code>，小程序就能看到并下载。</p>
-      <table>
-        <thead>
-          <tr><th>文件名</th><th>大小</th><th>修改时间</th><th>操作</th></tr>
-        </thead>
-        <tbody id="outgoingBody"></tbody>
-      </table>
-    </section>
+      <section class="card">
+        <div class="card-head">
+          <h2>导入与导出</h2>
+          <div class="row">
+            <input id="invoiceImportFile" type="file" accept=".csv,text/csv">
+            <button id="invoiceImportBtn" type="button">预览导入</button>
+            <button id="invoiceExportAllBtn" type="button" class="secondary">导出全部</button>
+            <button id="invoiceExportSelectedBtn" type="button" class="secondary">导出选中</button>
+            <button id="invoiceDeleteSelectedBtn" type="button" class="danger-solid">删除选中</button>
+          </div>
+        </div>
+        <div id="importPreview" class="import-preview"></div>
+      </section>
 
-    <section class="card">
-      <h2>最近事件</h2>
-      <div id="eventList" class="event-list"></div>
-    </section>
+      <section class="card">
+        <h2>搜索与筛选</h2>
+        <div class="filter-bar">
+          <input id="invKeyword" type="text" placeholder="全局搜索：号码/销方/买方/金额/批次">
+          <input id="invNumber" type="text" placeholder="发票号码">
+          <input id="invSeller" type="text" placeholder="销方名称">
+          <input id="invBatchFilter" type="text" placeholder="录入批次">
+          <input id="invDateFrom" type="date" aria-label="开票日期起">
+          <input id="invDateTo" type="date" aria-label="开票日期止">
+          <input id="invAmountMin" type="number" placeholder="金额下限">
+          <input id="invAmountMax" type="number" placeholder="金额上限">
+          <label><input id="invOnlyDuplicates" type="checkbox"> 仅看重复</label>
+          <label><input id="invOnlyNeedFill" type="checkbox"> 仅看待补录</label>
+        </div>
+        <p class="hint">已选 <span id="invoiceSelectedCount">0</span> 张</p>
+      </section>
+
+      <section class="card">
+        <div id="duplicateAlert" class="duplicate-alert"></div>
+        <div class="table-wrap">
+          <table class="invoice-table">
+            <thead>
+              <tr>
+                <th></th><th>发票号码</th><th>发票代码</th><th>票种</th><th>开票日期</th>
+                <th>销方名称</th><th>销方税号</th><th>买方名称</th><th>买方税号</th>
+                <th>不含税金额</th><th>税额</th><th>价税合计</th><th>税率</th>
+                <th>录入批次</th><th>录入时间</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="invoiceBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
   </main>
+
+  <div id="duplicateDrawer" class="drawer" hidden>
+    <div class="drawer-panel">
+      <div class="drawer-head">
+        <h2>重复发票处理</h2>
+        <button id="closeDrawerBtn" type="button" class="secondary">关闭</button>
+      </div>
+      <div id="duplicateBody" class="drawer-body"></div>
+    </div>
+  </div>
 
   <script src="/api.js"></script>
   <script src="/render.js"></script>
   <script src="/app.js"></script>
+  <script src="/ledger-api.js"></script>
+  <script src="/ledger-render.js"></script>
+  <script src="/ledger-app.js"></script>
 </body>
 </html>

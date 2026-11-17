@@ -92,8 +92,21 @@ async function copyText(text) {
   }
 }
 
+function switchTab(name) {
+  const showConsole = name === 'console'
+  $('pageConsole').hidden = !showConsole
+  $('pageLedger').hidden = showConsole
+  $('tabConsole').classList.toggle('active', showConsole)
+  $('tabLedger').classList.toggle('active', !showConsole)
+
+  if (showConsole) refresh()
+  else if (window.refreshLedger) window.refreshLedger()
+}
+
 function bindEvents() {
   $('refreshBtn').addEventListener('click', refresh)
+  $('tabConsole').addEventListener('click', () => switchTab('console'))
+  $('tabLedger').addEventListener('click', () => switchTab('ledger'))
   $('chooseBtn').addEventListener('click', () => $('fileInput').click())
   $('fileInput').addEventListener('change', (event) => handleUpload(event.target.files))
   $('searchInput').addEventListener('input', renderAll)
