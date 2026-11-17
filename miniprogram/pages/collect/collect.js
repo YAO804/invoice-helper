@@ -77,6 +77,10 @@ Page({
     wx.navigateTo({ url: '/pages/export/export' })
   },
 
+  onTransfer() {
+    wx.navigateTo({ url: '/pages/transfer/transfer' })
+  },
+
   onReview() {
     wx.navigateTo({ url: '/pages/review/review' })
   },

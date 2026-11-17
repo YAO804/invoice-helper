@@ -91,6 +91,25 @@ function postJSON(path, data) {
   })
 }
 
+function getJSON(path) {
+  const base = getBase()
+  if (!base) return Promise.reject(new Error('未配置桌面端地址'))
+
+  return new Promise(function (resolve, reject) {
+    wx.request({
+      url: base + path,
+      method: 'GET',
+      success: function (res) {
+        if (res.statusCode >= 200 && res.statusCode < 300) return resolve(res.data)
+        reject(new Error('HTTP ' + res.statusCode))
+      },
+      fail: function (err) {
+        reject(new Error((err && err.errMsg) || '连接失败'))
+      }
+    })
+  })
+}
+
 function checkInvoiceNumbers(numbers) {
   return postJSON('/api/invoices/check', { numbers: numbers })
 }
@@ -99,6 +118,47 @@ function sendInvoices(invoices) {
   return postJSON('/api/invoices', {
     device_id: deviceId(),
     invoices: invoices
+  })
+}
+
+/** 电脑端已收到的文件列表 */
+function listFiles() {
+  return getJSON('/api/files')
+}
+
+/**
+ * 上传原件到电脑端。
+ * name 字段必须为 file（对应服务端 r.FormFile("file")），
+ * device_id / source 通过 formData 传，服务端用 r.FormValue 读取。
+ */
+function uploadFile(filePath, name, source) {
+  const base = getBase()
+  if (!base) return Promise.reject(new Error('未配置桌面端地址'))
+
+  return new Promise(function (resolve, reject) {
+    wx.uploadFile({
+      url: base + '/api/files/upload',
+      filePath: filePath,
+      name: 'file',
+      fileName: name,
+      formData: {
+        device_id: deviceId(),
+        source: source || 'miniprogram'
+      },
+      success: function (res) {
+        let data = res.data
+        if (typeof data === 'string') {
+          try { data = JSON.parse(data) } catch (e) {
+            return reject(new Error('返回格式错误'))
+          }
+        }
+        if (res.statusCode >= 200 && res.statusCode < 300) return resolve(data)
+        reject(new Error('HTTP ' + res.statusCode))
+      },
+      fail: function (err) {
+        reject(new Error((err && err.errMsg) || '上传失败'))
+      }
+    })
   })
 }
 
@@ -149,6 +209,8 @@ module.exports = {
   heartbeat: heartbeat,
   checkInvoiceNumbers: checkInvoiceNumbers,
   sendInvoices: sendInvoices,
+  listFiles: listFiles,
+  uploadFile: uploadFile,
   shouldAutoConnect: shouldAutoConnect,
   autoConnect: autoConnect,
   startAutoHeartbeat: startAutoHeartbeat,

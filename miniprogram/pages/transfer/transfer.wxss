@@ -1,0 +1,9 @@
+.log-row {
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #ecece8;
+}
+
+.foot {
+  padding: 10rpx 8rpx;
+  line-height: 1.7;
+}

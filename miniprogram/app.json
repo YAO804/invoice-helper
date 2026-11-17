@@ -9,6 +9,7 @@
     "pages/export/export",
     "pages/manage/manage",
     "pages/review/review",
+    "pages/transfer/transfer",
     "pages/index/index"
   ],
   "window": {

@@ -1,0 +1,61 @@
+<view class="page">
+
+  <view class="card">
+    <view class="row">
+      <view class="card-t">传到电脑</view>
+      <view class="badge {{connected ? '' : 'badge-grey'}}">{{connected ? '已连接' : '未连接'}}</view>
+    </view>
+    <view class="tiny muted" style="margin-top:8rpx">{{baseText}}</view>
+    <view wx:if="{{!connected}}" class="tiny warn" style="margin-top:14rpx">尚未连接电脑端。请先在「设置」里连上电脑，手机和电脑要在同一 WiFi。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-t" style="margin-bottom:14rpx">上传原件</view>
+    <view class="btn btn-block" bindtap="onFromChat" hover-class="btn-hover">从微信会话选文件发送</view>
+    <view class="tiny muted" style="margin-top:14rpx">先把 .xml / .ofd / .pdf 以「文件」发到文件传输助手，再在这里选。最多 20 个、单个不超过 20MB。</view>
+    <view class="divider"></view>
+    <view class="btn btn-ghost btn-block" bindtap="onFromLedger" hover-class="btn-hover">发送台账已存原件（{{ledgerFileCount}}）</view>
+    <view class="tiny muted" style="margin-top:14rpx">把之前导入发票时存下的原件传给电脑，不用重新选。相同文件电脑端会自动去重。</view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <view class="card-t">发送记录</view>
+      <view class="tiny muted">{{history.length}} 条</view>
+    </view>
+    <view wx:if="{{!history.length}}" class="empty" style="padding:48rpx 20rpx">还没有发送记录。上传文件后会显示在这里。</view>
+    <view wx:for="{{history}}" wx:key="at" class="log-row">
+      <view class="row">
+        <view class="grow ellipsis small">{{item.name}}</view>
+        <view class="badge {{item.status === 'fail' ? 'badge-warn' : (item.status === 'duplicate' ? 'badge-grey' : '')}}">{{item.statusLabel}}</view>
+      </view>
+      <view class="row tiny muted" style="margin-top:6rpx">
+        <text>{{item.humanSize}} · {{item.source === 'ledger' ? '台账原件' : '会话文件'}} · {{item.timeText}}</text>
+      </view>
+      <view wx:if="{{item.status === 'fail'}}" class="tiny danger" style="margin-top:4rpx">{{item.message}}</view>
+    </view>
+    <view wx:if="{{history.length}}" class="divider"></view>
+    <view wx:if="{{history.length}}" class="btn btn-grey btn-block" bindtap="onClearHistory" hover-class="btn-hover">清空发送记录</view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <view class="card-t">电脑端文件</view>
+      <view class="btn btn-ghost" style="padding:10rpx 20rpx;font-size:22rpx" bindtap="onRefreshRemote" hover-class="btn-hover">刷新</view>
+    </view>
+    <view wx:if="{{remoteLoaded && !remote.length}}" class="empty" style="padding:48rpx 20rpx">电脑端还没有收到文件。</view>
+    <view wx:if="{{!remoteLoaded}}" class="tiny muted" style="padding:32rpx 0;text-align:center">点「刷新」查看电脑端已收到的文件</view>
+    <view wx:for="{{remote}}" wx:key="id" class="log-row">
+      <view class="row">
+        <view class="grow ellipsis small">{{item.name}}</view>
+        <text class="tiny muted">{{item.humanSize}}</text>
+      </view>
+      <view class="row tiny muted" style="margin-top:6rpx">
+        <text>{{item.uploaded_at}} · {{item.source}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="foot tiny muted">发送记录只存在本机，电脑端的实际接收情况以「电脑端文件」列表为准。本工具不查验发票真伪。</view>
+
+</view>

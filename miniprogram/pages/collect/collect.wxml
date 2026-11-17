@@ -17,6 +17,9 @@
     <view class="card-t" style="margin-bottom:14rpx">文件导入</view>
     <view class="btn btn-ghost btn-block" bindtap="onImport" hover-class="btn-hover">批量导入文件（最多 20 个）</view>
     <view class="tiny muted" style="margin-top:14rpx">支持 .xml / .ofd / .pdf。文件需先以「文件」消息发到文件传输助手，发成图片会被改名。XML 可自动填全字段，OFD/PDF 只存原件、字段需补录。</view>
+    <view class="divider"></view>
+    <view class="btn btn-block" bindtap="onTransfer" hover-class="btn-hover">传到电脑 / 查看发送记录 ›</view>
+    <view class="tiny muted" style="margin-top:14rpx">把原件文件发给电脑端归档，可查看已发送哪些文件。</view>
   </view>
 
   <view class="card">

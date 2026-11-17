@@ -14,6 +14,7 @@ function check(name, actual, expected) {
 
 const storage = {}
 let lastRequest = null
+let lastUpload = null
 let stubMatches = {}
 const stubSend = { added: 2, batch: 'B-TEST' }
 
@@ -28,7 +29,14 @@ global.wx = {
     if (options.url.indexOf('/api/invoices') >= 0) {
       return options.success({ statusCode: 200, data: stubSend })
     }
+    if (options.url.indexOf('/api/files') >= 0) {
+      return options.success({ statusCode: 200, data: { incoming: [], outgoing: [] } })
+    }
     options.success({ statusCode: 200, data: { ok: true } })
+  },
+  uploadFile(options) {
+    lastUpload = options
+    options.success({ statusCode: 201, data: JSON.stringify({ name: 'a.xml', size: 100 }) })
   }
 }
 
@@ -60,6 +68,22 @@ lanservice.heartbeat().then(function (data) {
   check('发送地址', lastRequest.url, 'http://192.168.1.20:8765/api/invoices')
   check('发送携带设备', lastRequest.data.device_id.indexOf('mp-') === 0, true)
   check('发送返回', data.added, 2)
+
+  return lanservice.listFiles()
+}).then(function (data) {
+  check('文件列表地址', lastRequest.url, 'http://192.168.1.20:8765/api/files')
+  check('文件列表 GET', lastRequest.method, 'GET')
+  check('文件列表 incoming', data.incoming, [])
+
+  return lanservice.uploadFile('/tmp/a.xml', 'a.xml', 'miniprogram')
+}).then(function (data) {
+  check('上传地址', lastUpload.url, 'http://192.168.1.20:8765/api/files/upload')
+  check('上传字段名', lastUpload.name, 'file')
+  check('上传文件名', lastUpload.fileName, 'a.xml')
+  check('上传文件路径', lastUpload.filePath, '/tmp/a.xml')
+  check('上传携带设备', lastUpload.formData.device_id.indexOf('mp-') === 0, true)
+  check('上传来源', lastUpload.formData.source, 'miniprogram')
+  check('上传返回解析', data.name, 'a.xml')
 
   console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
   process.exit(failCount === 0 ? 0 : 1)
