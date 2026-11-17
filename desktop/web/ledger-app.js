@@ -12,6 +12,59 @@ const EDIT_FIELDS = [
   ['tax', 'editTax'], ['total', 'editTotal'], ['tax_rate', 'editTaxRate']
 ]
 
+function showToast(message) {
+  const box = $('toast')
+  box.textContent = message
+  box.hidden = false
+  clearTimeout(showToast._timer)
+  showToast._timer = setTimeout(() => { box.hidden = true }, 1800)
+}
+
+async function copyInvoiceValue(button) {
+  const text = button.dataset.copy || ''
+  if (!text) return
+  await copyText(text)
+  const label = button.textContent.trim()
+  button.classList.add('copied')
+  showToast('已复制：' + label)
+  setTimeout(() => button.classList.remove('copied'), 1200)
+}
+
+function activeFilterCount() {
+  const fields = ['invNumber', 'invSeller', 'invBatchFilter', 'invDateFrom', 'invDateTo', 'invAmountMin', 'invAmountMax']
+  let count = fields.filter((id) => ($(id).value || '').trim()).length
+  if (($('invKeyword').value || '').trim()) count++
+  if ($('invOnlyDuplicates').checked) count++
+  if ($('invOnlyNeedFill').checked) count++
+  return count
+}
+
+function syncFilterCount() {
+  const n = activeFilterCount()
+  const badge = $('filterCount')
+  badge.textContent = n
+  badge.hidden = n === 0
+}
+
+function resetFilters() {
+  ;['invKeyword', 'invNumber', 'invSeller', 'invBatchFilter', 'invDateFrom', 'invDateTo',
+    'invAmountMin', 'invAmountMax'].forEach((id) => { $(id).value = '' })
+  $('invOnlyDuplicates').checked = false
+  $('invOnlyNeedFill').checked = false
+  syncFilterCount()
+  refreshLedger()
+}
+
+function toggleSelectAll(checked) {
+  document.querySelectorAll('.invoice-check').forEach((box) => {
+    box.checked = checked
+    if (checked) selectedInvoices.add(Number(box.dataset.id))
+    else selectedInvoices.delete(Number(box.dataset.id))
+  })
+  $('selectAll').checked = checked
+  $('invoiceSelectedCount').textContent = '已选 ' + selectedInvoices.size + ' 张'
+}
+
 function buildInvoiceParams() {
   const params = new URLSearchParams()
   const fields = {
@@ -43,7 +96,9 @@ function renderInvoiceAll() {
   renderDuplicateAlert(invoiceData.duplicates || [])
   renderInvoiceTable(items, selectedInvoices)
   renderDuplicatePanel(invoiceData.duplicates || [])
-  $('invoiceSelectedCount').textContent = selectedInvoices.size
+  $('invoiceSelectedCount').textContent = '已选 ' + selectedInvoices.size + ' 张'
+  const allChecked = items.length > 0 && items.every((item) => selectedInvoices.has(item.id))
+  $('selectAll').checked = allChecked
 }
 
 async function refreshLedger() {
@@ -56,6 +111,7 @@ async function refreshLedger() {
 }
 
 function scheduleLedgerRefresh() {
+  syncFilterCount()
   clearTimeout(invoiceSearchTimer)
   invoiceSearchTimer = setTimeout(refreshLedger, 250)
 }
@@ -162,15 +218,32 @@ function bindLedgerEvents() {
   $('invOnlyDuplicates').addEventListener('change', refreshLedger)
   $('invOnlyNeedFill').addEventListener('change', refreshLedger)
 
+  $('ledgerRefreshBtn').addEventListener('click', refreshLedger)
+  $('filterToggleBtn').addEventListener('click', () => {
+    const panel = $('filterPanel')
+    const open = panel.hidden
+    panel.hidden = !open
+    $('filterToggleBtn').setAttribute('aria-expanded', String(open))
+  })
+  $('filterResetBtn').addEventListener('click', resetFilters)
+  $('selectAll').addEventListener('change', (event) => toggleSelectAll(event.target.checked))
+
   document.addEventListener('change', (event) => {
     if (!event.target.classList.contains('invoice-check')) return
     const id = Number(event.target.dataset.id)
     if (event.target.checked) selectedInvoices.add(id)
     else selectedInvoices.delete(id)
-    $('invoiceSelectedCount').textContent = selectedInvoices.size
+    $('invoiceSelectedCount').textContent = '已选 ' + selectedInvoices.size + ' 张'
+    const boxes = Array.from(document.querySelectorAll('.invoice-check'))
+    $('selectAll').checked = boxes.length > 0 && boxes.every((box) => box.checked)
   })
 
   document.addEventListener('click', (event) => {
+    const copyButton = event.target.closest('.copy-cell')
+    if (copyButton) {
+      copyInvoiceValue(copyButton)
+      return
+    }
     const editButton = event.target.closest('[data-action="edit-invoice"]')
     if (editButton) {
       const item = (invoiceData.items || []).find((row) => row.id === Number(editButton.dataset.id))

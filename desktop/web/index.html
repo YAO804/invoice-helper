@@ -7,17 +7,22 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header>
-    <div>
-      <h1>攒票小匣 · 桌面端</h1>
-      <p>小程序与电脑之间的本地文件中转控制台</p>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">票</span>
+      <div>
+        <h1>攒票小匣</h1>
+        <p>本地发票归集与台账</p>
+      </div>
     </div>
-    <div class="header-actions">
-      <button id="tabConsole" type="button" class="tab active">控制台</button>
-      <button id="tabLedger" type="button" class="tab">发票台账</button>
-      <button id="refreshBtn" type="button" class="secondary">刷新</button>
-    </div>
+    <nav class="tabs" role="tablist">
+      <button id="tabConsole" type="button" class="tab active" role="tab">控制台</button>
+      <button id="tabLedger" type="button" class="tab" role="tab">发票台账</button>
+    </nav>
+    <button id="refreshBtn" type="button" class="btn btn-ghost" title="刷新当前页面">刷新</button>
   </header>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <main>
     <div id="pageConsole">
@@ -109,93 +114,116 @@
     </div>
 
     <div id="pageLedger" hidden>
-      <section class="card">
-        <div class="card-head">
-          <h2>台账总览</h2>
+      <div class="page-head">
+        <div>
+          <h2>发票台账</h2>
           <span id="lastInvoiceRefresh" class="hint">尚未刷新</span>
         </div>
-        <div class="grid">
-          <div class="stat">
-            <div class="stat-label">当前列表</div>
-            <div id="invTotal" class="stat-value">—</div>
-            <div class="stat-sub">张发票</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">重复组</div>
-            <div id="invDuplicates" class="stat-value warn">—</div>
-            <div class="stat-sub">按发票号码判定</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">待补录</div>
-            <div id="invNeedFill" class="stat-value warn">—</div>
-            <div class="stat-sub">关键字段缺失</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">最新批次</div>
-            <div id="invBatch" class="stat-value small">—</div>
-            <div class="stat-sub">每次导入/发送一批</div>
-          </div>
+        <button id="ledgerRefreshBtn" type="button" class="btn btn-ghost">刷新数据</button>
+      </div>
+
+      <section class="stat-grid" aria-label="台账总览">
+        <div class="stat">
+          <div class="stat-label">当前列表</div>
+          <div id="invTotal" class="stat-value">—</div>
+          <div class="stat-sub">张发票</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">重复组</div>
+          <div id="invDuplicates" class="stat-value warn">—</div>
+          <div class="stat-sub">按发票号码判定</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">待补录</div>
+          <div id="invNeedFill" class="stat-value warn">—</div>
+          <div class="stat-sub">关键字段缺失</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">最新批次</div>
+          <div id="invBatch" class="stat-value small">—</div>
+          <div class="stat-sub">每次导入/发送一批</div>
         </div>
       </section>
 
-      <section class="card">
-        <div class="card-head">
-          <h2>导入与导出</h2>
-          <div class="row">
-            <input id="invoiceImportFile" type="file" accept=".csv,text/csv">
-            <button id="invoiceImportBtn" type="button">预览导入</button>
-            <button id="invoiceExportAllBtn" type="button" class="secondary">导出全部</button>
-            <button id="invoiceExportSelectedBtn" type="button" class="secondary">导出选中</button>
-            <button id="invoiceDeleteSelectedBtn" type="button" class="danger-solid">删除选中</button>
+      <div id="duplicateAlert" class="duplicate-alert"></div>
+
+      <section class="card table-card">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <button id="invoiceImportBtn" type="button" class="btn">导入 CSV</button>
+            <input id="invoiceImportFile" type="file" accept=".csv,text/csv" hidden>
+            <button id="invoiceExportAllBtn" type="button" class="btn btn-ghost">导出全部</button>
+            <button id="invoiceExportSelectedBtn" type="button" class="btn btn-ghost">导出选中</button>
+            <button id="invoiceDeleteSelectedBtn" type="button" class="btn btn-danger-ghost">删除选中</button>
+          </div>
+          <button id="filterToggleBtn" type="button" class="btn btn-ghost" aria-expanded="false" aria-controls="filterPanel">
+            筛选 <span id="filterCount" class="filter-count" hidden>0</span>
+          </button>
+        </div>
+
+        <div id="filterPanel" class="filter-panel" hidden>
+          <div class="filter-grid">
+            <label class="filter-field filter-wide"><span>全局搜索</span>
+              <input id="invKeyword" type="text" placeholder="号码 / 销方 / 买方 / 金额 / 批次"></label>
+            <label class="filter-field"><span>发票号码</span>
+              <input id="invNumber" type="text" placeholder="发票号码"></label>
+            <label class="filter-field"><span>销方名称</span>
+              <input id="invSeller" type="text" placeholder="销方名称"></label>
+            <label class="filter-field"><span>录入批次</span>
+              <input id="invBatchFilter" type="text" placeholder="录入批次"></label>
+            <label class="filter-field"><span>开票日期起</span>
+              <input id="invDateFrom" type="date"></label>
+            <label class="filter-field"><span>开票日期止</span>
+              <input id="invDateTo" type="date"></label>
+            <label class="filter-field"><span>金额下限</span>
+              <input id="invAmountMin" type="number" placeholder="0.00"></label>
+            <label class="filter-field"><span>金额上限</span>
+              <input id="invAmountMax" type="number" placeholder="0.00"></label>
+          </div>
+          <div class="filter-checks">
+            <label><input id="invOnlyDuplicates" type="checkbox"> 仅看重复</label>
+            <label><input id="invOnlyNeedFill" type="checkbox"> 仅看待补录</label>
+            <button id="filterResetBtn" type="button" class="btn btn-ghost btn-sm">重置筛选</button>
           </div>
         </div>
+
         <div id="importPreview" class="import-preview"></div>
-      </section>
 
-      <section class="card">
-        <div class="card-head"><h2>按录入时间清理</h2></div>
-        <div class="row">
-          <input id="invPurgeFrom" type="date" aria-label="录入时间起">
-          <span class="hint">至</span>
-          <input id="invPurgeTo" type="date" aria-label="录入时间止">
-          <button id="invoicePurgePreviewBtn" type="button" class="secondary">预览</button>
-          <button id="invoicePurgeBtn" type="button" class="danger-solid">确认清理</button>
+        <div class="table-meta">
+          <span id="invoiceSelectedCount" class="selected-count">已选 0 张</span>
+          <span class="hint">点击发票号码或代码可复制 · 勾选可批量操作</span>
         </div>
-        <p id="purgeResult" class="hint">只清理电脑台账，不影响手机本地记录；清理前会自动备份。</p>
-      </section>
 
-      <section class="card">
-        <h2>搜索与筛选</h2>
-        <div class="filter-bar">
-          <input id="invKeyword" type="text" placeholder="全局搜索：号码/销方/买方/金额/批次">
-          <input id="invNumber" type="text" placeholder="发票号码">
-          <input id="invSeller" type="text" placeholder="销方名称">
-          <input id="invBatchFilter" type="text" placeholder="录入批次">
-          <input id="invDateFrom" type="date" aria-label="开票日期起">
-          <input id="invDateTo" type="date" aria-label="开票日期止">
-          <input id="invAmountMin" type="number" placeholder="金额下限">
-          <input id="invAmountMax" type="number" placeholder="金额上限">
-          <label><input id="invOnlyDuplicates" type="checkbox"> 仅看重复</label>
-          <label><input id="invOnlyNeedFill" type="checkbox"> 仅看待补录</label>
-        </div>
-        <p class="hint">已选 <span id="invoiceSelectedCount">0</span> 张</p>
-      </section>
-
-      <section class="card">
-        <div id="duplicateAlert" class="duplicate-alert"></div>
         <div class="table-wrap">
           <table class="invoice-table">
             <thead>
               <tr>
-                <th></th><th>发票号码</th><th>发票代码</th><th>票种</th><th>开票日期</th>
+                <th class="col-check"><input id="selectAll" type="checkbox" aria-label="全选当前页"></th>
+                <th>发票号码</th><th>发票代码</th><th>票种</th><th>开票日期</th>
                 <th>销方名称</th><th>销方税号</th><th>买方名称</th><th>买方税号</th>
-                <th>不含税金额</th><th>税额</th><th>价税合计</th><th>税率</th>
-                <th>录入批次</th><th>录入时间</th><th>操作</th>
+                <th class="num">不含税金额</th><th class="num">税额</th><th class="num">价税合计</th><th>税率</th>
+                <th>录入批次</th><th>录入时间</th><th class="col-actions">操作</th>
               </tr>
             </thead>
             <tbody id="invoiceBody"></tbody>
           </table>
         </div>
+      </section>
+
+      <section class="card">
+        <details class="details-block">
+          <summary>清理台账 <span class="hint">按录入时间 · 危险操作，清理前自动备份</span></summary>
+          <div class="details-body">
+            <div class="row">
+              <input id="invPurgeFrom" type="date" aria-label="录入时间起">
+              <span class="hint">至</span>
+              <input id="invPurgeTo" type="date" aria-label="录入时间止">
+              <button id="invoicePurgePreviewBtn" type="button" class="btn btn-ghost">预览</button>
+              <button id="invoicePurgeBtn" type="button" class="btn btn-danger">确认清理</button>
+            </div>
+            <p id="purgeResult" class="hint">只清理电脑台账，不影响手机本地记录；清理前会自动备份。</p>
+          </div>
+        </details>
       </section>
     </div>
   </main>
@@ -204,7 +232,7 @@
     <div class="drawer-panel">
       <div class="drawer-head">
         <h2>重复发票处理</h2>
-        <button id="closeDrawerBtn" type="button" class="secondary">关闭</button>
+        <button id="closeDrawerBtn" type="button" class="btn btn-ghost">关闭</button>
       </div>
       <div id="duplicateBody" class="drawer-body"></div>
     </div>
@@ -214,7 +242,7 @@
     <div class="modal-panel">
       <div class="drawer-head">
         <h2>补录发票信息</h2>
-        <button id="closeEditBtn" type="button" class="secondary">关闭</button>
+        <button id="closeEditBtn" type="button" class="btn btn-ghost">关闭</button>
       </div>
       <div class="modal-body">
         <label>发票号码 <input id="editNumber" type="text"></label>
@@ -231,8 +259,8 @@
         <label>税率 <input id="editTaxRate" type="text" placeholder="6%"></label>
       </div>
       <div class="row modal-actions">
-        <button id="saveEditBtn" type="button">保存补录</button>
-        <button id="cancelEditBtn" type="button" class="secondary">取消</button>
+        <button id="saveEditBtn" type="button" class="btn">保存补录</button>
+        <button id="cancelEditBtn" type="button" class="btn btn-ghost">取消</button>
       </div>
     </div>
   </div>
