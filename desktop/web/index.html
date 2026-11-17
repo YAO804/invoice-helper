@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>攒票小匣 · 桌面端</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>攒票小匣 · 桌面端</h1>
+    <p>小程序与电脑之间的本地文件中转服务</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="card-head">
+        <h2>连接状态</h2>
+        <button id="refreshBtn" type="button">刷新</button>
+      </div>
+      <p id="health" class="status">正在检查服务...</p>
+    </section>
+
+    <section class="card">
+      <h2>上传到电脑</h2>
+      <form id="uploadForm">
+        <div class="row">
+          <input id="fileInput" type="file" required>
+          <input id="sourceInput" type="text" placeholder="来源，例如 小程序">
+          <button type="submit">上传</button>
+        </div>
+      </form>
+      <p id="uploadResult" class="hint"></p>
+    </section>
+
+    <section class="card">
+      <h2>小程序上传的文件</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>文件名</th>
+            <th>大小</th>
+            <th>来源</th>
+            <th>上传时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="incomingBody"></tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>电脑待取文件</h2>
+      <p class="hint">把文件放进 <code>desktop/data/outgoing</code>，小程序就能看到并下载。</p>
+      <table>
+        <thead>
+          <tr>
+            <th>文件名</th>
+            <th>大小</th>
+            <th>修改时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="outgoingBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

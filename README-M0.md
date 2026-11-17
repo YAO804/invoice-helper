@@ -202,7 +202,8 @@ invoice-helper/
 │   ├── web/                     # 本地网页静态文件
 │   ├── data/                    # 运行时数据，不提交 Git
 │   └── README.md                # 电脑端目录约定
-├── shared/                      # 两端共享协议、字段约定与测试样本
+├── shared/
+│   └── protocol.md              # 小程序与桌面端通信协议 v0.1
 ├── test/
 │   ├── miniprogram/
 │   │   ├── einvoice.test.js     # 真实 XML 树 1:1 回归，60 项断言
@@ -215,7 +216,7 @@ invoice-helper/
 │   │   ├── scanbatch.test.js    # 批量扫码交互与重复提示回归，27 项
 │   │   ├── exportsel.test.js    # 导出范围/勾选/逐个转发回归，19 项
 │   │   └── purge.test.js        # 台账清理：时间区间与删除回归，14 项
-│   ├── desktop/                 # 电脑端 Go 测试，后续添加
+│   ├── desktop/                 # 电脑端联调测试预留；Go 单元测试在 desktop/internal 各包内
 │   └── integration/             # 小程序与电脑端联调测试，后续添加
 ├── scripts/                     # 图标生成与开发脚本
 ├── assets/                      # 项目静态资源
@@ -238,9 +239,13 @@ node test/miniprogram/p0.test.js
 node test/miniprogram/scanbatch.test.js
 node test/miniprogram/exportsel.test.js
 node test/miniprogram/purge.test.js
+
+cd desktop
+go test ./...
 ```
 
-十套共 310 项断言（60 + 14 + 11 + 72 + 35 + 30 + 28 + 27 + 19 + 14），当前全绿。
+小程序十套共 310 项断言（60 + 14 + 11 + 72 + 35 + 30 + 28 + 27 + 19 + 14），当前全绿。
+电脑端 Go 测试单独运行，覆盖文件保存、去重、待取文件列表、上传接口、下载接口和本地网页。
 
 ---
 
