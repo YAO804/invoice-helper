@@ -6,6 +6,7 @@ import (
 
 	"invoice-helper/desktop/internal/api"
 	"invoice-helper/desktop/internal/config"
+	"invoice-helper/desktop/internal/discovery"
 )
 
 func main() {
@@ -21,5 +22,14 @@ func main() {
 		log.Printf("手机访问: %s", url)
 	}
 	log.Printf("数据目录: %s", cfg.DataDir)
+
+	server, err := discovery.Start(cfg.Addr)
+	if err != nil {
+		log.Printf("局域网自动发现不可用: %v", err)
+	} else {
+		defer server.Shutdown()
+		log.Printf("局域网自动发现已开启: %s", discovery.Instance)
+	}
+
 	log.Fatal(http.ListenAndServe(cfg.Addr, handler))
 }

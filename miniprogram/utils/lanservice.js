@@ -1,7 +1,11 @@
+const discover = require('./discover')
+
 const BASE_KEY = 'desktop_base_url'
 const DEVICE_KEY = 'desktop_device_id'
+const AUTO_KEY = 'desktop_auto_try_at'
 const APP_VERSION = '1.0.0'
 const HEARTBEAT_MS = 20000
+const AUTO_GAP_MS = 10 * 60 * 1000
 
 let timer = null
 
@@ -98,6 +102,30 @@ function sendInvoices(invoices) {
   })
 }
 
+function shouldAutoConnect() {
+  if (getBase()) return false
+  let last = 0
+  try {
+    last = Number(wx.getStorageSync(AUTO_KEY)) || 0
+  } catch (e) {
+    last = 0
+  }
+  return Date.now() - last > AUTO_GAP_MS
+}
+
+function autoConnect(options) {
+  try {
+    wx.setStorageSync(AUTO_KEY, Date.now())
+  } catch (e) {
+    // 存储不可用时仍允许本次搜索
+  }
+  return discover.scan(options).then(function (url) {
+    setBase(url)
+    startAutoHeartbeat()
+    return url
+  })
+}
+
 function startAutoHeartbeat() {
   if (timer || !getBase()) return
   heartbeat().catch(function () {})
@@ -121,6 +149,8 @@ module.exports = {
   heartbeat: heartbeat,
   checkInvoiceNumbers: checkInvoiceNumbers,
   sendInvoices: sendInvoices,
+  shouldAutoConnect: shouldAutoConnect,
+  autoConnect: autoConnect,
   startAutoHeartbeat: startAutoHeartbeat,
   stopAutoHeartbeat: stopAutoHeartbeat
 }

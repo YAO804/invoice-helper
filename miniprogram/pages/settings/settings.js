@@ -1,12 +1,16 @@
 const store = require('../../utils/store')
 const lanservice = require('../../utils/lanservice')
+const discover = require('../../utils/discover')
 
 Page({
   data: {
     basis: 'created',
     reviewCount: 0,
     desktopUrl: '',
-    desktopStatus: '未配置'
+    desktopStatus: '未配置',
+    canDiscover: false,
+    discovering: false,
+    discoverTip: ''
   },
 
   onShow() {
@@ -15,7 +19,8 @@ Page({
       basis: store.getBasis(),
       reviewCount: store.reviewList().length,
       desktopUrl: url,
-      desktopStatus: url ? '已配置' : '未配置'
+      desktopStatus: url ? '已配置' : '未配置',
+      canDiscover: discover.supported()
     })
   },
 
@@ -41,6 +46,26 @@ Page({
     lanservice.startAutoHeartbeat()
     this.setData({ desktopUrl: url, desktopStatus: '已配置' })
     wx.showToast({ title: '已保存', icon: 'none' })
+  },
+
+  async onDiscover() {
+    if (this.data.discovering) return
+    this.setData({ discovering: true, discoverTip: '正在搜索同一局域网的电脑…' })
+    try {
+      const url = await lanservice.autoConnect({ settleMs: 2500 })
+      this.setData({
+        desktopUrl: url,
+        desktopStatus: '已自动连接',
+        discoverTip: '已找到电脑：' + url,
+        discovering: false
+      })
+      wx.showToast({ title: '已自动连接', icon: 'none' })
+    } catch (e) {
+      this.setData({
+        discoverTip: e.message || '没有找到电脑，请手动填写地址',
+        discovering: false
+      })
+    }
   },
 
   async onTestDesktop() {

@@ -11,7 +11,10 @@
 
   <view class="card">
     <view class="card-t">桌面端连接</view>
-    <view class="tiny muted" style="margin:8rpx 0 14rpx">保存电脑端地址后，小程序打开时会自动上报在线状态。电脑端显示「小程序在线」即表示连接成功。</view>
+    <view class="tiny muted" style="margin:8rpx 0 14rpx">手机和电脑连同一个 WiFi 即可自动找到电脑；找不到时再手动填地址。</view>
+    <view wx:if="{{canDiscover}}" class="btn btn-block" bindtap="onDiscover" hover-class="btn-hover">{{discovering ? '正在搜索…' : '自动搜索电脑'}}</view>
+    <view wx:else class="tiny muted" style="margin-bottom:12rpx">当前微信版本不支持自动搜索，请手动填写地址。</view>
+    <view wx:if="{{discoverTip}}" class="tiny muted" style="margin:10rpx 0">{{discoverTip}}</view>
     <input class="input" value="{{desktopUrl}}" bindinput="onDesktopUrlInput" placeholder="http://192.168.1.20:8765" />
     <view class="btn-row" style="margin-top:16rpx">
       <view class="btn" bindtap="onSaveDesktop" hover-class="btn-hover">保存地址</view>

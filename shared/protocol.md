@@ -1,4 +1,4 @@
-# 小程序与桌面端通信协议 v0.4
+# 小程序与桌面端通信协议 v0.5
 
 ## 基础约定
 
@@ -10,6 +10,24 @@
 - 当前版本不要求 HTTPS，也不校验小程序 request 合法域名。
 - 当前版本没有 token，只允许在可信局域网内自用。
 - 小程序打开时每 20 秒上报一次心跳；桌面端按 45 秒窗口判断在线。
+
+### 电脑地址自动发现
+
+桌面端启动时注册 mDNS 服务：
+
+```text
+实例名: invoice-helper-desktop
+服务类型: _http._tcp.
+域名: local.
+TXT: app=攒票小匣, version=1.0.0
+```
+
+小程序安卓端用 `wx.startLocalServiceDiscovery({serviceType: '_http._tcp.'})` 搜索，
+`wx.onLocalServiceFound` 返回 `ip` 和 `port`。小程序逐个请求 `/api/health` 验证，
+取第一个可达地址作为 `http://IP:PORT`。搜索会在找到后停止，微信最长运行 30 秒。
+
+iOS 微信 7.0.18 及以上不支持 mDNS，保留手动填写地址作为兜底。
+小程序首次启动且未配置地址时会自动尝试一次；失败后 10 分钟内不再重试。
 
 ## GET /api/health
 
@@ -187,6 +205,50 @@ only_duplicates=1, only_need_fill=1
 
 判重口径：**发票号码相同即为重复**。
 重复记录会写入台账并高亮显示，由用户自行选择删除，不自动删除。
+
+### PUT /api/invoices/{id}
+
+补录单张发票字段。`id` 是列表里的行号。请求体直接传发票字段：
+
+```json
+{
+  "number": "26932000001877489821",
+  "seller_name": "宁波顺渝餐饮管理有限公司",
+  "seller_tax_id": "91330200MA2XXX",
+  "buyer_name": "个人",
+  "amount": "100.00",
+  "tax": "13.00",
+  "total": "113.00",
+  "tax_rate": "13%"
+}
+```
+
+`batch` 和 `created_at` 不允许覆盖，保持原值。写入前自动备份。
+
+响应：
+
+```json
+{ "updated": true, "invoice": {} }
+```
+
+### POST /api/invoices/purge
+
+按电脑端「录入时间」清理台账。
+
+请求：
+
+```json
+{ "from": "2026-11-01", "to": "2026-11-17", "confirm": false }
+```
+
+`confirm=false`（默认）只返回命中数量，不删除；`confirm=true` 执行删除并自动备份。
+`from` 和 `to` 至少填一个，比较的是 `created_at` 的日期部分。
+
+响应：
+
+```json
+{ "removed": 12, "confirmed": false }
+```
 
 ### POST /api/invoices/import
 

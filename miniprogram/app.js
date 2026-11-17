@@ -16,6 +16,9 @@ App({
       console.error('[store] init failed', e)
     }
     lanservice.startAutoHeartbeat()
+    if (lanservice.shouldAutoConnect()) {
+      lanservice.autoConnect().catch(function () {})
+    }
   },
 
   onShow() {
