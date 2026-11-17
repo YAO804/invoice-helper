@@ -1,6 +1,8 @@
 const lanservice = require('./lanservice')
 const store = require('./store')
 
+const MAX_SEND = 200
+
 function money(cents) {
   const value = Number(cents) || 0
   return value > 0 ? store.yuan(value) : ''
@@ -49,13 +51,52 @@ function confirmDuplicates(matches) {
   })
 }
 
-function postList(list) {
+function confirmLimit(count) {
+  return new Promise(function (resolve) {
+    wx.showModal({
+      title: '超出单次发送限制',
+      content: '电脑端单次最多接收 ' + MAX_SEND + ' 张，本次共有 ' + count + ' 张。将只发送前 ' + MAX_SEND + ' 张，剩余 ' + (count - MAX_SEND) + ' 张不会发送。',
+      confirmText: '发送前 ' + MAX_SEND + ' 张',
+      cancelText: '取消',
+      success: function (r) { resolve(!!r.confirm) },
+      fail: function () { resolve(false) }
+    })
+  })
+}
+
+function postList(list, left) {
   return lanservice.sendInvoices(list).then(function (result) {
     return {
       sent: result.added || 0,
       skipped: 0,
-      batch: result.batch || ''
+      batch: result.batch || '',
+      left: left
     }
+  })
+}
+
+function sendChecked(invoices, left) {
+  return lanservice.checkInvoiceNumbers(invoices.map(function (invoice) {
+    return invoice.number
+  })).then(function (result) {
+    const matches = result.matches || {}
+    if (!Object.keys(matches).length) return postList(invoices, left)
+
+    return confirmDuplicates(matches).then(function (keepAll) {
+      if (keepAll) return postList(invoices, left)
+      const kept = invoices.filter(function (invoice) {
+        return !matches[invoice.number]
+      })
+      if (!kept.length) {
+        return { sent: 0, skipped: invoices.length, batch: '', left: left }
+      }
+      return postList(kept, left).then(function (summary) {
+        summary.skipped = invoices.length - kept.length
+        return summary
+      })
+    })
+  }).catch(function (error) {
+    return { sent: 0, skipped: 0, left: left, error: error.message || '发送失败' }
   })
 }
 
@@ -63,29 +104,12 @@ function send(drafts) {
   const invoices = (drafts || []).map(toInvoice).filter(function (invoice) {
     return !!invoice.number
   })
-  if (!invoices.length) return Promise.resolve({ sent: 0, skipped: 0, batch: '' })
+  if (!invoices.length) return Promise.resolve({ sent: 0, skipped: 0, batch: '', left: 0 })
+  if (invoices.length <= MAX_SEND) return sendChecked(invoices, 0)
 
-  return lanservice.checkInvoiceNumbers(invoices.map(function (invoice) {
-    return invoice.number
-  })).then(function (result) {
-    const matches = result.matches || {}
-    if (!Object.keys(matches).length) return postList(invoices)
-
-    return confirmDuplicates(matches).then(function (keepAll) {
-      if (keepAll) return postList(invoices)
-      const kept = invoices.filter(function (invoice) {
-        return !matches[invoice.number]
-      })
-      if (!kept.length) {
-        return { sent: 0, skipped: invoices.length, batch: '' }
-      }
-      return postList(kept).then(function (summary) {
-        summary.skipped = invoices.length - kept.length
-        return summary
-      })
-    })
-  }).catch(function (error) {
-    return { sent: 0, skipped: 0, error: error.message || '发送失败' }
+  return confirmLimit(invoices.length).then(function (go) {
+    if (!go) return { sent: 0, skipped: 0, batch: '', left: 0, cancelled: true }
+    return sendChecked(invoices.slice(0, MAX_SEND), invoices.length - MAX_SEND)
   })
 }
 

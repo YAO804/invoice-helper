@@ -114,9 +114,11 @@ function sendToDesktop(drafts, done) {
     if (summary.error) {
       return wx.showToast({ title: '发送失败：' + summary.error, icon: 'none', duration: 2500 })
     }
+    if (summary.cancelled) return
 
     const tip = '成功发送 ' + summary.sent + ' 张' +
       (summary.skipped ? '\n跳过重复 ' + summary.skipped + ' 张' : '') +
+      (summary.left ? '\n未发送 ' + summary.left + ' 张（单次上限 200 张）' : '') +
       (summary.batch ? '\n批次：' + summary.batch : '') +
       '\n电脑台账会自动标记待补录。'
 

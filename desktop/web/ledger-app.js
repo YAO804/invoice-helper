@@ -2,6 +2,15 @@ let invoiceData = null
 let selectedInvoices = new Set()
 let pendingImportFile = null
 let invoiceSearchTimer = null
+let editingId = 0
+
+const EDIT_FIELDS = [
+  ['number', 'editNumber'], ['code', 'editCode'], ['kind', 'editKind'],
+  ['issue_date', 'editIssueDate'], ['seller_name', 'editSellerName'],
+  ['seller_tax_id', 'editSellerTaxId'], ['buyer_name', 'editBuyerName'],
+  ['buyer_tax_id', 'editBuyerTaxId'], ['amount', 'editAmount'],
+  ['tax', 'editTax'], ['total', 'editTotal'], ['tax_rate', 'editTaxRate']
+]
 
 function buildInvoiceParams() {
   const params = new URLSearchParams()
@@ -96,6 +105,47 @@ async function removeInvoices(ids) {
   }
 }
 
+function openEdit(item) {
+  EDIT_FIELDS.forEach(([field, id]) => { $(id).value = item[field] || '' })
+  editingId = item.id
+  $('invoiceEditModal').hidden = false
+}
+
+function closeEdit() {
+  editingId = 0
+  $('invoiceEditModal').hidden = true
+}
+
+async function saveEdit() {
+  if (!editingId) return
+  const payload = {}
+  EDIT_FIELDS.forEach(([field, id]) => { payload[field] = ($(id).value || '').trim() })
+  if (!payload.number) return alert('发票号码不能为空')
+
+  try {
+    await updateInvoice(editingId, payload)
+    closeEdit()
+    await refreshLedger()
+    if (window.refresh) window.refresh()
+  } catch (error) {
+    alert('补录失败：' + error.message)
+  }
+}
+
+function purgeRange(confirm) {
+  const from = $('invPurgeFrom').value
+  const to = $('invPurgeTo').value
+  if (!from && !to) return alert('请选择录入时间的起止日期')
+  if (confirm && !window.confirm('确定清理这段时间录入的发票？清理前会自动备份。')) return
+
+  return purgeInvoices(from, to, confirm).then((result) => {
+    $('purgeResult').textContent = confirm
+      ? '已清理 ' + result.removed + ' 张发票。'
+      : '该时间段有 ' + result.removed + ' 张发票，确认后将删除。'
+    if (confirm) return refreshLedger()
+  }).catch((error) => alert('清理失败：' + error.message))
+}
+
 function openDrawer() {
   $('duplicateDrawer').hidden = false
 }
@@ -121,6 +171,17 @@ function bindLedgerEvents() {
   })
 
   document.addEventListener('click', (event) => {
+    const editButton = event.target.closest('[data-action="edit-invoice"]')
+    if (editButton) {
+      const item = (invoiceData.items || []).find((row) => row.id === Number(editButton.dataset.id))
+      if (item) openEdit(item)
+      return
+    }
+    if (event.target.closest('#saveEditBtn')) return saveEdit()
+    if (event.target.closest('#closeEditBtn') || event.target.closest('#cancelEditBtn')) return closeEdit()
+    if (event.target.closest('#invoicePurgePreviewBtn')) return purgeRange(false)
+    if (event.target.closest('#invoicePurgeBtn')) return purgeRange(true)
+
     const button = event.target.closest('[data-action="delete-invoice"]')
     if (button) {
       removeInvoices([Number(button.dataset.id)])
@@ -149,6 +210,10 @@ function bindLedgerEvents() {
 
   $('duplicateDrawer').addEventListener('click', (event) => {
     if (event.target.id === 'duplicateDrawer') closeDrawer()
+  })
+
+  $('invoiceEditModal').addEventListener('click', (event) => {
+    if (event.target.id === 'invoiceEditModal') closeEdit()
   })
 
   setInterval(() => {

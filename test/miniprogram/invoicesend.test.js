@@ -15,7 +15,10 @@ function check(name, actual, expected) {
 const storage = { desktop_base_url: 'http://192.168.1.20:8765' }
 let stubMatches = {}
 let modalConfirm = false
+let limitConfirm = false
 let lastSendPayload = null
+let lastModal = null
+let many = []
 
 global.wx = {
   getStorageSync(k) { return storage[k] },
@@ -28,7 +31,9 @@ global.wx = {
     options.success({ statusCode: 200, data: { added: options.data.invoices.length, batch: 'B-TEST' } })
   },
   showModal(options) {
-    options.success({ confirm: modalConfirm })
+    lastModal = options
+    const confirm = options.title === '超出单次发送限制' ? limitConfirm : modalConfirm
+    options.success({ confirm: confirm })
   }
 }
 
@@ -76,6 +81,20 @@ invoicesend.send([draft('N1'), draft('N2')]).then(function (summary) {
 }).then(function (summary) {
   check('仍然发送时数量', summary.sent, 2)
   check('仍然发送时跳过数', summary.skipped, 0)
+
+  for (let i = 0; i < 205; i++) many.push(draft('B' + i))
+  limitConfirm = false
+  return invoicesend.send(many)
+}).then(function (summary) {
+  check('超限取消不再发送', summary.cancelled, true)
+  check('超限有明确提示', lastModal.title, '超出单次发送限制')
+
+  limitConfirm = true
+  return invoicesend.send(many)
+}).then(function (summary) {
+  check('超限只发送前200张', lastSendPayload.invoices.length, 200)
+  check('超限发送数', summary.sent, 200)
+  check('超限剩余张数', summary.left, 5)
 
   console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
   process.exit(failCount === 0 ? 0 : 1)

@@ -30,6 +30,22 @@ function deleteInvoices(ids) {
   })
 }
 
+function updateInvoice(id, data) {
+  return requestJSON('/api/invoices/' + id, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+}
+
+function purgeInvoices(from, to, confirm) {
+  return requestJSON('/api/invoices/purge', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ from: from, to: to, confirm: confirm })
+  })
+}
+
 function downloadInvoiceCSV(params) {
   window.location.href = '/api/invoices/export?' + params.toString()
 }

@@ -47,7 +47,10 @@ function renderInvoiceTable(items, selected) {
       <td>${esc(item.tax_rate)}</td>
       <td>${esc(item.batch)}</td>
       <td>${esc(item.created_at)}</td>
-      <td><button type="button" class="link danger" data-action="delete-invoice" data-id="${item.id}">删除</button></td>
+      <td>
+        <button type="button" class="link" data-action="edit-invoice" data-id="${item.id}">补录</button>
+        <button type="button" class="link danger" data-action="delete-invoice" data-id="${item.id}">删除</button>
+      </td>
     </tr>
   `).join('')
 }

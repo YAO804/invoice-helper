@@ -153,6 +153,18 @@
       </section>
 
       <section class="card">
+        <div class="card-head"><h2>按录入时间清理</h2></div>
+        <div class="row">
+          <input id="invPurgeFrom" type="date" aria-label="录入时间起">
+          <span class="hint">至</span>
+          <input id="invPurgeTo" type="date" aria-label="录入时间止">
+          <button id="invoicePurgePreviewBtn" type="button" class="secondary">预览</button>
+          <button id="invoicePurgeBtn" type="button" class="danger-solid">确认清理</button>
+        </div>
+        <p id="purgeResult" class="hint">只清理电脑台账，不影响手机本地记录；清理前会自动备份。</p>
+      </section>
+
+      <section class="card">
         <h2>搜索与筛选</h2>
         <div class="filter-bar">
           <input id="invKeyword" type="text" placeholder="全局搜索：号码/销方/买方/金额/批次">
@@ -195,6 +207,33 @@
         <button id="closeDrawerBtn" type="button" class="secondary">关闭</button>
       </div>
       <div id="duplicateBody" class="drawer-body"></div>
+    </div>
+  </div>
+
+  <div id="invoiceEditModal" class="modal" hidden>
+    <div class="modal-panel">
+      <div class="drawer-head">
+        <h2>补录发票信息</h2>
+        <button id="closeEditBtn" type="button" class="secondary">关闭</button>
+      </div>
+      <div class="modal-body">
+        <label>发票号码 <input id="editNumber" type="text"></label>
+        <label>发票代码 <input id="editCode" type="text"></label>
+        <label>票种 <input id="editKind" type="text"></label>
+        <label>开票日期 <input id="editIssueDate" type="text" placeholder="YYYY-MM-DD"></label>
+        <label>销方名称 <input id="editSellerName" type="text"></label>
+        <label>销方税号 <input id="editSellerTaxId" type="text"></label>
+        <label>买方名称 <input id="editBuyerName" type="text"></label>
+        <label>买方税号 <input id="editBuyerTaxId" type="text"></label>
+        <label>不含税金额 <input id="editAmount" type="text" placeholder="0.00"></label>
+        <label>税额 <input id="editTax" type="text" placeholder="0.00"></label>
+        <label>价税合计 <input id="editTotal" type="text" placeholder="0.00"></label>
+        <label>税率 <input id="editTaxRate" type="text" placeholder="6%"></label>
+      </div>
+      <div class="row modal-actions">
+        <button id="saveEditBtn" type="button">保存补录</button>
+        <button id="cancelEditBtn" type="button" class="secondary">取消</button>
+      </div>
     </div>
   </div>
 
