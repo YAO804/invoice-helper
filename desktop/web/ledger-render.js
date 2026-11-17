@@ -28,6 +28,17 @@ function copyCell(value) {
   return `<button type="button" class="copy-cell" data-copy="${esc(text)}" title="点击复制">${esc(text)}<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M0 6.75C0 5.78.78 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .14.11.25.25.25h7.5c.14 0 .25-.11.25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25v-7.5ZM5 1.75C5 .78 5.78 0 6.75 0h7.5c.97 0 1.75.78 1.75 1.75v7.5c0 .97-.78 1.75-1.75 1.75h-7.5A1.75 1.75 0 0 1 5 9.25v-7.5Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .14.11.25.25.25h7.5c.14 0 .25-.11.25-.25v-7.5a.25.25 0 0 0-.25-.25h-7.5Z"/></svg></button>`
 }
 
+/** 报销人可点击直接编辑，无需打开补录弹窗 */
+function reimburserCell(item) {
+  const value = item.reimburser || ''
+  const label = value ? esc(value) : '<span class="muted">待补录</span>'
+  return `<td class="reimburser-cell" data-action="edit-reimburser" data-id="${item.id}"
+    tabindex="0" role="button" title="点击填写报销人">
+    <span class="inline-value">${label}</span>
+    <svg class="inline-pencil" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Zm1.414 1.06a.25.25 0 0 0-.354 0L3.464 11.1a.25.25 0 0 0-.064.108l-.497 1.74 1.74-.497a.25.25 0 0 0 .108-.064l8.612-8.612a.25.25 0 0 0 0-.354l-1.086-1.086Z"/></svg>
+  </td>`
+}
+
 function renderInvoiceTable(items, selected) {
   const body = $('invoiceBody')
   if (!items || !items.length) {
@@ -43,7 +54,7 @@ function renderInvoiceTable(items, selected) {
       <td>${esc(item.kind)}</td>
       <td>${esc(item.issue_date)}</td>
       <td class="num">${esc(item.total)}</td>
-      <td>${item.reimburser ? esc(item.reimburser) : '<span class="muted">（待补录）</span>'}</td>
+      ${reimburserCell(item)}
       <td>${esc(item.batch)}</td>
       <td>${esc(item.created_at)}</td>
       <td class="col-actions">

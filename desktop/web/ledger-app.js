@@ -28,6 +28,79 @@ async function copyInvoiceValue(button) {
   setTimeout(() => button.classList.remove('copied'), 1200)
 }
 
+/** PUT /api/invoices/{id} 是整条替换（仅保留批次与录入时间），必须带上其余字段 */
+function invoicePayload(item, overrides) {
+  const payload = {
+    number: item.number || '',
+    code: item.code || '',
+    kind: item.kind || '',
+    issue_date: item.issue_date || '',
+    total: item.total || '',
+    reimburser: item.reimburser || ''
+  }
+  return Object.assign(payload, overrides || {})
+}
+
+/** 报销人单元格行内编辑：Enter/Tab/失焦保存，Esc 取消 */
+function startReimburserEdit(cell) {
+  if (cell.dataset.editing === '1') return
+  const id = Number(cell.dataset.id)
+  const item = (invoiceData.items || []).find((row) => row.id === id)
+  if (!item) return
+
+  const original = item.reimburser || ''
+  const input = document.createElement('input')
+  input.className = 'inline-input'
+  input.type = 'text'
+  input.value = original
+  input.placeholder = '输入报销人'
+  input.setAttribute('aria-label', '报销人')
+  input.autocomplete = 'off'
+
+  cell.dataset.editing = '1'
+  cell.classList.add('cell-editing')
+  cell.textContent = ''
+  cell.appendChild(input)
+  input.focus()
+  input.select()
+
+  let done = false
+  const restore = () => {
+    cell.classList.remove('cell-editing')
+    cell.dataset.editing = '0'
+    renderInvoiceTable(invoiceData.items || [], selectedInvoices)
+  }
+
+  const finish = async (save) => {
+    if (done) return
+    done = true
+    const value = input.value.trim()
+    input.disabled = true
+    if (!save || value === original) return restore()
+
+    try {
+      await updateInvoice(id, invoicePayload(item, { reimburser: value }))
+      showToast(value ? '报销人已保存：' + value : '已清空报销人')
+      await refreshLedger()
+      if (window.refresh) window.refresh()
+    } catch (error) {
+      showToast('保存失败：' + error.message)
+      restore()
+    }
+  }
+
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      finish(true)
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      finish(false)
+    }
+  })
+  input.addEventListener('blur', () => finish(true))
+}
+
 function activeFilterCount() {
   const fields = ['invNumber', 'invReimburser', 'invBatchFilter', 'invDateFrom', 'invDateTo', 'invAmountMin', 'invAmountMax']
   let count = fields.filter((id) => ($(id).value || '').trim()).length
@@ -228,6 +301,16 @@ function bindLedgerEvents() {
   $('filterResetBtn').addEventListener('click', resetFilters)
   $('selectAll').addEventListener('change', (event) => toggleSelectAll(event.target.checked))
 
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    const target = event.target
+    if (!target || typeof target.closest !== 'function') return
+    const cell = target.closest('.reimburser-cell[data-action="edit-reimburser"]')
+    if (!cell || cell.dataset.editing === '1') return
+    event.preventDefault()
+    startReimburserEdit(cell)
+  })
+
   document.addEventListener('change', (event) => {
     if (!event.target.classList.contains('invoice-check')) return
     const id = Number(event.target.dataset.id)
@@ -242,6 +325,11 @@ function bindLedgerEvents() {
     const copyButton = event.target.closest('.copy-cell')
     if (copyButton) {
       copyInvoiceValue(copyButton)
+      return
+    }
+    const reimburserCell = event.target.closest('[data-action="edit-reimburser"]')
+    if (reimburserCell) {
+      startReimburserEdit(reimburserCell)
       return
     }
     const editButton = event.target.closest('[data-action="edit-invoice"]')
