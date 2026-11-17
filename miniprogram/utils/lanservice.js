@@ -66,6 +66,38 @@ function heartbeat() {
   })
 }
 
+function postJSON(path, data) {
+  const base = getBase()
+  if (!base) return Promise.reject(new Error('未配置桌面端地址'))
+
+  return new Promise(function (resolve, reject) {
+    wx.request({
+      url: base + path,
+      method: 'POST',
+      header: { 'content-type': 'application/json' },
+      data: data,
+      success: function (res) {
+        if (res.statusCode >= 200 && res.statusCode < 300) return resolve(res.data)
+        reject(new Error('HTTP ' + res.statusCode))
+      },
+      fail: function (err) {
+        reject(new Error((err && err.errMsg) || '连接失败'))
+      }
+    })
+  })
+}
+
+function checkInvoiceNumbers(numbers) {
+  return postJSON('/api/invoices/check', { numbers: numbers })
+}
+
+function sendInvoices(invoices) {
+  return postJSON('/api/invoices', {
+    device_id: deviceId(),
+    invoices: invoices
+  })
+}
+
 function startAutoHeartbeat() {
   if (timer || !getBase()) return
   heartbeat().catch(function () {})
@@ -87,6 +119,8 @@ module.exports = {
   setBase: setBase,
   deviceId: deviceId,
   heartbeat: heartbeat,
+  checkInvoiceNumbers: checkInvoiceNumbers,
+  sendInvoices: sendInvoices,
   startAutoHeartbeat: startAutoHeartbeat,
   stopAutoHeartbeat: stopAutoHeartbeat
 }
