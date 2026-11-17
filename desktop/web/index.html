@@ -136,7 +136,7 @@
         <div class="stat">
           <div class="stat-label">待补录</div>
           <div id="invNeedFill" class="stat-value warn">—</div>
-          <div class="stat-sub">关键字段缺失</div>
+          <div class="stat-sub">报销人为空</div>
         </div>
         <div class="stat">
           <div class="stat-label">最新批次</div>
@@ -156,19 +156,28 @@
             <button id="invoiceExportSelectedBtn" type="button" class="btn btn-ghost">导出选中</button>
             <button id="invoiceDeleteSelectedBtn" type="button" class="btn btn-danger-ghost">删除选中</button>
           </div>
-          <button id="filterToggleBtn" type="button" class="btn btn-ghost" aria-expanded="false" aria-controls="filterPanel">
-            筛选 <span id="filterCount" class="filter-count" hidden>0</span>
-          </button>
+          <div class="toolbar-right">
+            <label class="sort-label" for="invSort">排序</label>
+            <select id="invSort" class="sort-select" aria-label="台账排序方式">
+              <option value="created">录入时间</option>
+              <option value="number">发票号码</option>
+              <option value="issued">开票日期</option>
+              <option value="reimburser">报销人</option>
+            </select>
+            <button id="filterToggleBtn" type="button" class="btn btn-ghost" aria-expanded="false" aria-controls="filterPanel">
+              筛选 <span id="filterCount" class="filter-count" hidden>0</span>
+            </button>
+          </div>
         </div>
 
         <div id="filterPanel" class="filter-panel" hidden>
           <div class="filter-grid">
             <label class="filter-field filter-wide"><span>全局搜索</span>
-              <input id="invKeyword" type="text" placeholder="号码 / 销方 / 买方 / 金额 / 批次"></label>
+              <input id="invKeyword" type="text" placeholder="号码 / 报销人 / 金额 / 批次"></label>
             <label class="filter-field"><span>发票号码</span>
               <input id="invNumber" type="text" placeholder="发票号码"></label>
-            <label class="filter-field"><span>销方名称</span>
-              <input id="invSeller" type="text" placeholder="销方名称"></label>
+            <label class="filter-field"><span>报销人</span>
+              <input id="invReimburser" type="text" placeholder="报销人"></label>
             <label class="filter-field"><span>录入批次</span>
               <input id="invBatchFilter" type="text" placeholder="录入批次"></label>
             <label class="filter-field"><span>开票日期起</span>
@@ -200,8 +209,7 @@
               <tr>
                 <th class="col-check"><input id="selectAll" type="checkbox" aria-label="全选当前页"></th>
                 <th>发票号码</th><th>发票代码</th><th>票种</th><th>开票日期</th>
-                <th>销方名称</th><th>销方税号</th><th>买方名称</th><th>买方税号</th>
-                <th class="num">不含税金额</th><th class="num">税额</th><th class="num">价税合计</th><th>税率</th>
+                <th class="num">价税合计</th><th>报销人</th>
                 <th>录入批次</th><th>录入时间</th><th class="col-actions">操作</th>
               </tr>
             </thead>
@@ -249,14 +257,8 @@
         <label>发票代码 <input id="editCode" type="text"></label>
         <label>票种 <input id="editKind" type="text"></label>
         <label>开票日期 <input id="editIssueDate" type="text" placeholder="YYYY-MM-DD"></label>
-        <label>销方名称 <input id="editSellerName" type="text"></label>
-        <label>销方税号 <input id="editSellerTaxId" type="text"></label>
-        <label>买方名称 <input id="editBuyerName" type="text"></label>
-        <label>买方税号 <input id="editBuyerTaxId" type="text"></label>
-        <label>不含税金额 <input id="editAmount" type="text" placeholder="0.00"></label>
-        <label>税额 <input id="editTax" type="text" placeholder="0.00"></label>
         <label>价税合计 <input id="editTotal" type="text" placeholder="0.00"></label>
-        <label>税率 <input id="editTaxRate" type="text" placeholder="6%"></label>
+        <label>报销人 <input id="editReimburser" type="text" placeholder="由报销人自行补录"></label>
       </div>
       <div class="row modal-actions">
         <button id="saveEditBtn" type="button" class="btn">保存补录</button>

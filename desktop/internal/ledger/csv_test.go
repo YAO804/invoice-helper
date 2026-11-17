@@ -21,6 +21,7 @@ func TestCSVRoundTrip(t *testing.T) {
 }
 
 func TestParseLegacyCSV(t *testing.T) {
+	// 旧版 12 列仍应能读：按列名取值，被删除的字段忽略，价税合计/批次正常解析
 	legacy := "发票号码,发票代码,票种,开票日期,销方名称,销方税号,买方名称,买方税号,不含税金额,税额,价税合计,税率\n" +
 		"N003,,普通发票,2026-08-03,丙公司,T003,个人,,50.00,6.50,56.50,13%\n"
 
@@ -28,7 +29,7 @@ func TestParseLegacyCSV(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(list) != 1 || list[0].Number != "N003" || list[0].Batch != "" {
+	if len(list) != 1 || list[0].Number != "N003" || list[0].Total != "56.50" || list[0].Batch != "" {
 		t.Fatalf("旧版 12 列解析错误: %+v", list)
 	}
 }

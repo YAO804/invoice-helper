@@ -63,35 +63,31 @@ console.log('\n--- 台账 CSV ---')
 const list = [
   {
     invoice_no: '26932000001295659876', invoice_code: '', invoice_type: '普通发票',
-    issue_date: '2026-08-02', seller_name: '宁波,顺渝公司', seller_tax_id: '91330205MACB4PTU91',
-    buyer_name: '姚未正（个人）', buyer_tax_id: '',
-    amount_excl_tax_cent: 13868, tax_cent: 832, total_cent: 14700,
-    tax_rate: '0.06', status: 'unknown', source: 'xml',
-    anomaly: ['金额勾稽不符', '号码位数异常'], note: '测试,备注', created_at: Date.now(),
+    issue_date: '2026-08-02', total_cent: 14700, reimburser: '宁波,顺渝',
+    source: 'xml',
+    anomaly: ['号码位数异常'], note: '测试,备注', created_at: Date.now(),
     files: [{ name: 'a.xml', size: 4304, digest: 'abcdef12', digestType: 'md5', path: '/usr/invoices/files/abcdef12_a.xml' }]
   }
 ]
 const ledger = exporter.ledgerCsv(list)
 const header = ledger.split('\r\n')[0]
 check('表头含价税合计', header.indexOf('价税合计') > 0, true)
+check('表头含报销人', header.indexOf('报销人') > 0, true)
 check('金额转成元', ledger.indexOf('147.00') > 0, true)
-check('销方逗号被转义', ledger.indexOf('"宁波,顺渝公司"') > 0, true)
-check('XML 不含税金额保留', ledger.indexOf('138.68') > 0, true)
-check('XML 税额保留', ledger.indexOf('8.32') > 0, true)
-check('不导出内部状态列', ['状态', '异常提示', '备注', '创建时间'].every(function (h) { return header.indexOf(h) < 0 }), true)
+check('报销人逗号被转义', ledger.indexOf('"宁波,顺渝"') > 0, true)
+check('不导出内部状态列', ['状态', '异常提示', '备注', '创建时间', '销方名称', '税额', '税率'].every(function (h) { return header.indexOf(h) < 0 }), true)
 
 const qrLedger = exporter.ledgerCsv([{
   invoice_no: '26327000000459915366', invoice_type: '数电票',
   issue_date: '2026-03-05', total_cent: 29500,
-  source: 'qr', anomaly: ['字段待补录'], note: '扫码草稿',
+  source: 'qr', reimburser: '', anomaly: ['报销人待补录'], note: '扫码草稿',
   status: 'unknown', created_at: Date.now()
 }])
 const qrCells = qrLedger.split('\r\n')[1].split(',')
-check('扫码草稿不含税金额留空', qrCells[8], '')
-check('扫码草稿税额留空', qrCells[9], '')
-check('扫码草稿价税合计保留', qrCells[10], '295.00')
-check('扫码草稿来源保留', qrCells[12], 'qr')
-check('内部信息不进 CSV', ['unknown', '字段待补录', '扫码草稿'].every(function (s) { return qrLedger.indexOf(s) < 0 }), true)
+check('扫码草稿报销人留空', qrCells[5], '')
+check('扫码草稿价税合计保留', qrCells[4], '295.00')
+check('扫码草稿来源保留', qrCells[6], 'qr')
+check('内部信息不进 CSV', ['unknown', '报销人待补录', '扫码草稿'].every(function (s) { return qrLedger.indexOf(s) < 0 }), true)
 
 console.log('\n--- 原件清单 CSV ---')
 const manifest = exporter.manifestCsv(list)

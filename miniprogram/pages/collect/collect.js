@@ -15,7 +15,7 @@ Page({
   onShow() { this.refresh() },
 
   refresh() {
-    const list = store.listInvoices({ sortBy: store.getBasis() })
+    const list = store.listInvoices({ sortBy: store.getSort() })
     this.setData({
       count: list.length,
       amountText: store.yuan(list.reduce(function (s, inv) { return s + (Number(inv.total_cent) || 0) }, 0)),

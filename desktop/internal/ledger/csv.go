@@ -43,20 +43,14 @@ func headerIndex(header []string) map[string]int {
 
 func invoiceFromRow(row []string, index map[string]int) Invoice {
 	return Invoice{
-		Number:      cell(row, index, "发票号码"),
-		Code:        cell(row, index, "发票代码"),
-		Kind:        cell(row, index, "票种"),
-		IssueDate:   cell(row, index, "开票日期"),
-		SellerName:  cell(row, index, "销方名称"),
-		SellerTaxID: cell(row, index, "销方税号"),
-		BuyerName:   cell(row, index, "买方名称"),
-		BuyerTaxID:  cell(row, index, "买方税号"),
-		Amount:      cell(row, index, "不含税金额"),
-		Tax:         cell(row, index, "税额"),
-		Total:       cell(row, index, "价税合计"),
-		TaxRate:     cell(row, index, "税率"),
-		Batch:       cell(row, index, "录入批次"),
-		CreatedAt:   cell(row, index, "录入时间"),
+		Number:     cell(row, index, "发票号码"),
+		Code:       cell(row, index, "发票代码"),
+		Kind:       cell(row, index, "票种"),
+		IssueDate:  cell(row, index, "开票日期"),
+		Total:      cell(row, index, "价税合计"),
+		Reimburser: cell(row, index, "报销人"),
+		Batch:      cell(row, index, "录入批次"),
+		CreatedAt:  cell(row, index, "录入时间"),
 	}
 }
 
@@ -92,8 +86,6 @@ func writeCSV(list []Invoice) ([]byte, error) {
 func invoiceRow(invoice Invoice) []string {
 	return []string{
 		invoice.Number, invoice.Code, invoice.Kind, invoice.IssueDate,
-		invoice.SellerName, invoice.SellerTaxID, invoice.BuyerName, invoice.BuyerTaxID,
-		invoice.Amount, invoice.Tax, invoice.Total, invoice.TaxRate,
-		invoice.Batch, invoice.CreatedAt,
+		invoice.Total, invoice.Reimburser, invoice.Batch, invoice.CreatedAt,
 	}
 }

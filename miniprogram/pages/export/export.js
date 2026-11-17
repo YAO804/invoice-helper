@@ -51,7 +51,7 @@ Page({
   },
 
   loadCustom() {
-    const all = store.listInvoices({ sortBy: this.data.basis })
+    const all = store.listInvoices({ sortBy: store.getSort() })
     this.setData({ customList: exportsel.toCards(all, this.data.customIds) })
   },
 

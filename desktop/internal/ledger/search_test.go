@@ -4,10 +4,10 @@ import "testing"
 
 func TestFilterByKeywordAndAmount(t *testing.T) {
 	list := sampleInvoices()
-	query := Query{Keyword: "乙公司", AmountMin: "200"}
+	query := Query{Keyword: "张三", AmountMin: "100"}
 	result := filter(list, query)
 
-	if len(result) != 1 || result[0].Number != "N002" {
+	if len(result) != 1 || result[0].Number != "N001" {
 		t.Fatalf("筛选错误: %+v", result)
 	}
 }

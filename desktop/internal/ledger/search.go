@@ -2,6 +2,7 @@ package ledger
 
 import (
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -11,8 +12,7 @@ type Query struct {
 	Number         string
 	Code           string
 	Kind           string
-	Seller         string
-	Buyer          string
+	Reimburser     string
 	Batch          string
 	DateFrom       string
 	DateTo         string
@@ -20,6 +20,7 @@ type Query struct {
 	AmountMax      string
 	OnlyDuplicates bool
 	OnlyNeedFill   bool
+	Sort           string
 }
 
 func QueryFromValues(values url.Values) Query {
@@ -28,8 +29,7 @@ func QueryFromValues(values url.Values) Query {
 		Number:         values.Get("number"),
 		Code:           values.Get("code"),
 		Kind:           values.Get("kind"),
-		Seller:         values.Get("seller"),
-		Buyer:          values.Get("buyer"),
+		Reimburser:     values.Get("reimburser"),
 		Batch:          values.Get("batch"),
 		DateFrom:       values.Get("date_from"),
 		DateTo:         values.Get("date_to"),
@@ -37,6 +37,7 @@ func QueryFromValues(values url.Values) Query {
 		AmountMax:      values.Get("amount_max"),
 		OnlyDuplicates: values.Get("only_duplicates") == "1" || values.Get("only_duplicates") == "true",
 		OnlyNeedFill:   values.Get("only_need_fill") == "1" || values.Get("only_need_fill") == "true",
+		Sort:           values.Get("sort"),
 	}
 }
 
@@ -60,10 +61,10 @@ func match(invoice Invoice, query Query) bool {
 	if !contains(invoice.Number, query.Number) || !contains(invoice.Code, query.Code) {
 		return false
 	}
-	if !contains(invoice.Kind, query.Kind) || !contains(invoice.SellerName, query.Seller) {
+	if !contains(invoice.Kind, query.Kind) || !contains(invoice.Reimburser, query.Reimburser) {
 		return false
 	}
-	if !contains(invoice.BuyerName, query.Buyer) || !contains(invoice.Batch, query.Batch) {
+	if !contains(invoice.Batch, query.Batch) {
 		return false
 	}
 	if query.DateFrom != "" && invoice.IssueDate < query.DateFrom {
@@ -108,8 +109,57 @@ func amountValue(value string) (float64, bool) {
 func searchText(invoice Invoice) string {
 	return strings.ToLower(strings.Join([]string{
 		invoice.Number, invoice.Code, invoice.Kind, invoice.IssueDate,
-		invoice.SellerName, invoice.SellerTaxID, invoice.BuyerName, invoice.BuyerTaxID,
-		invoice.Amount, invoice.Tax, invoice.Total, invoice.TaxRate,
-		invoice.Batch, invoice.CreatedAt,
+		invoice.Total, invoice.Reimburser, invoice.Batch, invoice.CreatedAt,
 	}, " "))
+}
+
+// sortInvoices 按指定字段排序。默认按录入时间倒序（新录入在前）。
+// 数值型/时间型字段用自然序，文本字段（报销人/号码）用不区分大小写的字典序。
+func sortInvoices(list []Invoice, sortBy string) []Invoice {
+	result := append([]Invoice(nil), list...)
+	less := invoiceLess(sortBy)
+	sort.SliceStable(result, func(i, j int) bool { return less(result[i], result[j]) })
+	return result
+}
+
+func invoiceLess(sortBy string) func(Invoice, Invoice) bool {
+	switch sortBy {
+	case "number":
+		return func(a, b Invoice) bool {
+			cmp := strings.Compare(strings.ToLower(a.Number), strings.ToLower(b.Number))
+			if cmp != 0 {
+				return cmp < 0
+			}
+			return a.ID < b.ID
+		}
+	case "issued":
+		return func(a, b Invoice) bool {
+			if a.IssueDate != b.IssueDate {
+				return a.IssueDate > b.IssueDate
+			}
+			return a.ID < b.ID
+		}
+	case "reimburser":
+		return func(a, b Invoice) bool {
+			la, lb := strings.ToLower(a.Reimburser), strings.ToLower(b.Reimburser)
+			// 空报销人排最后，方便先看到已填写的
+			if la == "" && lb != "" {
+				return false
+			}
+			if la != "" && lb == "" {
+				return true
+			}
+			if la != lb {
+				return la < lb
+			}
+			return a.ID < b.ID
+		}
+	default: // created：录入时间倒序
+		return func(a, b Invoice) bool {
+			if a.CreatedAt != b.CreatedAt {
+				return a.CreatedAt > b.CreatedAt
+			}
+			return a.ID > b.ID
+		}
+	}
 }

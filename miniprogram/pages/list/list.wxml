@@ -7,7 +7,6 @@
     </view>
     <view class="sum-amount">¥ {{totalText}}</view>
     <view class="row tiny muted">
-      <text>其中税额 ¥{{taxText}}</text>
       <text>数据仅存本机</text>
     </view>
   </view>
@@ -30,8 +29,10 @@
 
   <view class="card">
     <view class="row sort-bar">
-      <view class="sort-btn {{basis === 'created' ? 'on' : ''}}" data-basis="created" bindtap="onBasisChange" hover-class="btn-hover">按导入时间</view>
-      <view class="sort-btn {{basis === 'issued' ? 'on' : ''}}" data-basis="issued" bindtap="onBasisChange" hover-class="btn-hover">按开票日期</view>
+      <view class="sort-btn {{sortBy === 'created' ? 'on' : ''}}" data-sort="created" bindtap="onSortChange" hover-class="btn-hover">录入时间</view>
+      <view class="sort-btn {{sortBy === 'number' ? 'on' : ''}}" data-sort="number" bindtap="onSortChange" hover-class="btn-hover">发票号码</view>
+      <view class="sort-btn {{sortBy === 'issued' ? 'on' : ''}}" data-sort="issued" bindtap="onSortChange" hover-class="btn-hover">开票日期</view>
+      <view class="sort-btn {{sortBy === 'reimburser' ? 'on' : ''}}" data-sort="reimburser" bindtap="onSortChange" hover-class="btn-hover">报销人</view>
     </view>
     <picker mode="selector" range="{{monthOptions}}" value="{{monthIndex}}" bindchange="onMonthChange">
       <view class="picker-box row">
@@ -42,7 +43,7 @@
     <view class="chips">
       <view wx:for="{{categoryChips}}" wx:key="name" class="chip {{item.on ? 'on' : ''}}" data-value="{{item.value}}" bindtap="onCategoryChange" hover-class="btn-hover">{{item.name}}</view>
     </view>
-    <input class="input search" placeholder="搜索销方 / 发票号码 / 金额" value="{{keyword}}" bindinput="onKeywordInput" />
+    <input class="input search" placeholder="搜索报销人 / 发票号码 / 金额" value="{{keyword}}" bindinput="onKeywordInput" />
   </view>
 
   <view wx:for="{{invoices}}" wx:key="id" class="card invoice" data-id="{{item.id}}" bindtap="onOpenDetail" bindlongpress="onLongPress" hover-class="btn-hover">

@@ -23,7 +23,7 @@ func TestCheckInvoices(t *testing.T) {
 		Matches map[string]ledger.Invoice `json:"matches"`
 	}
 	decodeJSON(t, rec, &result)
-	if len(result.Matches) != 1 || result.Matches["N100"].SellerName != "甲公司" {
+	if len(result.Matches) != 1 || result.Matches["N100"].Reimburser != "甲公司" {
 		t.Fatalf("查重结果错误: %+v", result.Matches)
 	}
 }
@@ -35,9 +35,8 @@ func TestReceiveInvoices(t *testing.T) {
 		"invoices": []map[string]any{
 			{"number": "N200", "total": "105.00"},
 			{
-				"number": "N201", "total": "50.00", "seller_name": "乙公司",
-				"seller_tax_id": "T2", "buyer_name": "个人", "amount": "44.25",
-				"tax": "5.75", "tax_rate": "13%", "issue_date": "2026-08-01",
+				"number": "N201", "total": "50.00", "reimburser": "乙公司",
+				"issue_date": "2026-08-01",
 			},
 		},
 	}

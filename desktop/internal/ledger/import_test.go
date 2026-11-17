@@ -8,7 +8,7 @@ func TestPreviewAndCommitImport(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	incoming := append(sampleInvoices(), Invoice{Number: "", SellerName: "空号码"})
+	incoming := append(sampleInvoices(), Invoice{Number: "", Reimburser: "空号码"})
 	content, err := writeCSV(incoming)
 	if err != nil {
 		t.Fatal(err)

@@ -8,28 +8,20 @@ const store = require('./store')
 const csv = require('./csv')
 
 /**
- * 只导出对账用得上的票面字段。
- * 状态 / 异常提示 / 备注 / 创建时间是 App 内部管理信息，不进对账表。
+ * 只导出对账用得上的票面字段，列头与电脑端台账保持一致（电脑端按列名导入）。
+ * 状态 / 异常提示 / 备注 / 原件明细属于 App 内部管理信息，不进对账表。
  */
 const LEDGER_HEADERS = [
-  '发票号码', '发票代码', '票种', '开票日期', '销方名称', '销方税号',
-  '买方名称', '买方税号', '不含税金额', '税额', '价税合计', '税率', '来源'
+  '发票号码', '发票代码', '票种', '开票日期',
+  '价税合计', '报销人', '来源'
 ]
 
-const FILE_HEADERS = ['发票号码', '开票日期', '销方名称', '文件名', '大小(字节)', '摘要', '摘要算法', '本地路径']
-
-/** 扫码草稿没采到税额/不含税金额，留空比写 0.00 诚实 */
-function amountCell(inv, cents) {
-  if (!cents && inv.source === 'qr') return ''
-  return store.yuan(cents)
-}
+const FILE_HEADERS = ['发票号码', '开票日期', '报销人', '文件名', '大小(字节)', '摘要', '摘要算法', '本地路径']
 
 function ledgerRow(inv) {
   return [
     inv.invoice_no, inv.invoice_code, inv.invoice_type, inv.issue_date,
-    inv.seller_name, inv.seller_tax_id, inv.buyer_name, inv.buyer_tax_id,
-    amountCell(inv, inv.amount_excl_tax_cent), amountCell(inv, inv.tax_cent),
-    store.yuan(inv.total_cent), inv.tax_rate, inv.source
+    store.yuan(inv.total_cent), inv.reimburser || '', inv.source
   ]
 }
 
@@ -38,7 +30,7 @@ function fileRows(list) {
   list.forEach(function (inv) {
     (inv.files || []).forEach(function (f) {
       rows.push([
-        inv.invoice_no, inv.issue_date, inv.seller_name,
+        inv.invoice_no, inv.issue_date, inv.reimburser || '',
         f.name, f.size, f.digest, f.digestType || '', f.path
       ])
     })

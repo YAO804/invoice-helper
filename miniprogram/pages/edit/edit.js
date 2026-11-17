@@ -6,20 +6,14 @@ const EMPTY = {
   invoice_no: '',
   issue_date: '',
   invoice_type: '数电票',
-  seller_name: '',
-  seller_tax_id: '',
-  buyer_name: '',
   total: '',
-  excl: '',
-  tax: '',
-  tax_rate: '',
+  reimburser: '',
   category: '未分类',
   note: ''
 }
 
 const BASE_FIELDS = {
   invoice_code: '',
-  buyer_tax_id: '',
   source: 'manual',
   confidence: 1,
   raw_qr: '',
@@ -34,13 +28,8 @@ function formFromRecord(rec) {
     invoice_no: rec.invoice_no || '',
     issue_date: rec.issue_date || '',
     invoice_type: rec.invoice_type || '',
-    seller_name: rec.seller_name || '',
-    seller_tax_id: rec.seller_tax_id || '',
-    buyer_name: rec.buyer_name || '',
     total: rec.total_cent ? store.yuan(rec.total_cent) : '',
-    excl: rec.amount_excl_tax_cent ? store.yuan(rec.amount_excl_tax_cent) : '',
-    tax: rec.tax_cent ? store.yuan(rec.tax_cent) : '',
-    tax_rate: rec.tax_rate || '',
+    reimburser: rec.reimburser || '',
     category: rec.category || '未分类',
     note: rec.note || ''
   }
@@ -122,13 +111,8 @@ Page({
       invoice_no: f.invoice_no.trim(),
       issue_date: f.issue_date,
       invoice_type: f.invoice_type || '数电票',
-      seller_name: f.seller_name.trim(),
-      seller_tax_id: f.seller_tax_id.trim(),
-      buyer_name: f.buyer_name.trim(),
       total_cent: store.toCents(f.total),
-      amount_excl_tax_cent: store.toCents(f.excl),
-      tax_cent: store.toCents(f.tax),
-      tax_rate: f.tax_rate.trim() || null,
+      reimburser: (f.reimburser || '').trim(),
       category: f.category || '未分类',
       note: f.note.trim()
     })

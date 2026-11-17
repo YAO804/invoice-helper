@@ -9,10 +9,9 @@ func TestUpdateInvoice(t *testing.T) {
 	}
 
 	input := sampleInvoices()[0]
-	input.SellerName = "甲公司补录"
-	input.Tax = "13.50"
+	input.Reimburser = "王五补录"
 	updated, ok, err := store.Update(1, input)
-	if err != nil || !ok || updated.SellerName != "甲公司补录" {
+	if err != nil || !ok || updated.Reimburser != "王五补录" {
 		t.Fatalf("补录结果错误: %+v ok=%v err=%v", updated, ok, err)
 	}
 
@@ -20,7 +19,7 @@ func TestUpdateInvoice(t *testing.T) {
 	if err != nil || len(all) != 2 {
 		t.Fatalf("读取台账错误: %d %v", len(all), err)
 	}
-	if all[0].Tax != "13.50" || all[0].Batch != "B001" || all[0].CreatedAt == "" {
+	if all[0].Reimburser != "王五补录" || all[0].Batch != "B001" || all[0].CreatedAt == "" {
 		t.Fatalf("补录未正确保留批次与时间: %+v", all[0])
 	}
 }

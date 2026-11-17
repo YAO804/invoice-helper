@@ -97,7 +97,7 @@ check('待复核数量', store.reviewList().length, 2)
 console.log('--- 统计聚合 ---')
 const list = store.listInvoices({ sortBy: 'issued' })
 const sum = stats.summary(list)
-check('汇总', [sum.count, sum.totalCent, sum.taxCent], [4, 35000, 0])
+check('汇总（张数/价税合计分）', [sum.count, sum.totalCent], [4, 35000])
 
 const cats = stats.byCategory(list)
 check('分类名称按金额降序', cats.map(function (x) { return x.name }), ['办公', '餐饮', '未分类'])

@@ -6,10 +6,8 @@ let editingId = 0
 
 const EDIT_FIELDS = [
   ['number', 'editNumber'], ['code', 'editCode'], ['kind', 'editKind'],
-  ['issue_date', 'editIssueDate'], ['seller_name', 'editSellerName'],
-  ['seller_tax_id', 'editSellerTaxId'], ['buyer_name', 'editBuyerName'],
-  ['buyer_tax_id', 'editBuyerTaxId'], ['amount', 'editAmount'],
-  ['tax', 'editTax'], ['total', 'editTotal'], ['tax_rate', 'editTaxRate']
+  ['issue_date', 'editIssueDate'], ['total', 'editTotal'],
+  ['reimburser', 'editReimburser']
 ]
 
 function showToast(message) {
@@ -31,7 +29,7 @@ async function copyInvoiceValue(button) {
 }
 
 function activeFilterCount() {
-  const fields = ['invNumber', 'invSeller', 'invBatchFilter', 'invDateFrom', 'invDateTo', 'invAmountMin', 'invAmountMax']
+  const fields = ['invNumber', 'invReimburser', 'invBatchFilter', 'invDateFrom', 'invDateTo', 'invAmountMin', 'invAmountMax']
   let count = fields.filter((id) => ($(id).value || '').trim()).length
   if (($('invKeyword').value || '').trim()) count++
   if ($('invOnlyDuplicates').checked) count++
@@ -47,7 +45,7 @@ function syncFilterCount() {
 }
 
 function resetFilters() {
-  ;['invKeyword', 'invNumber', 'invSeller', 'invBatchFilter', 'invDateFrom', 'invDateTo',
+  ;['invKeyword', 'invNumber', 'invReimburser', 'invBatchFilter', 'invDateFrom', 'invDateTo',
     'invAmountMin', 'invAmountMax'].forEach((id) => { $(id).value = '' })
   $('invOnlyDuplicates').checked = false
   $('invOnlyNeedFill').checked = false
@@ -68,7 +66,7 @@ function toggleSelectAll(checked) {
 function buildInvoiceParams() {
   const params = new URLSearchParams()
   const fields = {
-    keyword: 'invKeyword', number: 'invNumber', seller: 'invSeller',
+    keyword: 'invKeyword', number: 'invNumber', reimburser: 'invReimburser',
     batch: 'invBatchFilter', date_from: 'invDateFrom', date_to: 'invDateTo',
     amount_min: 'invAmountMin', amount_max: 'invAmountMax'
   }
@@ -78,6 +76,7 @@ function buildInvoiceParams() {
   })
   if ($('invOnlyDuplicates').checked) params.set('only_duplicates', '1')
   if ($('invOnlyNeedFill').checked) params.set('only_need_fill', '1')
+  params.set('sort', $('invSort').value)
   return params
 }
 
@@ -211,12 +210,13 @@ function closeDrawer() {
 }
 
 function bindLedgerEvents() {
-  ;['invKeyword', 'invNumber', 'invSeller', 'invBatchFilter', 'invDateFrom',
+  ;['invKeyword', 'invNumber', 'invReimburser', 'invBatchFilter', 'invDateFrom',
     'invDateTo', 'invAmountMin', 'invAmountMax'].forEach((id) => {
     $(id).addEventListener('input', scheduleLedgerRefresh)
   })
   $('invOnlyDuplicates').addEventListener('change', refreshLedger)
   $('invOnlyNeedFill').addEventListener('change', refreshLedger)
+  $('invSort').addEventListener('change', refreshLedger)
 
   $('ledgerRefreshBtn').addEventListener('click', refreshLedger)
   $('filterToggleBtn').addEventListener('click', () => {

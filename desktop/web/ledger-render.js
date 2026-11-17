@@ -31,7 +31,7 @@ function copyCell(value) {
 function renderInvoiceTable(items, selected) {
   const body = $('invoiceBody')
   if (!items || !items.length) {
-    body.innerHTML = emptyRow('没有匹配的发票', 16)
+    body.innerHTML = emptyRow('没有匹配的发票', 10)
     return
   }
 
@@ -42,14 +42,8 @@ function renderInvoiceTable(items, selected) {
       <td>${copyCell(item.code)}</td>
       <td>${esc(item.kind)}</td>
       <td>${esc(item.issue_date)}</td>
-      <td>${esc(item.seller_name)}</td>
-      <td>${esc(item.seller_tax_id)}</td>
-      <td>${esc(item.buyer_name)}</td>
-      <td>${esc(item.buyer_tax_id)}</td>
-      <td class="num">${esc(item.amount)}</td>
-      <td class="num">${esc(item.tax)}</td>
       <td class="num">${esc(item.total)}</td>
-      <td>${esc(item.tax_rate)}</td>
+      <td>${item.reimburser ? esc(item.reimburser) : '<span class="muted">（待补录）</span>'}</td>
       <td>${esc(item.batch)}</td>
       <td>${esc(item.created_at)}</td>
       <td class="col-actions">
@@ -72,7 +66,7 @@ function renderDuplicatePanel(groups) {
       <div class="table-wrap">
         <table class="diff-table">
           <thead>
-            <tr><th>记录</th><th>票种</th><th>开票日期</th><th>销方名称</th><th>价税合计</th><th>批次</th><th>录入时间</th><th>操作</th></tr>
+            <tr><th>记录</th><th>票种</th><th>开票日期</th><th>报销人</th><th>价税合计</th><th>批次</th><th>录入时间</th><th>操作</th></tr>
           </thead>
           <tbody>
             ${group.items.map((item) => `
@@ -80,7 +74,7 @@ function renderDuplicatePanel(groups) {
                 <td>#${item.id}</td>
                 <td>${esc(item.kind)}</td>
                 <td>${esc(item.issue_date)}</td>
-                <td class="${item.seller_name ? '' : 'changed'}">${esc(item.seller_name || '（空）')}</td>
+                <td class="${item.reimburser ? '' : 'changed'}">${esc(item.reimburser || '（待补录）')}</td>
                 <td>${esc(item.total)}</td>
                 <td>${esc(item.batch)}</td>
                 <td>${esc(item.created_at)}</td>
@@ -104,13 +98,13 @@ function renderImportPreview(preview) {
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>状态</th><th>发票号码</th><th>销方名称</th><th>价税合计</th><th>说明</th></tr></thead>
+        <thead><tr><th>状态</th><th>发票号码</th><th>报销人</th><th>价税合计</th><th>说明</th></tr></thead>
         <tbody>
           ${(preview.items || []).slice(0, 50).map((item) => `
             <tr class="preview-item ${esc(item.status)}">
               <td>${esc(item.status)}</td>
               <td>${esc(item.invoice.number)}</td>
-              <td>${esc(item.invoice.seller_name)}</td>
+              <td>${esc(item.invoice.reimburser || '')}</td>
               <td>${esc(item.invoice.total)}</td>
               <td>${esc(item.message)}</td>
             </tr>

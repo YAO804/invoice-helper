@@ -11,6 +11,7 @@ function categoryChips(active) {
 
 Page({
   data: {
+    sortBy: 'created',
     basis: 'created',
     categoryChips: categoryChips(''),
     categoryFilter: '',
@@ -22,12 +23,14 @@ Page({
     invoices: [],
     totalCount: 0,
     totalText: '0.00',
-    taxText: '0.00',
     reviewCount: 0,
     currentMonthText: '全部月份'
   },
 
-  onLoad() { this.setData({ basis: store.getBasis() }); this.loadMonths() },
+  onLoad() {
+    this.setData({ sortBy: store.getSort(), basis: store.getBasis() })
+    this.loadMonths()
+  },
   onShow() { this.loadMonths(); this.refresh() },
 
   loadMonths() {
@@ -35,12 +38,11 @@ Page({
     this.setData({ months: months, monthOptions: ['全部月份'].concat(months) })
   },
 
-  onBasisChange(e) {
-    const basis = e.currentTarget.dataset.basis
-    if (basis === this.data.basis) return
-    store.setBasis(basis)
-    this.setData({ basis: basis, month: '', monthIndex: 0, currentMonthText: '全部月份' })
-    this.loadMonths()
+  onSortChange(e) {
+    const sortBy = e.currentTarget.dataset.sort
+    if (sortBy === this.data.sortBy) return
+    store.setSort(sortBy)
+    this.setData({ sortBy: sortBy })
     this.refresh()
   },
 
@@ -66,20 +68,16 @@ Page({
     const filter = {
       month: this.data.month,
       monthBasis: this.data.basis,
-      sortBy: this.data.basis,
+      sortBy: this.data.sortBy,
       category: this.data.categoryFilter
     }
     const list = store.listInvoices(Object.assign({}, filter, { keyword: this.data.keyword }))
     const statList = store.listInvoices(filter)
-    const sum = function (key) {
-      return statList.reduce(function (s, inv) { return s + (Number(inv[key]) || 0) }, 0)
-    }
     this.setData({
       invoices: list.map(toCard),
       categoryChips: categoryChips(this.data.categoryFilter),
       totalCount: statList.length,
-      totalText: store.yuan(sum('total_cent')),
-      taxText: store.yuan(sum('tax_cent')),
+      totalText: store.yuan(statList.reduce(function (s, inv) { return s + (Number(inv.total_cent) || 0) }, 0)),
       reviewCount: store.reviewList().length
     })
   },
@@ -137,7 +135,7 @@ function toCard(inv) {
   const cat = inv.category || '未分类'
   return {
     id: inv.id,
-    title: inv.seller_name || '未填销方',
+    title: inv.reimburser || inv.invoice_no || '未填报销人',
     no: inv.invoice_no || '无号码',
     date: inv.issue_date || '日期待补',
     importText: labels.importText(inv.created_at),

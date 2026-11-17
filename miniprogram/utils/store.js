@@ -91,8 +91,9 @@ function init() {
 }
 
 const BASIS_KEY = 'ledger_basis'
+const SORT_KEY = 'ledger_sort'
 
-/** 用户偏好：created=按导入时间，issued=按开票日期。默认 created。 */
+/** 月份分组口径：created=按导入月，issued=按开票月。默认 created。 */
 function getBasis() {
   try { return wx.getStorageSync(BASIS_KEY) === 'issued' ? 'issued' : 'created' } catch (e) { return 'created' }
 }
@@ -100,6 +101,23 @@ function getBasis() {
 function setBasis(basis) {
   try { wx.setStorageSync(BASIS_KEY, basis === 'issued' ? 'issued' : 'created') } catch (e) {}
   return getBasis()
+}
+
+/** 列表排序口径：created=录入时间（默认）/ issued=开票日期 / number=发票号码 / reimburser=报销人 */
+const SORTS = ['created', 'issued', 'number', 'reimburser']
+
+function getSort() {
+  try {
+    const v = wx.getStorageSync(SORT_KEY)
+    return SORTS.indexOf(v) >= 0 ? v : 'created'
+  } catch (e) {
+    return 'created'
+  }
+}
+
+function setSort(sortBy) {
+  try { wx.setStorageSync(SORT_KEY, SORTS.indexOf(sortBy) >= 0 ? sortBy : 'created') } catch (e) {}
+  return getSort()
 }
 
 /** 物理分片始终按开票日期，这里只算「展示口径」的月份 */
@@ -180,18 +198,18 @@ function listInvoices(filter) {
   })
 
   const kw = (filter.keyword || '').trim().toLowerCase()
-  const seller = (filter.seller || '').trim().toLowerCase()
+  const reimburser = (filter.reimburser || '').trim().toLowerCase()
 
   const out = all.filter(function (inv) {
     if (filter.batchId && inv.batch_id !== filter.batchId) return false
     if (filter.category && (inv.category || '未分类') !== filter.category) return false
     if (filter.status && inv.status !== filter.status) return false
-    if (seller && String(inv.seller_name || '').toLowerCase().indexOf(seller) < 0) return false
+    if (reimburser && String(inv.reimburser || '').toLowerCase().indexOf(reimburser) < 0) return false
     if (filter.minCent !== undefined && Number(inv.total_cent) < Number(filter.minCent)) return false
     if (filter.maxCent !== undefined && Number(inv.total_cent) > Number(filter.maxCent)) return false
     if (kw) {
       const hay = [
-        inv.invoice_no, inv.seller_name, inv.buyer_name, inv.note,
+        inv.invoice_no, inv.reimburser, inv.note,
         yuan(inv.total_cent), String(inv.total_cent),
         (inv.items || []).map(function (it) { return it.name }).join(' ')
       ].join(' ').toLowerCase()
@@ -200,16 +218,28 @@ function listInvoices(filter) {
     return true
   })
 
-  const sortBy = filter.sortBy || 'issued'
+  const sortBy = filter.sortBy || getSort()
   out.sort(function (a, b) {
-    if (sortBy === 'created') {
-      const ca = Number(a.created_at) || 0
-      const cb = Number(b.created_at) || 0
-      if (ca !== cb) return cb - ca
-    } else {
+    if (sortBy === 'number') {
+      const na = String(a.invoice_no || '').toLowerCase()
+      const nb = String(b.invoice_no || '').toLowerCase()
+      if (na !== nb) return na < nb ? -1 : 1
+    } else if (sortBy === 'reimburser') {
+      const ra = String(a.reimburser || '').toLowerCase()
+      const rb = String(b.reimburser || '').toLowerCase()
+      // 空报销人排最后，方便先看已填写的
+      if (!ra && rb) return 1
+      if (ra && !rb) return -1
+      if (ra !== rb) return ra < rb ? -1 : 1
+    } else if (sortBy === 'issued') {
       const da = String(a.issue_date || '')
       const db = String(b.issue_date || '')
       if (da !== db) return da < db ? 1 : -1
+    } else {
+      // created：录入时间倒序（新录入在前）
+      const ca = Number(a.created_at) || 0
+      const cb = Number(b.created_at) || 0
+      if (ca !== cb) return cb - ca
     }
     return Number(b.id || 0) - Number(a.id || 0)
   })
@@ -254,8 +284,7 @@ function normalize(inv, idx) {
   out.files = out.files || []
   out.items = out.items || []
   out.note = out.note || ''
-  out.amount_excl_tax_cent = Number(out.amount_excl_tax_cent) || 0
-  out.tax_cent = Number(out.tax_cent) || 0
+  out.reimburser = out.reimburser || ''
   out.total_cent = Number(out.total_cent) || 0
   out.created_at = out.created_at || now
   out.updated_at = now
@@ -326,8 +355,7 @@ function monthStats(month, basis) {
   return {
     month: month,
     count: list.length,
-    totalCent: list.reduce(function (s, inv) { return s + (Number(inv.total_cent) || 0) }, 0),
-    taxCent: list.reduce(function (s, inv) { return s + (Number(inv.tax_cent) || 0) }, 0)
+    totalCent: list.reduce(function (s, inv) { return s + (Number(inv.total_cent) || 0) }, 0)
   }
 }
 
@@ -349,7 +377,7 @@ function months(basis) {
 
 /** 待复核：有异常标记，或还没有发票号码的草稿 */
 function reviewList() {
-  return listInvoices({ sortBy: getBasis() }).filter(function (inv) {
+  return listInvoices({ sortBy: getSort() }).filter(function (inv) {
     return !inv.invoice_no || (inv.anomaly || []).length > 0
   })
 }
@@ -368,19 +396,9 @@ function yuan(cents) {
   return (Number(cents || 0) / 100).toFixed(2)
 }
 
-/** 离线勾稽校验。只标异常，不做真伪判断。 */
+/** 离线校验。只标异常，不做真伪判断。金额字段已精简，仅校验号码位数。 */
 function validate(inv) {
   const out = []
-  const total = Number(inv.total_cent) || 0
-  const excl = Number(inv.amount_excl_tax_cent) || 0
-  const tax = Number(inv.tax_cent) || 0
-  if (excl + tax !== total) out.push('金额勾稽不符：不含税 ' + yuan(excl) + ' + 税额 ' + yuan(tax) + ' ≠ 价税合计 ' + yuan(total))
-
-  const items = inv.items || []
-  if (items.length) {
-    const sum = items.reduce(function (s, it) { return s + (Number(it.amount_cent) || 0) }, 0)
-    if (sum !== excl) out.push('明细金额合计 ' + yuan(sum) + ' ≠ 不含税金额 ' + yuan(excl))
-  }
   const no = String(inv.invoice_no || '')
   if (no && no.length !== 8 && no.length !== 20) out.push('发票号码位数异常：' + no.length + ' 位')
   return out
@@ -409,14 +427,8 @@ function fromParsed(parsed, extra) {
     invoice_code: '',
     invoice_type: parsed.typeLabel || '数电票',
     issue_date: (parsed.issueTime || '').slice(0, 10),
-    seller_name: (parsed.seller && parsed.seller.name) || '',
-    seller_tax_id: (parsed.seller && parsed.seller.idNum) || '',
-    buyer_name: (parsed.buyer && parsed.buyer.name) || '',
-    buyer_tax_id: (parsed.buyer && parsed.buyer.idNum) || '',
-    amount_excl_tax_cent: toCents(parsed.amount && parsed.amount.withoutTax),
-    tax_cent: toCents(parsed.amount && parsed.amount.tax),
     total_cent: toCents(parsed.amount && parsed.amount.withTax),
-    tax_rate: items.length ? items[0].tax_rate : null,
+    reimburser: '',
     category: category.guess(items[0] && items[0].name, items, parsed.seller && parsed.seller.name),
     source: extra.source || 'xml',
     confidence: 1,
@@ -449,14 +461,8 @@ function fromQr(qr, extra) {
     invoice_code: qr.invoiceCode || '',
     invoice_type: qr.invoiceType || '未知票种',
     issue_date: String(qr.issueDate || '').replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'),
-    seller_name: '',
-    seller_tax_id: '',
-    buyer_name: '',
-    buyer_tax_id: '',
-    amount_excl_tax_cent: 0,
-    tax_cent: 0,
     total_cent: toCents(qr.amount),
-    tax_rate: null,
+    reimburser: '',
     category: '未分类',
     source: 'qr',
     confidence: 0.8,
@@ -464,10 +470,9 @@ function fromQr(qr, extra) {
     qr_integrity: 'n/a',
     items: [],
     files: [],
-    note: '扫码草稿：销方/税额/明细待补录'
+    note: '扫码草稿：报销人待补录'
   }
-  // 扫码本来就只有号码/金额/日期，不该报「金额勾稽不符」吓人
-  inv.anomaly = ['扫码草稿：不含销方、税额与明细，字段待补录']
+  inv.anomaly = ['扫码草稿：报销人待补录，请到台账补录']
   return inv
 }
 
@@ -475,6 +480,8 @@ module.exports = {
   setEnv: setEnv,
   getBasis: getBasis,
   setBasis: setBasis,
+  getSort: getSort,
+  setSort: setSort,
   groupMonth: groupMonth,
   init: init,
   rebuildIndex: rebuildIndex,

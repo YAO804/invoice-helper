@@ -4,6 +4,7 @@ const discover = require('../../utils/discover')
 
 Page({
   data: {
+    sortBy: 'created',
     basis: 'created',
     reviewCount: 0,
     desktopUrl: '',
@@ -16,6 +17,7 @@ Page({
   onShow() {
     const url = lanservice.getBase()
     this.setData({
+      sortBy: store.getSort(),
       basis: store.getBasis(),
       reviewCount: store.reviewList().length,
       desktopUrl: url,
@@ -24,12 +26,20 @@ Page({
     })
   },
 
+  onSortChange(e) {
+    const sortBy = e.currentTarget.dataset.sort
+    if (sortBy === this.data.sortBy) return
+    store.setSort(sortBy)
+    this.setData({ sortBy: sortBy })
+    wx.showToast({ title: '已切换排序方式', icon: 'none' })
+  },
+
   onBasisChange(e) {
     const basis = e.currentTarget.dataset.basis
     if (basis === this.data.basis) return
     store.setBasis(basis)
     this.setData({ basis: basis })
-    wx.showToast({ title: '已切换排序口径', icon: 'none' })
+    wx.showToast({ title: '已切换归月口径', icon: 'none' })
   },
 
   onDesktopUrlInput(e) {

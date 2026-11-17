@@ -8,7 +8,7 @@
   <view class="card">
     <view class="card-t" style="margin-bottom:14rpx">扫码</view>
     <view class="btn btn-block" bindtap="onScan" hover-class="btn-hover">扫数电票二维码</view>
-    <view class="tiny muted" style="margin-top:14rpx">每扫一张会问是否继续。二维码只有号码、金额、日期，销方和税额请在下一步补录。</view>
+    <view class="tiny muted" style="margin-top:14rpx">每扫一张会问是否继续。二维码只有号码、金额、日期，报销人请到台账补录。</view>
     <view class="btn btn-ghost btn-block" style="margin-top:16rpx" bindtap="onBatchScan" hover-class="btn-hover">批量连续扫码</view>
     <view class="tiny muted" style="margin-top:14rpx">一次扫很多张时用这个：不用逐张确认，点左上角 × 或手机返回键结束，每 10 张也会问一次。扫完可直接导出 CSV 发到电脑。</view>
   </view>

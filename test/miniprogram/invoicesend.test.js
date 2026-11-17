@@ -45,22 +45,16 @@ function draft(number) {
     invoice_code: '',
     invoice_type: '数电票',
     issue_date: '2026-08-01',
-    seller_name: '',
-    seller_tax_id: '',
-    buyer_name: '',
-    buyer_tax_id: '',
-    amount_excl_tax_cent: 0,
-    tax_cent: 0,
     total_cent: 10500,
-    tax_rate: null
+    reimburser: ''
   }
 }
 
 const converted = invoicesend.toInvoice(draft('N1'))
 check('转换发票号码', converted.number, 'N1')
-check('扫码草稿不含税金额留空', converted.amount, '')
-check('扫码草稿价税合计', converted.total, '105.00')
-check('扫码草稿税率留空', converted.tax_rate, '')
+check('转换价税合计', converted.total, '105.00')
+check('转换报销人', converted.reimburser, '')
+check('已删字段不进入传输', converted.seller_name, undefined)
 
 stubMatches = { N1: { number: 'N1', seller_name: '甲公司' } }
 modalConfirm = false

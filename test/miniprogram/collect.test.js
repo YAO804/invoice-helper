@@ -94,7 +94,7 @@ archive.save('/tmp/src.xml', '发票/xml..xml', 4304).then(function (saved) {
   return collect.fileDraft()
 }).then(function (r) {
   check('XML 导入成功', r.ok, true)
-  check('自动填销方', r.draft.seller_name, '宁波顺渝餐饮管理有限公司')
+  check('报销人默认为空待补录', r.draft.reimburser, '')
   check('自动填金额（分）', r.draft.total_cent, 14700)
   check('来源为 xml', r.draft.source, 'xml')
   check('带原件条目', r.draft.files.length, 1)

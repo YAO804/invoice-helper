@@ -10,7 +10,6 @@ Page({
     currentMonthText: '全部月份',
     count: 0,
     totalText: '0.00',
-    taxText: '0.00',
     categories: [],
     sources: []
   },
@@ -37,13 +36,12 @@ Page({
     const list = store.listInvoices({
       month: this.data.month,
       monthBasis: store.getBasis(),
-      sortBy: store.getBasis()
+      sortBy: store.getSort()
     })
     const sum = stats.summary(list)
     this.setData({
       count: sum.count,
       totalText: store.yuan(sum.totalCent),
-      taxText: store.yuan(sum.taxCent),
       categories: stats.byCategory(list),
       sources: stats.bySource(list)
     })

@@ -189,6 +189,13 @@ code { background: var(--canvas); padding: 2px 5px; border-radius: 4px; }
   border-bottom: 1px solid var(--border-muted);
 }
 .toolbar-left { display: flex; gap: 8px; flex-wrap: wrap; }
+.toolbar-right { display: flex; align-items: center; gap: 8px; }
+.sort-label { font-size: 12px; color: var(--muted); }
+.sort-select {
+  font: inherit; font-size: 12px; padding: 5px 8px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--text); cursor: pointer;
+}
 .filter-count {
   display: inline-grid;
   place-items: center;

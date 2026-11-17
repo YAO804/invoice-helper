@@ -22,10 +22,16 @@ func TestDuplicateGroups(t *testing.T) {
 
 func TestNeedFill(t *testing.T) {
 	list := sampleInvoices()
-	list[0].Tax = ""
-
+	// sampleInvoices[0] 报销人"张三"已填 → 不需补录；[1] 为空 → 待补录
 	marked := markNeedFill(list)
-	if !marked[0].NeedFill || marked[1].NeedFill {
+	if marked[0].NeedFill || !marked[1].NeedFill {
 		t.Fatalf("待补录标记错误: %+v", marked)
+	}
+
+	// 给空报销人补上后不再待补录
+	marked[1].Reimburser = "李四"
+	marked = markNeedFill(marked)
+	if marked[1].NeedFill {
+		t.Fatalf("报销人填写后仍标记待补录: %+v", marked[1])
 	}
 }

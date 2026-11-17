@@ -10,13 +10,7 @@ Page({
     sourceText: '',
     statusText: '',
     totalText: '0.00',
-    exclText: '0.00',
-    taxText: '0.00',
-    taxRate: '—',
-    sellerName: '',
-    sellerTaxId: '',
-    buyerName: '',
-    buyerTaxId: '',
+    reimburser: '',
     note: '',
     anomaly: [],
     items: [],
@@ -57,40 +51,24 @@ Page({
       metaRows.push({ k: '签名格式', v: sig.format || '-' })
       if (sig.time) metaRows.push({ k: '签名时间', v: sig.time })
     }
-    if (meta.seller_detail) {
-      const sd = meta.seller_detail
-      if (sd.addr) metaRows.push({ k: '销方地址', v: sd.addr })
-      if (sd.tel) metaRows.push({ k: '销方电话', v: sd.tel })
-      if (sd.bankName) metaRows.push({ k: '开户行', v: sd.bankName })
-      if (sd.bankAcc) metaRows.push({ k: '银行账号', v: sd.bankAcc })
-    }
 
     const items = (inv.items || []).map(function (it) {
       return {
         line_no: it.line_no || 1,
         name: it.name,
-        amountText: store.yuan(it.amount_cent),
-        taxText: store.yuan(it.tax_cent),
-        totalText: store.yuan(it.total_cent),
-        taxRate: it.tax_rate || '—'
+        totalText: store.yuan(it.total_cent)
       }
     })
 
     this.setData({
       inv: inv,
-      title: inv.seller_name || '未填销方',
+      title: inv.reimburser || inv.invoice_no || '未填报销人',
       no: inv.invoice_no || '无号码',
       date: inv.issue_date || '日期待补',
       sourceText: labels.sourceName(inv.source, true),
       statusText: inv.status === 'manually_verified' ? '已人工核验' : '待人工核验',
       totalText: store.yuan(inv.total_cent),
-      exclText: store.yuan(inv.amount_excl_tax_cent),
-      taxText: store.yuan(inv.tax_cent),
-      taxRate: inv.tax_rate || '—',
-      sellerName: inv.seller_name || '—',
-      sellerTaxId: inv.seller_tax_id || '—',
-      buyerName: inv.buyer_name || '—',
-      buyerTaxId: inv.buyer_tax_id || '—',
+      reimburser: inv.reimburser || '（待补录）',
       note: inv.note || '',
       anomaly: inv.anomaly || [],
       items: items,

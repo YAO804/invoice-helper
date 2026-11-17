@@ -9,6 +9,7 @@ func (s *Store) List(query Query) ([]Invoice, []DuplicateGroup, error) {
 	groups := duplicateGroups(all)
 	all = markDuplicates(all, groups)
 	all = markNeedFill(all)
+	all = sortInvoices(all, query.Sort)
 	return filter(all, query), groups, nil
 }
 

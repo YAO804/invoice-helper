@@ -2,7 +2,7 @@
 
   <view class="card">
     <view class="card-t">{{isEdit ? '编辑发票' : '手动录入'}}</view>
-    <view class="tiny muted" style="margin-top:8rpx">金额单位：元；只填价税合计也可以，勾稽提示会在详情页显示。</view>
+    <view class="tiny muted" style="margin-top:8rpx">报销人默认为空，由报销人自行补录。</view>
   </view>
 
   <view wx:if="{{hint}}" class="card hint-card">
@@ -35,18 +35,8 @@
     </view>
 
     <view class="field">
-      <view class="field-label">销方名称</view>
-      <input class="input" placeholder="开票单位" value="{{form.seller_name}}" data-field="seller_name" bindinput="onInput" />
-    </view>
-
-    <view class="field">
-      <view class="field-label">销方税号</view>
-      <input class="input mono" placeholder="统一社会信用代码" value="{{form.seller_tax_id}}" data-field="seller_tax_id" bindinput="onInput" />
-    </view>
-
-    <view class="field">
-      <view class="field-label">买方名称</view>
-      <input class="input" placeholder="个人抬头可写姓名" value="{{form.buyer_name}}" data-field="buyer_name" bindinput="onInput" />
+      <view class="field-label">报销人</view>
+      <input class="input" placeholder="由报销人自行填写" value="{{form.reimburser}}" data-field="reimburser" bindinput="onInput" />
     </view>
   </view>
 
@@ -54,18 +44,6 @@
     <view class="field">
       <view class="field-label">价税合计（元）</view>
       <input class="input" type="digit" placeholder="0.00" value="{{form.total}}" data-field="total" bindinput="onInput" />
-    </view>
-    <view class="field">
-      <view class="field-label">不含税金额（元）</view>
-      <input class="input" type="digit" placeholder="0.00" value="{{form.excl}}" data-field="excl" bindinput="onInput" />
-    </view>
-    <view class="field">
-      <view class="field-label">税额（元）</view>
-      <input class="input" type="digit" placeholder="0.00" value="{{form.tax}}" data-field="tax" bindinput="onInput" />
-    </view>
-    <view class="field">
-      <view class="field-label">税率</view>
-      <input class="input" placeholder="如 0.06" value="{{form.tax_rate}}" data-field="tax_rate" bindinput="onInput" />
     </view>
     <view class="field" style="margin-bottom:0">
       <view class="field-label">备注</view>

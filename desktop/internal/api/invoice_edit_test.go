@@ -11,14 +11,9 @@ func TestUpdateInvoiceAPI(t *testing.T) {
 	request(t, handler, http.MethodPost, "/api/invoices/import?confirm=1", body, contentType)
 
 	payload := map[string]any{
-		"number":        "N300",
-		"seller_name":   "甲公司已补录",
-		"seller_tax_id": "T999",
-		"buyer_name":    "个人",
-		"amount":        "100.00",
-		"tax":           "13.00",
-		"total":         "113.00",
-		"tax_rate":      "13%",
+		"number":     "N300",
+		"reimburser": "甲公司已补录",
+		"total":      "113.00",
 	}
 	rec := request(t, handler, http.MethodPut, "/api/invoices/1", jsonBody(t, payload), "application/json")
 	if rec.Code != http.StatusOK {
@@ -28,7 +23,7 @@ func TestUpdateInvoiceAPI(t *testing.T) {
 	listRec := request(t, handler, http.MethodGet, "/api/invoices", nil, "")
 	var list invoiceListResponse
 	decodeJSON(t, listRec, &list)
-	if list.Total != 1 || list.Items[0].SellerName != "甲公司已补录" || list.NeedFill != 0 {
+	if list.Total != 1 || list.Items[0].Reimburser != "甲公司已补录" || list.NeedFill != 0 {
 		t.Fatalf("补录未生效: %+v", list)
 	}
 }

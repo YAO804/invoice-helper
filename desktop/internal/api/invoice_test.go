@@ -22,10 +22,10 @@ func invoiceCSV(rows ...[]string) []byte {
 	return buf.Bytes()
 }
 
-func invoiceRow(number string, seller string, total string) []string {
+func invoiceRow(number string, reimburser string, total string) []string {
 	return []string{
-		number, "", "普通发票", "2026-08-01", seller, "T001", "个人", "",
-		"100.00", "13.00", total, "13%", "B001", "2026-11-17 10:00:00",
+		number, "", "普通发票", "2026-08-01", total, reimburser,
+		"B001", "2026-11-17 10:00:00",
 	}
 }
 

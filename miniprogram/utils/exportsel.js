@@ -23,20 +23,21 @@ function defaultScope() {
 function resolve(scope, opts) {
   opts = opts || {}
   const basis = opts.basis || store.getBasis()
+  const sortBy = opts.sortBy || store.getSort()
   if (scope === 'batch') {
     const id = batchmark.current()
-    return id ? store.listInvoices({ batchId: id, sortBy: basis }) : []
+    return id ? store.listInvoices({ batchId: id, sortBy: sortBy }) : []
   }
   if (scope === 'month' && opts.month) {
-    return store.listInvoices({ month: opts.month, monthBasis: basis, sortBy: basis })
+    return store.listInvoices({ month: opts.month, monthBasis: basis, sortBy: sortBy })
   }
   if (scope === 'custom') {
     const ids = (opts.ids || []).map(Number)
-    return store.listInvoices({ sortBy: basis }).filter(function (inv) {
+    return store.listInvoices({ sortBy: sortBy }).filter(function (inv) {
       return ids.indexOf(Number(inv.id)) >= 0
     })
   }
-  return store.listInvoices({ sortBy: basis })
+  return store.listInvoices({ sortBy: sortBy })
 }
 
 function toCards(list, selectedIds) {
@@ -44,7 +45,7 @@ function toCards(list, selectedIds) {
   return (list || []).map(function (inv) {
     return {
       id: inv.id,
-      title: inv.seller_name || '未填销方',
+      title: inv.reimburser || '未填报销人',
       no: inv.invoice_no || '无号码',
       amountText: store.yuan(inv.total_cent),
       checked: ids.indexOf(Number(inv.id)) >= 0

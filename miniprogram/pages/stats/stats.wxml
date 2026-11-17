@@ -12,7 +12,6 @@
   <view class="card summary">
     <view class="row tiny muted"><text>发票张数</text><text>{{count}} 张</text></view>
     <view class="sum-amount">¥ {{totalText}}</view>
-    <view class="row tiny muted"><text>其中税额</text><text>¥{{taxText}}</text></view>
   </view>
 
   <view class="card">

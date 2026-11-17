@@ -29,9 +29,8 @@ function summary(list) {
   return (list || []).reduce(function (s, inv) {
     s.count++
     s.totalCent += Number(inv.total_cent) || 0
-    s.taxCent += Number(inv.tax_cent) || 0
     return s
-  }, { count: 0, totalCent: 0, taxCent: 0 })
+  }, { count: 0, totalCent: 0 })
 }
 
 function byCategory(list) {

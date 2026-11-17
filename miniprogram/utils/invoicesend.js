@@ -14,22 +14,15 @@ function toInvoice(draft) {
     code: draft.invoice_code || '',
     kind: draft.invoice_type || '',
     issue_date: draft.issue_date || '',
-    seller_name: draft.seller_name || '',
-    seller_tax_id: draft.seller_tax_id || '',
-    buyer_name: draft.buyer_name || '',
-    buyer_tax_id: draft.buyer_tax_id || '',
-    amount: money(draft.amount_excl_tax_cent),
-    tax: money(draft.tax_cent),
     total: money(draft.total_cent),
-    tax_rate: draft.tax_rate || '',
+    reimburser: draft.reimburser || '',
     batch: '',
     created_at: ''
   }
 }
 
 function matchText(match) {
-  if (!match.seller_name) return '电脑台账已有'
-  return match.seller_name + ' / ' + (match.total || '-') + ' / ' + (match.issue_date || '-')
+  return '价税合计 ' + (match.total || '-') + ' / ' + (match.issue_date || '-')
 }
 
 function confirmDuplicates(matches) {

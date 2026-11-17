@@ -1,5 +1,7 @@
 package ledger
 
+import "strings"
+
 func duplicateGroups(list []Invoice) []DuplicateGroup {
 	groups := map[string]*DuplicateGroup{}
 	order := []string{}
@@ -41,9 +43,7 @@ func markDuplicates(list []Invoice, groups []DuplicateGroup) []Invoice {
 func markNeedFill(list []Invoice) []Invoice {
 	for i := range list {
 		invoice := &list[i]
-		invoice.NeedFill = invoice.SellerName == "" || invoice.SellerTaxID == "" ||
-			invoice.BuyerName == "" || invoice.Amount == "" ||
-			invoice.Tax == "" || invoice.TaxRate == ""
+		invoice.NeedFill = strings.TrimSpace(invoice.Reimburser) == ""
 	}
 	return list
 }

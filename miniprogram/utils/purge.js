@@ -47,7 +47,7 @@ function cards(list, selectedIds) {
   return (list || []).map(function (inv) {
     return {
       id: inv.id,
-      title: inv.seller_name || '未填销方',
+      title: inv.reimburser || inv.invoice_no || '未填报销人',
       no: inv.invoice_no || '无号码',
       amountText: store.yuan(inv.total_cent),
       importText: labels.importText(inv.created_at),

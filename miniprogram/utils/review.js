@@ -14,7 +14,7 @@ function reasons(inv) {
 function toCard(inv) {
   return {
     id: inv.id,
-    title: inv.seller_name || '未填销方',
+    title: inv.reimburser || inv.invoice_no || '未填报销人',
     no: inv.invoice_no || '无号码',
     date: inv.issue_date || '日期待补',
     amountText: store.yuan(inv.total_cent),

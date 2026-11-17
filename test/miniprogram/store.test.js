@@ -56,29 +56,27 @@ check('显示层', store.yuan(14700), '147.00')
 console.log('\n--- 新增与分片 ---')
 const a = store.upsertInvoice({
   invoice_no: '26932000001295659876', issue_date: '2026-08-02',
-  seller_name: '宁波顺渝餐饮管理有限公司', total_cent: 14700,
-  amount_excl_tax_cent: 13868, tax_cent: 832, source: 'xml'
+  reimburser: '张三', total_cent: 14700, source: 'xml'
 })
 check('分配 id', a.id, 1)
 check('按月分片落盘', !!fs._files['/usr/invoices/ledger/2026-08.json'], true)
 
 const b = store.upsertInvoice({
   invoice_no: '26932000001877489821', issue_date: '2026-11-10',
-  seller_name: '南京某某科技有限公司', total_cent: 1050000,
-  amount_excl_tax_cent: 990566, tax_cent: 59434, source: 'qr'
+  reimburser: '李四', total_cent: 1050000, source: 'qr'
 })
 check('第二个月另起分片', !!fs._files['/usr/invoices/ledger/2026-11.json'], true)
 check('索引 nextId', JSON.parse(fs._files['/usr/invoices/index.json']).nextId, 3)
 
 console.log('\n--- 查询与筛选 ---')
-check('全部按日期倒序', store.listInvoices().map(function (i) { return i.invoice_no }),
+check('全部按录入时间倒序（默认）', store.listInvoices().map(function (i) { return i.invoice_no }),
   ['26932000001877489821', '26932000001295659876'])
 check('按月份', store.listInvoices({ month: '2026-08' }).length, 1)
-check('按销方关键字', store.listInvoices({ seller: '顺渝' }).length, 1)
+check('按报销人关键字', store.listInvoices({ reimburser: '张三' }).length, 1)
 check('按全文关键字', store.listInvoices({ keyword: '10500' }).length, 1)
 check('按来源', store.listInvoices({ status: 'unknown' }).length, 2)
 check('金额下限', store.listInvoices({ minCent: 200000 }).length, 1)
-check('取详情', store.getInvoice(1).seller_name, '宁波顺渝餐饮管理有限公司')
+check('取详情', store.getInvoice(1).reimburser, '张三')
 check('月份列表', store.months(), ['2026-11', '2026-08'])
 
 console.log('\n--- 去重 ---')
@@ -91,13 +89,14 @@ check('金额不同不算重复', store.findDuplicate({
 
 console.log('\n--- 编辑与删除 ---')
 const edited = store.upsertInvoice({ id: 1, invoice_no: a.invoice_no, issue_date: a.issue_date,
-  seller_name: '改过的销方', total_cent: 14700, note: '已补录' })
+  reimburser: '张三改', total_cent: 14700, note: '已补录' })
 check('同 id 更新不新增', store.listInvoices({ month: '2026-08' }).length, 1)
 check('更新内容生效', edited.note, '已补录')
+check('报销人更新生效', edited.reimburser, '张三改')
 check('旧去重键已清', store.findDuplicate({ invoice_no: a.invoice_no, issue_date: a.issue_date, total_cent: 14700 }).id, 1)
 check('跨月编辑后旧分片清空', (function () {
   const moved = store.upsertInvoice({ id: 1, invoice_no: a.invoice_no, issue_date: '2026-09-15',
-    seller_name: '改过的销方', total_cent: 14700 })
+    reimburser: '张三改', total_cent: 14700 })
   return moved.id === 1 && store.listInvoices({ month: '2026-08' }).length === 0 &&
     store.listInvoices({ month: '2026-09' }).length === 1
 })(), true)
@@ -137,23 +136,19 @@ const converted = store.fromParsed(parsed)
 check('转档成功', !!converted, true)
 check('金额转分', converted.total_cent, 14700)
 check('开票日期截取', converted.issue_date, '2026-08-02')
-check('个人抬头税号为空', converted.buyer_tax_id, '')
+check('报销人默认为空', converted.reimburser, '')
 check('明细行号', converted.items[0].line_no, 1)
-check('税率保留', converted.tax_rate, '0.06')
-check('真实样本勾稽无异常', converted.anomaly, [])
+check('已删字段不入库', converted.seller_name, undefined)
+check('解析无异常', converted.anomaly, [])
 check('元数据带签名算法名', converted.meta.signature.algorithmName, 'SM2')
 
-console.log('\n--- 勾稽校验 ---')
-check('金额不符能检出', store.validate({
-  invoice_no: '26932000001295659876', amount_excl_tax_cent: 10000, tax_cent: 100, total_cent: 14700, items: []
-}).length, 1)
-check('明细合计不符能检出', store.validate({
-  invoice_no: '26932000001295659876', amount_excl_tax_cent: 13868, tax_cent: 832, total_cent: 14700,
-  items: [{ amount_cent: 10000 }]
-}).length, 1)
+console.log('\n--- 离线校验（金额字段已精简，只校验号码位数） ---')
 check('号码位数异常能检出', store.validate({
-  invoice_no: '123', amount_excl_tax_cent: 0, tax_cent: 0, total_cent: 0, items: []
+  invoice_no: '123', total_cent: 14700, items: []
 }).length, 1)
+check('20 位号码无异常', store.validate({
+  invoice_no: '26932000001295659876', total_cent: 14700, items: []
+}).length, 0)
 
 console.log('\n--- 扫码草稿 ---')
 const qrDraft = store.fromQr({
@@ -165,15 +160,24 @@ check('日期转成 YYYY-MM-DD', qrDraft.issue_date, '2026-11-10')
 check('草稿金额为分', qrDraft.total_cent, 1050000)
 check('草稿置信度低', qrDraft.confidence, 0.8)
 check('原始二维码保留', qrDraft.raw_qr.indexOf('01,31,') === 0, true)
-check('扫码草稿不误报金额勾稽', qrDraft.anomaly[0].indexOf('字段待补录') > 0, true)
+check('扫码草稿报销人待补录', qrDraft.anomaly[0].indexOf('报销人') >= 0, true)
+check('扫码草稿报销人为空', qrDraft.reimburser, '')
 
 console.log('\n--- 排序口径：导入时间 / 开票日期 ---')
 const oldImport = store.upsertInvoice({ invoice_no: 'OLDIMPORT', issue_date: '2026-12-31',
-  created_at: Date.now() + 1000, total_cent: 100, seller_name: '晚开票早导入' })
+  created_at: Date.now() + 1000, total_cent: 100, reimburser: '晚开票早导入' })
 const newImport = store.upsertInvoice({ invoice_no: 'NEWIMPORT', issue_date: '2026-01-01',
-  created_at: Date.now() + 2000, total_cent: 200, seller_name: '早开票晚导入' })
+  created_at: Date.now() + 2000, total_cent: 200, reimburser: '早开票晚导入' })
 check('按开票日期倒序', store.listInvoices({ sortBy: 'issued' })[0].invoice_no, 'OLDIMPORT')
 check('按导入时间倒序', store.listInvoices({ sortBy: 'created' })[0].invoice_no, 'NEWIMPORT')
+const numberSorted = store.listInvoices({ sortBy: 'number' }).map(function (i) { return i.invoice_no })
+check('发票号码升序', numberSorted.every(function (no, i) { return i === 0 || numberSorted[i - 1] <= no }), true)
+const reimbSorted = store.listInvoices({ sortBy: 'reimburser' }).map(function (i) { return i.reimburser || '' })
+let seenEmpty = false
+check('报销人升序且空值排最后', reimbSorted.every(function (r) {
+  if (!r) { seenEmpty = true; return true }
+  return !seenEmpty
+}), true)
 const createdOrder = store.listInvoices({ sortBy: 'created' })
 const pos = function (no) {
   for (let i = 0; i < createdOrder.length; i++) if (createdOrder[i].invoice_no === no) return i
@@ -187,8 +191,10 @@ check('按开票月份仍能列出', store.months('issued').indexOf('2026-12') >
 const byCreated = store.listInvoices({ month: thisMonth, monthBasis: 'created' })
 check('导入月份筛选不漏票', byCreated.some(function (inv) { return inv.invoice_no === 'NEWIMPORT' }), true)
 check('开票月不同仍按导入月筛到', byCreated.some(function (inv) { return inv.invoice_no === 'OLDIMPORT' }), true)
-check('偏好默认 created', store.getBasis(), 'created')
-check('无 wx 时设置偏好安全降级', store.setBasis('issued'), 'created')
+check('归月偏好默认 created', store.getBasis(), 'created')
+check('无 wx 时归月偏好安全降级', store.setBasis('issued'), 'created')
+check('排序偏好默认 created（录入时间）', store.getSort(), 'created')
+check('无 wx 时排序偏好安全降级', store.setSort('number'), 'created')
 
 console.log('\n--- 批量落库 ---')
 const report = batch.saveAll([
@@ -208,7 +214,7 @@ console.log('\n--- 重复票按来源质量升级 ---')
 const qrOld = { id: 99, invoice_no: 'MIX001', issue_date: '2026-06-01', total_cent: 100,
   source: 'qr', confidence: 0.8, files: [{ path: '/a' }], created_at: 111 }
 const xmlNew = { invoice_no: 'MIX001', issue_date: '2026-06-01', total_cent: 100,
-  source: 'xml', confidence: 1, seller_name: '完整销方', files: [{ path: '/b' }], anomaly: [] }
+  source: 'xml', confidence: 1, reimburser: '王五', files: [{ path: '/b' }], anomaly: [] }
 const merged = batch.mergeBetter(qrOld, xmlNew)
 check('升级后来源为 xml', merged.source, 'xml')
 check('保留原记录 id', merged.id, 99)
@@ -219,10 +225,10 @@ check('低质量不能反向覆盖', batch.mergeBetter(xmlNew, qrOld), null)
 store.upsertInvoice({ invoice_no: 'UPGRADE001', issue_date: '2026-07-01',
   total_cent: 500, source: 'qr', created_at: Date.now() })
 const upgradeReport = batch.saveAll([{ invoice_no: 'UPGRADE001', issue_date: '2026-07-01',
-  total_cent: 500, source: 'xml', seller_name: '补全的销方', confidence: 1 }])
+  total_cent: 500, source: 'xml', reimburser: '赵六', confidence: 1 }])
 check('重复但自动升级', upgradeReport.upgraded, 1)
 check('不算新入库', upgradeReport.saved, 0)
-check('销方已补全', store.listInvoices({ keyword: 'UPGRADE001' })[0].seller_name, '补全的销方')
+check('来源已升级为 xml', store.listInvoices({ keyword: 'UPGRADE001' })[0].source, 'xml')
 
 console.log('\n' + (failCount === 0 ? '全部通过' : failCount + ' 项失败'))
 process.exit(failCount === 0 ? 0 : 1)
