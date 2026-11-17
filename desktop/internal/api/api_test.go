@@ -12,16 +12,22 @@ import (
 	"testing"
 
 	"invoice-helper/desktop/internal/files"
+	"invoice-helper/desktop/internal/registry"
 )
 
 func newTestHandler(t *testing.T) (http.Handler, *files.Store) {
 	t.Helper()
 
-	store, err := files.New(t.TempDir())
+	root := t.TempDir()
+	store, err := files.New(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return NewHandler(store), store
+	deviceRegistry, err := registry.New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return NewHandler(":8765", store, deviceRegistry), store
 }
 
 func request(t *testing.T, handler http.Handler, method string, path string, body io.Reader, contentType string) *httptest.ResponseRecorder {

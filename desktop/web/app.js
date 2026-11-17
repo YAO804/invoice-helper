@@ -1,108 +1,126 @@
-const $ = (id) => document.getElementById(id)
+let statusData = null
+let filesData = null
+let uploadItems = []
 
-async function requestJSON(url, options) {
-  const response = await fetch(url, options)
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(data.error || response.statusText)
-  return data
-}
-
-async function refreshHealth() {
+async function refresh() {
   try {
-    const data = await requestJSON('/api/health')
-    $('health').textContent = `服务正常 · ${data.name} · v${data.version}`
-    $('health').className = 'status ok'
+    const [status, files] = await Promise.all([
+      requestJSON('/api/status'),
+      requestJSON('/api/files')
+    ])
+    statusData = status
+    filesData = files
+    renderAll()
   } catch (error) {
-    $('health').textContent = '服务异常：' + error.message
-    $('health').className = 'status bad'
+    $('serviceState').textContent = '服务异常'
+    $('serviceState').className = 'stat-value bad'
+    $('serviceDetail').textContent = error.message
   }
 }
 
-async function refreshFiles() {
-  try {
-    const data = await requestJSON('/api/files')
-    renderIncoming(data.incoming || [])
-    renderOutgoing(data.outgoing || [])
-  } catch (error) {
-    $('uploadResult').textContent = '读取文件列表失败：' + error.message
-  }
+function renderAll() {
+  if (!statusData || !filesData) return
+
+  renderStatus(statusData)
+  renderAddresses(statusData)
+  renderDevices((statusData.mini_program && statusData.mini_program.devices) || [])
+
+  const keyword = ($('searchInput').value || '').trim().toLowerCase()
+  renderIncoming(filesData.incoming || [], keyword)
+  renderOutgoing(filesData.outgoing || [], keyword)
+  renderEvents(statusData.events || [])
 }
 
-function esc(value) {
-  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
-  return String(value ?? '').replace(/[&<>"']/g, (ch) => map[ch])
+function setUploadItem(index, name, percent, state) {
+  uploadItems[index] = { name, percent, state }
+  renderUploadProgress(uploadItems)
 }
 
-function human(size) {
-  if (size < 1024) return size + ' B'
-  if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB'
-  return (size / 1024 / 1024).toFixed(2) + ' MB'
-}
+async function handleUpload(fileList) {
+  const files = Array.from(fileList || [])
+  if (!files.length) return
 
-function emptyRow(text, colspan) {
-  return `<tr><td colspan="${colspan}" class="empty">${text}</td></tr>`
-}
-
-function renderIncoming(list) {
-  if (!list.length) {
-    $('incomingBody').innerHTML = emptyRow('暂无上传文件', 5)
-    return
-  }
-
-  $('incomingBody').innerHTML = list.map((item) => `
-    <tr>
-      <td>${esc(item.name)}</td>
-      <td>${human(item.size)}</td>
-      <td>${esc(item.source)}</td>
-      <td>${esc(item.uploaded_at)}</td>
-      <td><a href="/api/incoming/${encodeURIComponent(item.id)}/download">下载</a></td>
-    </tr>
-  `).join('')
-}
-
-function renderOutgoing(list) {
-  if (!list.length) {
-    $('outgoingBody').innerHTML = emptyRow('暂无待取文件', 4)
-    return
-  }
-
-  $('outgoingBody').innerHTML = list.map((item) => `
-    <tr>
-      <td>${esc(item.name)}</td>
-      <td>${human(item.size)}</td>
-      <td>${esc(item.modified_at)}</td>
-      <td><a href="/api/outgoing/${encodeURIComponent(item.name)}/download">下载</a></td>
-    </tr>
-  `).join('')
-}
-
-async function upload(event) {
-  event.preventDefault()
-  const file = $('fileInput').files[0]
-  if (!file) return
-
-  $('uploadResult').textContent = '上传中...'
-  const form = new FormData()
-  form.append('file', file)
-  form.append('source', $('sourceInput').value || 'web')
+  uploadItems = files.map((file) => ({ name: file.name, percent: 0, state: '等待' }))
+  renderUploadProgress(uploadItems)
 
   try {
-    const record = await requestJSON('/api/files/upload', { method: 'POST', body: form })
-    $('uploadResult').textContent = record.duplicate
-      ? '文件内容已存在，未重复保存：' + record.name
-      : '已上传：' + record.name
-    $('fileInput').value = ''
-    await refreshFiles()
+    await uploadFiles(files, $('sourceInput').value || 'web', setUploadItem)
+    await refresh()
   } catch (error) {
-    $('uploadResult').textContent = '上传失败：' + error.message
+    const last = uploadItems[uploadItems.length - 1]
+    if (last) {
+      last.state = '失败：' + error.message
+      renderUploadProgress(uploadItems)
+    }
+  }
+  $('fileInput').value = ''
+}
+
+async function handleDelete(button) {
+  const kind = button.dataset.kind
+  const label = kind === 'incoming' ? button.dataset.id : button.dataset.name
+  if (!confirm('确定删除「' + label + '」？删除后不可恢复。')) return
+
+  const path = kind === 'incoming'
+    ? '/api/incoming/' + encodeURIComponent(button.dataset.id)
+    : '/api/outgoing/' + encodeURIComponent(button.dataset.name)
+
+  try {
+    await deleteJSON(path)
+    await refresh()
+  } catch (error) {
+    alert('删除失败：' + error.message)
   }
 }
 
-$('uploadForm').addEventListener('submit', upload)
-$('refreshBtn').addEventListener('click', () => {
-  refreshHealth()
-  refreshFiles()
-})
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text)
+      return
+    }
+    const input = document.createElement('textarea')
+    input.value = text
+    input.style.position = 'fixed'
+    input.style.opacity = '0'
+    document.body.appendChild(input)
+    input.select()
+    document.execCommand('copy')
+    document.body.removeChild(input)
+  } catch (error) {
+    prompt('手动复制这个地址：', text)
+  }
+}
 
-refreshHealth()
-refreshFiles()
+function bindEvents() {
+  $('refreshBtn').addEventListener('click', refresh)
+  $('chooseBtn').addEventListener('click', () => $('fileInput').click())
+  $('fileInput').addEventListener('change', (event) => handleUpload(event.target.files))
+  $('searchInput').addEventListener('input', renderAll)
+
+  const dropZone = $('dropZone')
+  dropZone.addEventListener('dragover', (event) => {
+    event.preventDefault()
+    dropZone.classList.add('over')
+  })
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'))
+  dropZone.addEventListener('drop', (event) => {
+    event.preventDefault()
+    dropZone.classList.remove('over')
+    handleUpload(event.dataTransfer.files)
+  })
+
+  document.addEventListener('click', (event) => {
+    const deleteButton = event.target.closest('.delete-btn')
+    if (deleteButton) {
+      handleDelete(deleteButton)
+      return
+    }
+    const copyButton = event.target.closest('.copy-btn')
+    if (copyButton) copyText(copyButton.dataset.url)
+  })
+}
+
+bindEvents()
+refresh()
+setInterval(refresh, 5000)

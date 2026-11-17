@@ -8,64 +8,103 @@
 </head>
 <body>
   <header>
-    <h1>攒票小匣 · 桌面端</h1>
-    <p>小程序与电脑之间的本地文件中转服务</p>
+    <div>
+      <h1>攒票小匣 · 桌面端</h1>
+      <p>小程序与电脑之间的本地文件中转控制台</p>
+    </div>
+    <button id="refreshBtn" type="button" class="secondary">刷新</button>
   </header>
 
   <main>
     <section class="card">
       <div class="card-head">
-        <h2>连接状态</h2>
-        <button id="refreshBtn" type="button">刷新</button>
+        <h2>运行总览</h2>
+        <span id="lastRefresh" class="hint">尚未刷新</span>
       </div>
-      <p id="health" class="status">正在检查服务...</p>
-    </section>
-
-    <section class="card">
-      <h2>上传到电脑</h2>
-      <form id="uploadForm">
-        <div class="row">
-          <input id="fileInput" type="file" required>
-          <input id="sourceInput" type="text" placeholder="来源，例如 小程序">
-          <button type="submit">上传</button>
+      <div class="grid">
+        <div class="stat">
+          <div class="stat-label">服务状态</div>
+          <div id="serviceState" class="stat-value">检查中</div>
+          <div id="serviceDetail" class="stat-sub"></div>
         </div>
-      </form>
-      <p id="uploadResult" class="hint"></p>
+        <div class="stat">
+          <div class="stat-label">小程序连接</div>
+          <div id="miniState" class="stat-value">检查中</div>
+          <div id="miniDetail" class="stat-sub"></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">今日接收</div>
+          <div id="todayCount" class="stat-value">—</div>
+          <div id="todayBytes" class="stat-sub"></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">电脑待取</div>
+          <div id="outgoingCount" class="stat-value">—</div>
+          <div id="outgoingBytes" class="stat-sub"></div>
+        </div>
+      </div>
     </section>
 
     <section class="card">
-      <h2>小程序上传的文件</h2>
+      <h2>连接小程序</h2>
+      <p class="hint">在小程序「设置 → 桌面端连接」填入任一地址。小程序打开时会自动上报在线状态。</p>
+      <div id="addressList" class="address-list"></div>
+
+      <h3 class="section-title">最近设备</h3>
       <table>
         <thead>
-          <tr>
-            <th>文件名</th>
-            <th>大小</th>
-            <th>来源</th>
-            <th>上传时间</th>
-            <th>操作</th>
-          </tr>
+          <tr><th>设备</th><th>版本</th><th>最近心跳</th><th>上传数</th><th>状态</th></tr>
         </thead>
-        <tbody id="incomingBody"></tbody>
+        <tbody id="deviceBody"></tbody>
       </table>
     </section>
 
     <section class="card">
-      <h2>电脑待取文件</h2>
+      <h2>发送到电脑</h2>
+      <div id="dropZone" class="drop-zone">
+        <strong>拖放文件到这里</strong>
+        <span class="hint">也可以点下面的按钮选择文件，支持一次选多个</span>
+      </div>
+      <div class="row">
+        <button id="chooseBtn" type="button">选择文件</button>
+        <input id="sourceInput" type="text" placeholder="来源，例如 web">
+        <input id="fileInput" type="file" multiple hidden>
+      </div>
+      <div id="uploadProgress" class="progress-list"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>文件列表</h2>
+        <input id="searchInput" type="text" placeholder="搜索文件名">
+      </div>
+
+      <h3 class="section-title">小程序上传的文件</h3>
+      <table>
+        <thead>
+          <tr><th>文件名</th><th>大小</th><th>来源</th><th>上传时间</th><th>操作</th></tr>
+        </thead>
+        <tbody id="incomingBody"></tbody>
+      </table>
+
+      <h3 class="section-title">电脑待取文件</h3>
       <p class="hint">把文件放进 <code>desktop/data/outgoing</code>，小程序就能看到并下载。</p>
       <table>
         <thead>
-          <tr>
-            <th>文件名</th>
-            <th>大小</th>
-            <th>修改时间</th>
-            <th>操作</th>
-          </tr>
+          <tr><th>文件名</th><th>大小</th><th>修改时间</th><th>操作</th></tr>
         </thead>
         <tbody id="outgoingBody"></tbody>
       </table>
     </section>
+
+    <section class="card">
+      <h2>最近事件</h2>
+      <div id="eventList" class="event-list"></div>
+    </section>
   </main>
 
+  <script src="/api.js"></script>
+  <script src="/render.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

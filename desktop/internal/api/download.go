@@ -5,38 +5,32 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-
-	"invoice-helper/desktop/internal/files"
 )
 
-func downloadIncoming(store *files.Store) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
-		record, ok, err := store.FindRecord(id)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "读取上传记录失败: "+err.Error())
-			return
-		}
-		if !ok {
-			writeError(w, http.StatusNotFound, "上传记录不存在")
-			return
-		}
-
-		serveDownload(w, r, store.IncomingRecordPath(record), record.Name)
+func (d *deps) downloadIncoming(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	record, ok, err := d.store.FindRecord(id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "读取上传记录失败: "+err.Error())
+		return
 	}
+	if !ok {
+		writeError(w, http.StatusNotFound, "上传记录不存在")
+		return
+	}
+
+	serveDownload(w, r, d.store.IncomingRecordPath(record), record.Name)
 }
 
-func downloadOutgoing(store *files.Store) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		name := r.PathValue("name")
-		path, ok := store.OutgoingPath(name)
-		if !ok {
-			writeError(w, http.StatusNotFound, "待取文件不存在")
-			return
-		}
-
-		serveDownload(w, r, path, name)
+func (d *deps) downloadOutgoing(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	path, ok := d.store.OutgoingPath(name)
+	if !ok {
+		writeError(w, http.StatusNotFound, "待取文件不存在")
+		return
 	}
+
+	serveDownload(w, r, path, name)
 }
 
 func serveDownload(w http.ResponseWriter, r *http.Request, path string, name string) {

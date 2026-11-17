@@ -17,6 +17,9 @@ func main() {
 	}
 
 	log.Printf("桌面端已启动: http://0.0.0.0%s", cfg.Addr)
+	for _, url := range api.LANURLsFromAddr(cfg.Addr) {
+		log.Printf("手机访问: %s", url)
+	}
 	log.Printf("数据目录: %s", cfg.DataDir)
 	log.Fatal(http.ListenAndServe(cfg.Addr, handler))
 }

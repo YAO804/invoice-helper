@@ -1,4 +1,5 @@
 const store = require('./utils/store')
+const lanservice = require('./utils/lanservice')
 
 App({
   globalData: {
@@ -14,6 +15,11 @@ App({
     } catch (e) {
       console.error('[store] init failed', e)
     }
+    lanservice.startAutoHeartbeat()
+  },
+
+  onShow() {
+    lanservice.startAutoHeartbeat()
   },
 
   onError(err) {
