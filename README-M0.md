@@ -197,17 +197,28 @@ invoice-helper/
 │       ├── exportsel.js         # 导出范围/内容选择解析
 │       ├── exportflow.js        # 按勾选顺序逐个转发
 │       ├── purge.js             # 台账清理：按 id 或导入时间区间删除
+├── desktop/
+│   ├── internal/                # 电脑端 Go 模块目录：api / files / config / discover
+│   ├── web/                     # 本地网页静态文件
+│   ├── data/                    # 运行时数据，不提交 Git
+│   └── README.md                # 电脑端目录约定
+├── shared/                      # 两端共享协议、字段约定与测试样本
 ├── test/
-│   ├── einvoice.test.js         # 真实 XML 树 1:1 回归，60 项断言
-│   ├── zip.test.js              # 手工构造 zip + S4 真机结构回归，14 项
-│   ├── fsx.test.js              # 私有目录与 TTL 清理回归，11 项
-│   ├── store.test.js            # 台账 + 排序口径 + 批量落库 + 来源升级回归，72 项（内存 FS）
-│   ├── collect.test.js          # 扫码/文件导入 + 批量入口回归，35 项（模拟 wx API）
-│   ├── export.test.js           # M5 CSV/导出/到期提醒回归，30 项
-│   ├── p0.test.js               # P0 分类/统计/待复核回归，28 项
-│   ├── scanbatch.test.js        # 批量扫码交互与重复提示回归，27 项
-│   ├── exportsel.test.js        # 导出范围/勾选/逐个转发回归，19 项
-│   └── purge.test.js            # 台账清理：时间区间与删除回归，14 项
+│   ├── miniprogram/
+│   │   ├── einvoice.test.js     # 真实 XML 树 1:1 回归，60 项断言
+│   │   ├── zip.test.js          # 手工构造 zip + S4 真机结构回归，14 项
+│   │   ├── fsx.test.js          # 私有目录与 TTL 清理回归，11 项
+│   │   ├── store.test.js        # 台账 + 排序口径 + 批量落库 + 来源升级回归，72 项（内存 FS）
+│   │   ├── collect.test.js      # 扫码/文件导入 + 批量入口回归，35 项（模拟 wx API）
+│   │   ├── export.test.js       # M5 CSV/导出/到期提醒回归，30 项
+│   │   ├── p0.test.js           # P0 分类/统计/待复核回归，28 项
+│   │   ├── scanbatch.test.js    # 批量扫码交互与重复提示回归，27 项
+│   │   ├── exportsel.test.js    # 导出范围/勾选/逐个转发回归，19 项
+│   │   └── purge.test.js        # 台账清理：时间区间与删除回归，14 项
+│   ├── desktop/                 # 电脑端 Go 测试，后续添加
+│   └── integration/             # 小程序与电脑端联调测试，后续添加
+├── scripts/                     # 图标生成与开发脚本
+├── assets/                      # 项目静态资源
 └── docs/
     ├── requirements.md          # 需求说明（含实测 XML 字段映射表）
     ├── miniprogram-plan.md      # 执行计划（M0 已完成）
@@ -217,15 +228,16 @@ invoice-helper/
 跑全部回归测试：
 
 ```bash
-node test/einvoice.test.js
-node test/zip.test.js
-node test/fsx.test.js
-node test/store.test.js
-node test/collect.test.js
-node test/export.test.js
-node test/p0.test.js
-node test/scanbatch.test.js
-node test/exportsel.test.js
+node test/miniprogram/einvoice.test.js
+node test/miniprogram/zip.test.js
+node test/miniprogram/fsx.test.js
+node test/miniprogram/store.test.js
+node test/miniprogram/collect.test.js
+node test/miniprogram/export.test.js
+node test/miniprogram/p0.test.js
+node test/miniprogram/scanbatch.test.js
+node test/miniprogram/exportsel.test.js
+node test/miniprogram/purge.test.js
 ```
 
 十套共 310 项断言（60 + 14 + 11 + 72 + 35 + 30 + 28 + 27 + 19 + 14），当前全绿。

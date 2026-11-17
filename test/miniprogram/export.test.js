@@ -1,7 +1,7 @@
 /**
  * csv.js / export.js 回归测试：模拟 wx 文件系统，不依赖微信环境。
  *
- *   node test/export.test.js
+ *   node test/miniprogram/export.test.js
  */
 
 let failCount = 0
@@ -44,8 +44,8 @@ global.wx = {
 files['/usr/invoices/files/aaaaaaaa_old.xml'] = 'old'
 files['/usr/invoices/files/bbbbbbbb_fresh.xml'] = 'new'
 
-const csv = require('../miniprogram/utils/csv')
-const exporter = require('../miniprogram/utils/export')
+const csv = require('../../miniprogram/utils/csv')
+const exporter = require('../../miniprogram/utils/export')
 
 console.log('--- CSV 基础 ---')
 check('逗号加引号', csv.cell('a,b'), '"a,b"')

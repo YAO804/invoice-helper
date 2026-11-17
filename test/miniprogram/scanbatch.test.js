@@ -1,7 +1,7 @@
 /**
  * scanbatch.js 回归测试：进入说明、连续扫码、重复提示、定期确认、跳过无效码、相机失败中止。
  *
- *   node test/scanbatch.test.js
+ *   node test/miniprogram/scanbatch.test.js
  */
 
 let failCount = 0
@@ -46,8 +46,8 @@ global.wx = {
   setStorageSync() {}
 }
 
-const store = require('../miniprogram/utils/store')
-const scanbatch = require('../miniprogram/utils/scanbatch')
+const store = require('../../miniprogram/utils/store')
+const scanbatch = require('../../miniprogram/utils/scanbatch')
 
 // 台账查重走 store，这里只替换查重结果，不动其他逻辑
 store.findDuplicate = function (inv) {

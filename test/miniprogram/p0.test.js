@@ -1,7 +1,7 @@
 /**
  * P0 回归测试：分类、来源文案、统计聚合、待复核清单。
  *
- *   node test/p0.test.js
+ *   node test/miniprogram/p0.test.js
  */
 
 let failCount = 0
@@ -38,11 +38,11 @@ global.wx = {
   setStorageSync(k, v) { storage[k] = v }
 }
 
-const category = require('../miniprogram/utils/category')
-const labels = require('../miniprogram/utils/labels')
-const stats = require('../miniprogram/utils/stats')
-const review = require('../miniprogram/utils/review')
-const store = require('../miniprogram/utils/store')
+const category = require('../../miniprogram/utils/category')
+const labels = require('../../miniprogram/utils/labels')
+const stats = require('../../miniprogram/utils/stats')
+const review = require('../../miniprogram/utils/review')
+const store = require('../../miniprogram/utils/store')
 
 store.setEnv({ root: '/usr/invoices', fileSystem: fs })
 store.init()

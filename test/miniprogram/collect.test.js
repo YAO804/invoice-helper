@@ -1,7 +1,7 @@
 /**
  * collect.js / archive.js 回归测试：模拟 wx API，不依赖微信环境。
  *
- *   node test/collect.test.js
+ *   node test/miniprogram/collect.test.js
  */
 
 let failCount = 0
@@ -58,8 +58,8 @@ global.wx = {
   showModal(o) { o.success && o.success({ confirm: false }) }
 }
 
-const archive = require('../miniprogram/utils/archive')
-const collect = require('../miniprogram/utils/collect')
+const archive = require('../../miniprogram/utils/archive')
+const collect = require('../../miniprogram/utils/collect')
 
 console.log('--- 纯函数 ---')
 check('扩展名', collect.extOf('a.b.XML'), 'xml')

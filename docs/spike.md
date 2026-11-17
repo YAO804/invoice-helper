@@ -225,7 +225,7 @@ S4 输出 `hasDocSignature:false`、`hasAnnotation:true`、`hasCustomTags:true`�
 - 对外主 API 改为 `extractInvoice(text)`，返回 `seller / buyer / amount / items[] / labels / signature / missing`
 - 旧 `extractFields` 已删除
 - 金额保留原始字符串，不做浮点求和
-- `test/einvoice.test.js` 按真实树 1:1 重建（双明细，故意让明细行合计 100.00 + 47.00 ≠ 合计 147.00，确保「取错行」必被测试抓到），并按真机复跑值校准 `version / tag / EIid / LabelCode / 签名 OID / 大写金额 / 税收分类编码`，**60 项断言全通过**
+- `test/miniprogram/einvoice.test.js` 按真实树 1:1 重建（双明细，故意让明细行合计 100.00 + 47.00 ≠ 合计 147.00，确保「取错行」必被测试抓到），并按真机复跑值校准 `version / tag / EIid / LabelCode / 签名 OID / 大写金额 / 税收分类编码`，**60 项断言全通过**
 
 ---
 

@@ -5,7 +5,7 @@
  * 验证的是纯逻辑：递归遍历、总量统计、30 天 TTL 清理。
  * 真实环境的容量限制仍需真机验证。
  *
- *   node test/fsx.test.js
+ *   node test/miniprogram/fsx.test.js
  */
 
 /* ---------- mock 内存文件系统 ---------- */
@@ -58,7 +58,7 @@ global.wx = {
 
 /* ---------- 载入被测模块 ---------- */
 
-const fsx = require('../miniprogram/utils/fsx')
+const fsx = require('../../miniprogram/utils/fsx')
 
 /* ---------- 断言 ---------- */
 

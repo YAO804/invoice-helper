@@ -6,3 +6,10 @@ project.private.config.json
 node_modules/
 *.log
 .DS_Store
+
+# 电脑端运行时数据
+desktop/data/*
+!desktop/data/.gitkeep
+desktop/bin/
+desktop/config.local.json
+desktop/*.exe

@@ -4,11 +4,11 @@
  * 用手工构造的 ZIP 验证中央目录读取；
  * 第二份按 S4 真机样本结构构造：无 Doc_0/Signs/，印章在 Annots/ 下。
  *
- *   node test/zip.test.js
+ *   node test/miniprogram/zip.test.js
  */
 
 const zlib = require('zlib')
-const zipx = require('../miniprogram/utils/zip')
+const zipx = require('../../miniprogram/utils/zip')
 
 let failCount = 0
 function check(name, actual, expected) {

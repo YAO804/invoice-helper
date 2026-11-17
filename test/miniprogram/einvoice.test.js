@@ -5,10 +5,10 @@
  * 发票号码 26932000001295659876）1:1 还原，包含全部易踩坑路径。
  * 二维码样本来自 S1 真机扫码 2026-11-16。
  *
- *   node test/einvoice.test.js
+ *   node test/miniprogram/einvoice.test.js
  */
 
-const e = require('../miniprogram/utils/einvoice')
+const e = require('../../miniprogram/utils/einvoice')
 
 let failCount = 0
 function check(name, actual, expected) {

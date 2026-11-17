@@ -1,11 +1,11 @@
 /**
  * store.js 回归测试：内存文件系统，不依赖 wx。
  *
- *   node test/store.test.js
+ *   node test/miniprogram/store.test.js
  */
 
-const store = require('../miniprogram/utils/store')
-const batch = require('../miniprogram/utils/batch')
+const store = require('../../miniprogram/utils/store')
+const batch = require('../../miniprogram/utils/batch')
 
 let failCount = 0
 function check(name, actual, expected) {

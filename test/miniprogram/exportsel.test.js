@@ -1,7 +1,7 @@
 /**
  * 导出页选择逻辑回归：本次扫码标记、范围解析、自定义勾选、逐个转发。
  *
- *   node test/exportsel.test.js
+ *   node test/miniprogram/exportsel.test.js
  */
 
 let failCount = 0
@@ -50,10 +50,10 @@ global.wx = {
   }
 }
 
-const store = require('../miniprogram/utils/store')
-const batchmark = require('../miniprogram/utils/batchmark')
-const exportsel = require('../miniprogram/utils/exportsel')
-const exportflow = require('../miniprogram/utils/exportflow')
+const store = require('../../miniprogram/utils/store')
+const batchmark = require('../../miniprogram/utils/batchmark')
+const exportsel = require('../../miniprogram/utils/exportsel')
+const exportflow = require('../../miniprogram/utils/exportflow')
 
 store.setEnv({ root: '/usr/invoices', fileSystem: fs })
 store.init()

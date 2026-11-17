@@ -1,7 +1,7 @@
 /**
  * purge.js 回归测试：按导入时间区间筛选、按 id 删除、卡片勾选态。
  *
- *   node test/purge.test.js
+ *   node test/miniprogram/purge.test.js
  */
 
 let failCount = 0
@@ -36,8 +36,8 @@ global.wx = {
   setStorageSync(k, v) { storage[k] = v }
 }
 
-const store = require('../miniprogram/utils/store')
-const purge = require('../miniprogram/utils/purge')
+const store = require('../../miniprogram/utils/store')
+const purge = require('../../miniprogram/utils/purge')
 
 store.setEnv({ root: '/usr/invoices', fileSystem: fs })
 store.init()

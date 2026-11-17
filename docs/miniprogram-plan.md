@@ -125,7 +125,7 @@
 > - 修掉一个跨月编辑漏洞：改开票日期时旧分片会自动移除同一条，避免两处各留一份。
 > - 页面：列表页（首页，月份筛选 + 关键字搜索 + 月度合计）、详情页（查看/编辑/核验标记/删除）、
 >   手动录入页（新增与编辑复用）；M0 验证页保留为列表页入口。
-> - `test/store.test.js` 用内存 FS 覆盖断言（当时四套全绿）。
+> - `test/miniprogram/store.test.js` 用内存 FS 覆盖断言（当时四套全绿）。
 >
 > **2026-11-16 15:05 补充**：用户要求默认按**导入时间**排序归类，开票日期口径保留且可切换。
 > `listInvoices({ sortBy, monthBasis })` 支持两种口径，偏好写 `wx.setStorageSync('ledger_basis')`；
@@ -170,7 +170,7 @@
 >   `.ofd/.pdf` 原件存档后生成"字段待补录"草稿（OFD 文本层暂未接，PDF 端侧不解析）。
 > - 列表页新增「扫二维码」「从会话导入文件」两个入口，编辑页统一消费草稿；
 >   去重仍由 `upsertInvoice` 前的 `findDuplicate` 提示，不静默覆盖。
-> - `test/collect.test.js` 模拟 wx API；五套测试当时全绿。
+> - `test/miniprogram/collect.test.js` 模拟 wx API；五套测试当时全绿。
 >
 > **2026-11-16 15:05 补充**：支持批量导入。`fileDrafts()` 一次选最多 20 个文件逐个存档解析，
 > `scanDrafts()` 连续扫码（每扫一张问是否继续）；`utils/batch.js` 统一落库并汇总
