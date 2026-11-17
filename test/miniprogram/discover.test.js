@@ -17,6 +17,8 @@ let foundHandler = null
 let stopHandler = null
 let startOptions = null
 let stopCount = 0
+let startCount = 0
+let failFirstStart = false
 
 function emitFound(res) {
   if (foundHandler) foundHandler(res)
@@ -35,6 +37,14 @@ global.wx = {
   stopLocalServiceDiscovery() { stopCount++; emitStop() },
   startLocalServiceDiscovery(options) {
     startOptions = options
+    startCount++
+    if (failFirstStart) {
+      failFirstStart = false
+      setTimeout(function () {
+        options.fail({ errMsg: 'startLocalServiceDiscovery:fail:scan task already exist' })
+      }, 1)
+      return
+    }
     setTimeout(function () {
       emitFound({ serviceName: 'other-device', ip: '192.168.1.99', port: 9000 })
       emitFound({ serviceName: 'invoice-helper-desktop', ip: '192.168.1.20', port: 8765 })
@@ -65,6 +75,16 @@ discover.scan({ settleMs: 10, timeoutMs: 200 }).then(function (url) {
     check('iOS 应拒绝', false, true)
   }).catch(function (error) {
     check('iOS 给出手动提示', error.message.indexOf('手动') >= 0, true)
+  })
+}).then(function () {
+  platform = 'android'
+  stopCount = 0
+  startCount = 0
+  failFirstStart = true
+  return discover.scan({ settleMs: 10, timeoutMs: 200 }).then(function (url) {
+    check('already exist 自愈后仍发现电脑', url, 'http://192.168.1.20:8765')
+    check('自愈时先 stop 再重试', stopCount, 2)
+    check('重试后 start 两次', startCount, 2)
   })
 }).then(function () {
   console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')

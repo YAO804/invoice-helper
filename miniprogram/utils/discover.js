@@ -3,6 +3,10 @@ const MATCH = 'invoice-helper'
 const DEFAULT_SETTLE_MS = 1500
 const DEFAULT_TIMEOUT_MS = 28000
 
+// mDNS 扫描是微信全局单例，同一时间只能跑一个任务。
+// 模块级互斥，避免 onLaunch 自动连接与手动点击重复 start（否则报 scan task already exist）。
+let activeScan = null
+
 function platform() {
   try {
     return wx.getSystemInfoSync().platform || ''
@@ -52,11 +56,7 @@ function firstWorking(list, index) {
   })
 }
 
-function scan(options) {
-  if (!supported()) {
-    return Promise.reject(new Error('这台设备不支持自动发现，请手动填写电脑地址'))
-  }
-
+function doScan(options) {
   const settings = options || {}
   const settleMs = settings.settleMs || DEFAULT_SETTLE_MS
   const timeoutMs = settings.timeoutMs || DEFAULT_TIMEOUT_MS
@@ -66,6 +66,8 @@ function scan(options) {
     let settleTimer = null
     let timeoutTimer = null
     let finished = false
+    let retried = false
+    let retrying = false
 
     function onFound(res) {
       const url = candidate(res)
@@ -76,6 +78,12 @@ function scan(options) {
 
     function onStop() {
       if (finished) return
+      // start 曾因「已有任务」失败：这次 stop 是为清掉遗留任务，停完再启动自己
+      if (retrying) {
+        retrying = false
+        startScan()
+        return
+      }
       firstWorking(unique(found)).then(function (url) {
         finish(url, '没有找到可连接的电脑')
       })
@@ -101,17 +109,47 @@ function scan(options) {
       else reject(new Error(message))
     }
 
+    function startScan() {
+      wx.startLocalServiceDiscovery({
+        serviceType: SERVICE_TYPE,
+        fail: function (err) {
+          const msg = (err && err.errMsg) || '启动局域网搜索失败'
+          // 上一次扫描没清干净：先 stop 再重试一次，避免把内部错误抛给用户
+          if (msg.indexOf('scan task already exist') >= 0 && !retried) {
+            retried = true
+            retrying = true
+            try {
+              wx.stopLocalServiceDiscovery()
+            } catch (e) {
+              retrying = false
+              finish('', msg)
+            }
+            return
+          }
+          finish('', msg)
+        }
+      })
+    }
+
     if (typeof wx.onLocalServiceFound === 'function') wx.onLocalServiceFound(onFound)
     if (typeof wx.onLocalServiceDiscoveryStop === 'function') wx.onLocalServiceDiscoveryStop(onStop)
     timeoutTimer = setTimeout(stop, timeoutMs)
-
-    wx.startLocalServiceDiscovery({
-      serviceType: SERVICE_TYPE,
-      fail: function (err) {
-        finish('', (err && err.errMsg) || '启动局域网搜索失败')
-      }
-    })
+    startScan()
   })
+}
+
+function scan(options) {
+  if (!supported()) {
+    return Promise.reject(new Error('这台设备不支持自动发现，请手动填写电脑地址'))
+  }
+  // 已有扫描在跑就复用，避免重复 start 触发 scan task already exist
+  if (activeScan) return activeScan
+  const current = doScan(options).then(
+    function (url) { if (activeScan === current) activeScan = null; return url },
+    function (err) { if (activeScan === current) activeScan = null; throw err }
+  )
+  activeScan = current
+  return current
 }
 
 module.exports = {
