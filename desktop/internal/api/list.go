@@ -6,8 +6,16 @@ import (
 	"invoice-helper/desktop/internal/files"
 )
 
+// incomingItem 是列表里的一条接收记录，额外带上能否预览。
+// 放在响应结构里而不是 Record 上：Record 会序列化进 index.json，
+// 预览类型是按文件名算出来的，不该落盘。
+type incomingItem struct {
+	files.Record
+	Preview string `json:"preview"`
+}
+
 type fileListResponse struct {
-	Incoming []files.Record       `json:"incoming"`
+	Incoming []incomingItem       `json:"incoming"`
 	Outgoing []files.OutgoingFile `json:"outgoing"`
 }
 
@@ -24,8 +32,16 @@ func (d *deps) listFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	items := make([]incomingItem, 0, len(incoming))
+	for _, record := range incoming {
+		items = append(items, incomingItem{
+			Record:  record,
+			Preview: files.PreviewKind(record.Name),
+		})
+	}
+
 	writeJSON(w, http.StatusOK, fileListResponse{
-		Incoming: incoming,
+		Incoming: items,
 		Outgoing: outgoing,
 	})
 }

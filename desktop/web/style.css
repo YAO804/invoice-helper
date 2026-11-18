@@ -363,6 +363,19 @@ tbody tr:last-child td { border-bottom: 0; }
 .modal-actions { padding: 0 20px 16px; }
 .empty { color: #8c959f; text-align: center; padding: 24px; }
 
+/* 文件预览：面板要能撑满剩余高度，PDF 的 iframe 才有地方显示 */
+.preview-modal { z-index: 60; }
+.preview-panel { width: min(1100px, 94vw); height: 88vh; background: var(--surface); border-radius: 12px; box-shadow: 0 16px 48px rgba(31,35,40,.2); display: flex; flex-direction: column; overflow: hidden; }
+.preview-panel .drawer-head h2 { margin: 0; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.preview-body { flex: 1; min-height: 0; overflow: auto; background: #f6f8fa; }
+.preview-frame { display: block; width: 100%; height: 100%; border: 0; }
+.preview-image { display: block; max-width: 100%; max-height: 100%; margin: 0 auto; object-fit: contain; }
+.preview-text { margin: 0; padding: 16px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.7; white-space: pre-wrap; word-break: break-all; }
+.preview-note { margin: 0; padding: 24px; color: #57606a; font-size: 13px; text-align: center; }
+.preview-hint { margin: 0; padding: 10px 20px; border-top: 1px solid var(--border); }
+.muted-link { color: #8c959f; }
+
 @media (max-width: 1024px) {
   .stat-grid, .grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .filter-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }

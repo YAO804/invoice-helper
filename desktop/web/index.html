@@ -255,6 +255,20 @@
     </div>
   </div>
 
+  <div id="previewModal" class="modal preview-modal" hidden>
+    <div class="preview-panel">
+      <div class="drawer-head">
+        <h2 id="previewTitle">文件预览</h2>
+        <div class="preview-actions">
+          <a id="previewDownload" class="btn btn-ghost" href="#" download>下载</a>
+          <button id="closePreviewBtn" type="button" class="btn btn-ghost">关闭</button>
+        </div>
+      </div>
+      <div id="previewBody" class="preview-body"></div>
+      <p id="previewHint" class="hint preview-hint"></p>
+    </div>
+  </div>
+
   <div id="invoiceEditModal" class="modal" hidden>
     <div class="modal-panel">
       <div class="drawer-head">
@@ -278,6 +292,7 @@
 
   <script src="/api.js"></script>
   <script src="/render.js"></script>
+  <script src="/preview.js"></script>
   <script src="/app.js"></script>
   <script src="/ledger-api.js"></script>
   <script src="/ledger-render.js"></script>

@@ -216,6 +216,7 @@ sort = created | issued | number | reimburser   // 默认 created（录入时间
 
 - `index.html`：控制台 + 发票台账两个 tab。
 - `app.js` / `render.js` / `api.js`：控制台（状态、连接二维码与地址、设备、发送到小程序、两边文件列表、事件）。
+- `preview.js`：文件预览弹层——PDF 用 iframe 交给浏览器内置阅读器、图片用 img、文本抓下来塞 `pre`（>512KB 拒绝预览）；可预览类型只认后端返回的 `preview` 字段。
 - `ledger-app.js` / `ledger-render.js` / `ledger-api.js`：台账（搜索、排序、筛选、导入、补录、行内改报销人、清理、重复抽屉、导出、号码点击复制）。
 
 ### 数据目录（`desktop/data/`，不提交）
@@ -265,6 +266,7 @@ registry.json   设备与事件记录
 | DELETE | `/api/invoices` | 按 id 批量删除 |
 | DELETE | `/api/incoming` `/api/outgoing` | 批量删除（incoming 用 `{ids}`、outgoing 用 `{names}`，或 `{all:true}`） |
 | POST | `/api/incoming/purge` `/api/outgoing/purge` | 按保留天数清理（`{days, confirm}`，先预览再确认） |
+| GET | `/api/incoming/{id}/view` | 浏览器内预览（inline，仅 pdf/图片/纯文本白名单） |
 | GET/DELETE | `/api/incoming/{id}` `/api/outgoing/{name}` | 文件下载与删除 |
 
 - **单次发送上限 200 张**：小程序超限时先弹提示，用户选「只发前 200 张」或取消，不静默截断。
@@ -272,6 +274,8 @@ registry.json   设备与事件记录
 - **文件双向**：`incoming/` 是小程序 → 电脑，`outgoing/` 是电脑 → 小程序，目录/接口/保留期完全对称。
   网页「发送到小程序」把文件**复制**进 `outgoing/`（源文件不动）；同名同内容判重、同名不同内容另存为 `名字 (2).ext`，不覆盖。
 - **两个目录都保留 30 天**：电脑端启动时清一次、之后每 6 小时清一次（`-keep-days` 可改，≤0 关闭自动清理）；小程序端发送历史同样按 30 天裁剪。两端都可手动清理。
+- **电脑端预览是白名单**：`files/preview.go` 的 `PreviewKind` 决定 `/api/incoming/{id}/view` 能不能 inline。
+  文本一律 `text/plain` + `nosniff`，`.html` / `.svg` 故意不在白名单里——预览响应与网页同源，按 HTML 渲染等于开 XSS 口子。
 - **小程序取文件的落地方式只有两种**：`wx.shareFileMessage` 转发到聊天（任何格式）和 `wx.openDocument` 预览（pdf/doc/docx/xls/xlsx/ppt/pptx）。OFD/XML/ZIP 不给「预览」，别给用户一个点了必然失败的入口。
 - **`duplicates` / `duplicate_groups` 按全量计算**，不受 `keyword` 等筛选影响；`items` / `total` / `need_fill` 才是筛选后的结果。
 - **导出前必须先标记重复**：`Export` 若只 `markNeedFill` 不 `markDuplicates`，`only_duplicates` 会导出一张只剩表头的空表（2026-11-18 修复，有回归测试守着）。

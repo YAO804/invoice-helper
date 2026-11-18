@@ -63,6 +63,7 @@ func NewHandler(addr string, store *files.Store, invoiceLedger *ledger.Store, de
 	mux.HandleFunc("DELETE /api/outgoing", d.deleteOutgoingBatch)
 	mux.HandleFunc("POST /api/outgoing/purge", d.purgeOutgoing)
 	mux.HandleFunc("GET /api/incoming/{id}/download", d.downloadIncoming)
+	mux.HandleFunc("GET /api/incoming/{id}/view", d.viewIncoming)
 	mux.HandleFunc("GET /api/outgoing/{name}/download", d.downloadOutgoing)
 	mux.Handle("/", staticFiles())
 

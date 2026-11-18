@@ -139,7 +139,8 @@ invoice-helper://connect?base=<urlencode 后的电脑地址>
 POST   /api/files/upload           小程序 → 电脑（进 incoming/）
 POST   /api/files/outgoing         电脑 → 小程序（进 outgoing/，网页「发送到小程序」用）
 GET    /api/files                  两边列表一起返回 {incoming, outgoing}
-GET    /api/incoming/{id}/download 取回小程序传上来的原件
+GET    /api/incoming/{id}/download 取回小程序传上来的原件（attachment，浏览器直接下载）
+GET    /api/incoming/{id}/view     在浏览器里预览（inline，仅白名单类型）
 GET    /api/outgoing/{name}/download 取回电脑给的文件（按文件名）
 DELETE /api/incoming               批量删（{ids} 或 {all:true}）
 DELETE /api/outgoing               批量删（{names} 或 {all:true}）
@@ -213,6 +214,28 @@ POST   /api/outgoing/purge          按修改时间清理
 ```
 
 既不传列表也不传 `all` 返回 400。响应 `{"deleted": 2}` 表示实际删除数量；单个文件删除失败不中断其余，删除失败数在服务端日志里。
+
+### GET /api/incoming/{id}/view
+
+电脑端网页预览用：`Content-Disposition: inline`，让浏览器自己渲染而不是弹出下载框。
+`/api/files` 的每条 `incoming` 记录都带一个 `preview` 字段，取值就是下面这张表，
+前端据此决定用 iframe、img 还是 pre 显示，不再自己维护一份扩展名列表。
+
+| `preview` | 扩展名 | Content-Type |
+|---|---|---|
+| `pdf` | `.pdf` | `application/pdf` |
+| `image` | `.png` `.jpg` `.jpeg` `.gif` `.webp` `.bmp` | 对应的 `image/*` |
+| `text` | `.txt` `.xml` `.json` `.csv` `.log` `.md` | `text/plain; charset=utf-8` |
+| 空串 | 其余（OFD、ZIP、Office、HTML、SVG…） | 预览返回 415，提示下载 |
+
+两点是安全要求，不是偏好：
+
+- **白名单而不是黑名单**。`.html` / `.svg` 必须落在「不可预览」里——预览响应和网页同源，
+  一旦让浏览器按 HTML 渲染用户上传的文件，就等于给局域网开了个存储型 XSS 的口子。
+- **所有文本都按 `text/plain` 输出**，并带 `X-Content-Type-Options: nosniff`。
+  发票 XML 里出现什么标签都不该被解析。
+
+`/api/incoming/{id}/download` 保持 `attachment` 不变：要下载还是要点预览，由用户选。
 
 ### 小程序取文件的两个动作
 

@@ -115,6 +115,17 @@ function matches(item, keyword) {
   return [item.name, item.source, item.id].some((value) => String(value || '').toLowerCase().includes(keyword))
 }
 
+/**
+ * 文件名做成按钮：能预览的点开弹层，不能预览的点一下提示下载。
+ * 两种都保留按钮，用户不会因为"这个名字是灰的、点不动"而以为页面坏了。
+ */
+function fileNameCell(item) {
+  const hint = item.preview ? '点击预览' : '这种格式浏览器打不开，点击提示下载'
+  const cls = item.preview ? 'link preview-btn' : 'link preview-btn muted-link'
+  return `<button type="button" class="${cls}" data-preview-id="${esc(item.id)}" title="${hint}">${esc(item.name)}</button>` +
+    `<div class="muted tiny">${esc(item.sha256 || '')}</div>`
+}
+
 function renderIncoming(list, keyword) {
   const rows = list.filter((item) => matches(item, keyword))
   if (!rows.length) {
@@ -124,7 +135,7 @@ function renderIncoming(list, keyword) {
 
   $('incomingBody').innerHTML = rows.map((item) => `
     <tr>
-      <td>${esc(item.name)}<div class="muted tiny">${esc(item.sha256 || '')}</div></td>
+      <td>${fileNameCell(item)}</td>
       <td>${human(item.size)}</td>
       <td>${esc(item.source)}</td>
       <td>${esc(item.uploaded_at)}</td>
