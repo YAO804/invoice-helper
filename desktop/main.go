@@ -41,27 +41,35 @@ func main() {
 	log.Fatal(http.ListenAndServe(cfg.Addr, handler))
 }
 
-// startRetention 启动接收文件的保留期清理：启动时先跑一次，之后定期检查。
+// startRetention 启动文件保留期清理：启动时先跑一次，之后定期检查。
+//
+// 两个目录都清：incoming 是小程序传上来的副本，outgoing 是给小程序取走的副本，
+// 两边的源文件都还在各自原处，所以这里的删除不会让用户失去唯一一份。
 // keepDays <= 0 表示关闭自动清理，文件只能由用户在页面上手动删。
 func startRetention(store *files.Store, keepDays int) {
 	if keepDays <= 0 {
-		log.Printf("接收文件自动清理已关闭")
+		log.Printf("文件自动清理已关闭")
 		return
 	}
 
 	purge := func() {
-		removed, err := store.PurgeOlderThan(keepDays)
+		removedIncoming, err := store.PurgeOlderThan(keepDays)
 		if err != nil {
 			log.Printf("清理超期接收文件失败: %v", err)
-			return
+		} else if removedIncoming > 0 {
+			log.Printf("已清理 %d 个超过 %d 天的接收文件", removedIncoming, keepDays)
 		}
-		if removed > 0 {
-			log.Printf("已清理 %d 个超过 %d 天的接收文件", removed, keepDays)
+
+		removedOutgoing, err := store.PurgeOutgoingOlderThan(keepDays)
+		if err != nil {
+			log.Printf("清理超期待取文件失败: %v", err)
+		} else if removedOutgoing > 0 {
+			log.Printf("已清理 %d 个超过 %d 天的待取文件", removedOutgoing, keepDays)
 		}
 	}
 
 	purge()
-	log.Printf("接收文件保留 %d 天，每 %v 检查一次", keepDays, retentionInterval)
+	log.Printf("接收与待取文件均保留 %d 天，每 %v 检查一次", keepDays, retentionInterval)
 
 	go func() {
 		ticker := time.NewTicker(retentionInterval)

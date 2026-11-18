@@ -141,6 +141,27 @@ function exportURL(query) {
 }
 
 /**
+ * 待取文件下载地址，给 wx.downloadFile 用；未连接时返回空串。
+ * 文件名里可能有空格和中文，必须 encodeURIComponent，否则 wx 侧会拼出非法 URL。
+ */
+function outgoingURL(name) {
+  const base = getBase()
+  if (!base || !name) return ''
+  return base + '/api/outgoing/' + encodeURIComponent(name) + '/download'
+}
+
+/** 删除电脑端的待取文件。不传 names 表示清空全部。 */
+function deleteOutgoing(names) {
+  const list = (names || []).filter(function (name) { return !!name })
+  return deleteJSON('/api/outgoing', list.length ? { names: list } : { all: true })
+}
+
+/** 按修改时间清理待取文件；confirm=false 只返回将要删除的数量 */
+function purgeOutgoing(days, confirm) {
+  return postJSON('/api/outgoing/purge', { days: days, confirm: !!confirm })
+}
+
+/**
  * 删除电脑端已收文件。不传 ids 表示清空全部。
  * 只删电脑端副本，手机里的台账记录和原件不受影响。
  */
@@ -248,6 +269,9 @@ module.exports = {
   listFiles: listFiles,
   fetchInvoices: fetchInvoices,
   exportURL: exportURL,
+  outgoingURL: outgoingURL,
+  deleteOutgoing: deleteOutgoing,
+  purgeOutgoing: purgeOutgoing,
   deleteIncoming: deleteIncoming,
   purgeIncoming: purgeIncoming,
   uploadFile: uploadFile,

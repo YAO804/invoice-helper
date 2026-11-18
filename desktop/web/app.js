@@ -44,7 +44,8 @@ async function handleUpload(fileList) {
   renderUploadProgress(uploadItems)
 
   try {
-    await uploadFiles(files, $('sourceInput').value || 'web', setUploadItem)
+    // 送进待取区等小程序来取，不是传到这台电脑自己这里
+    await postFiles('/api/files/outgoing', files, {}, setUploadItem)
     await refresh()
   } catch (error) {
     const last = uploadItems[uploadItems.length - 1]

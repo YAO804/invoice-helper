@@ -1,26 +1,35 @@
 <view class="page">
 
+  <view class="dir-bar">
+    <view class="dir-btn {{direction === 'to' ? 'on' : ''}}" data-direction="to" bindtap="onDirection" hover-class="btn-hover">发到电脑</view>
+    <view class="dir-btn {{direction === 'from' ? 'on' : ''}}" data-direction="from" bindtap="onDirection" hover-class="btn-hover">从电脑取</view>
+  </view>
+
   <view class="card">
     <view class="row">
-      <view class="card-t">传到电脑</view>
+      <view class="card-t">{{direction === 'to' ? '传到电脑' : '从电脑取文件'}}</view>
       <view class="badge {{connected ? '' : 'badge-grey'}}">{{connected ? '已连接' : '未连接'}}</view>
     </view>
     <view class="tiny muted" style="margin-top:8rpx">{{baseText}}</view>
     <view wx:if="{{!connected}}" class="tiny warn" style="margin-top:14rpx">尚未连接电脑端。请先在「设置」里连上电脑，手机和电脑要在同一 WiFi。</view>
-    <view class="divider"></view>
-    <view class="btn btn-block" bindtap="onFromChat" hover-class="btn-hover">从微信会话选文件发送</view>
-    <view class="tiny muted" style="margin-top:12rpx">先把 .xml / .ofd / .pdf 以「文件」发到文件传输助手，再在这里选。最多 20 个、单个不超过 20MB。</view>
+
+    <block wx:if="{{direction === 'to'}}">
+      <view class="divider"></view>
+      <view class="btn btn-block" bindtap="onFromChat" hover-class="btn-hover">从微信会话选文件发送</view>
+      <view class="tiny muted" style="margin-top:12rpx">先把 .xml / .ofd / .pdf 以「文件」发到文件传输助手，再在这里选。最多 20 个、单个不超过 20MB。</view>
+    </block>
+    <view wx:else class="tiny muted" style="margin-top:12rpx">电脑上点「发送到小程序」加进来的文件会出现在下面。点「接收」即可转发到聊天，能用系统打开的格式还能直接预览。电脑端 {{retentionDays}} 天后自动清理待取副本。</view>
   </view>
 
-  <view class="card">
+  <view class="card" wx:if="{{direction === 'to'}}">
     <view class="sort-bar">
       <view class="sort-btn {{tab === 'sent' ? 'on' : ''}}" data-tab="sent" bindtap="onTab" hover-class="btn-hover">我的上传 {{history.length}}</view>
       <view class="sort-btn {{tab === 'remote' ? 'on' : ''}}" data-tab="remote" bindtap="onTab" hover-class="btn-hover">电脑已收 {{remoteLoaded ? remote.length : '—'}}</view>
     </view>
 
-    <view class="row tiny muted" style="margin-bottom:6rpx">
+    <view class="row tiny muted" style="margin-top:12rpx;margin-bottom:6rpx">
       <text>{{tab === 'sent' ? '本机记录，只存在这台手机上' : '电脑端实际收到的文件'}}</text>
-      <text wx:if="{{tab === 'remote'}}" bindtap="onRefreshRemote" class="link">{{remoteLoading ? '读取中…' : '刷新'}}</text>
+      <text wx:if="{{tab === 'remote'}}" bindtap="onRefresh" class="link">{{remoteLoading ? '读取中…' : '刷新'}}</text>
     </view>
 
     <view wx:if="{{!currentCount}}" class="empty" style="padding:56rpx 20rpx">
@@ -57,22 +66,48 @@
     </block>
   </view>
 
+  <view class="card" wx:else>
+    <view class="row">
+      <view class="card-t">电脑待取 {{offerLoaded ? offer.length : '—'}}</view>
+      <text bindtap="onRefresh" class="link">{{offerLoading ? '读取中…' : '刷新'}}</text>
+    </view>
+
+    <view wx:if="{{!currentCount}}" class="empty" style="padding:56rpx 20rpx">
+      <block wx:if="{{!connected}}">还没有连接电脑。到「设置 → 桌面端连接」连上后再刷新。</block>
+      <block wx:else>电脑上没有待取文件。在电脑网页的「发送到小程序」里加一个，这里就会出现。</block>
+    </view>
+
+    <view wx:for="{{offer}}" wx:key="id" class="pick-row" data-id="{{item.id}}" bindtap="onToggle" hover-class="btn-hover">
+      <view class="check {{item.checked ? 'on' : ''}}"><text wx:if="{{item.checked}}">✓</text></view>
+      <view class="grow" style="margin-left:16rpx">
+        <view class="row">
+          <text class="small ellipsis grow">{{item.name}}</text>
+          <text class="tiny muted">{{item.humanSize}}</text>
+        </view>
+        <view class="tiny muted" style="margin-top:6rpx">{{item.timeText}}</view>
+      </view>
+      <text class="link" catchtap="onReceiveOne" data-name="{{item.name}}">接收</text>
+    </view>
+  </view>
+
   <view class="card">
     <view class="row">
       <view class="tiny muted">已选 {{selectedIds.length}} {{noun}}</view>
       <text wx:if="{{currentCount}}" class="link" bindtap="onToggleAll">{{allSelected ? '取消全选' : '全选'}}</text>
     </view>
     <view class="btn-row" style="margin-top:16rpx">
-      <view class="btn btn-danger" bindtap="onDeleteSelected" hover-class="btn-hover">删除选中</view>
-      <view class="btn btn-grey" bindtap="onDeleteAll" hover-class="btn-hover">全部删除</view>
+      <view wx:if="{{direction === 'from'}}" class="btn" bindtap="onReceiveSelected" hover-class="btn-hover">接收选中</view>
+      <view class="btn btn-danger" data-all="no" bindtap="onDelete" hover-class="btn-hover">删除选中</view>
+      <view class="btn btn-grey" data-all="all" bindtap="onDelete" hover-class="btn-hover">全部删除</view>
       <view class="btn btn-ghost" bindtap="onPurgeOld" hover-class="btn-hover">清理超 {{retentionDays}} 天</view>
     </view>
     <view class="tiny muted" style="margin-top:6rpx">
-      <block wx:if="{{tab === 'sent'}}">只删本机记录，不动电脑端文件。超过 {{retentionDays}} 天的记录会自动清理。</block>
+      <block wx:if="{{direction === 'from'}}">「接收」会把文件转发到聊天；勾选多个后一次接收会逐个确认。「删除」删的是电脑上的待取副本，你电脑上的源文件不受影响。</block>
+      <block wx:elif="{{tab === 'sent'}}">只删本机记录，不动电脑端文件。超过 {{retentionDays}} 天的记录会自动清理。</block>
       <block wx:else>会真的删除电脑上的接收文件，不可恢复。电脑端也会每 6 小时自动清理超过 {{retentionDays}} 天的文件。</block>
     </view>
   </view>
 
-  <view class="foot tiny muted">发送记录只存在本机；电脑端实际收到了什么，以「电脑已收」为准。本工具不查验发票真伪。</view>
+  <view class="foot tiny muted">发送记录只存在本机；电脑端实际收到了什么，以「电脑已收」为准；电脑给了什么，以「从电脑取」为准。本工具不查验发票真伪。</view>
 
 </view>

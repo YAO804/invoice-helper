@@ -1,4 +1,4 @@
-# 小程序与桌面端通信协议 v0.8
+# 小程序与桌面端通信协议 v0.9
 
 ## 基础约定
 
@@ -132,18 +132,24 @@ invoice-helper://connect?base=<urlencode 后的电脑地址>
 
 ## 文件传输接口
 
+文件是双向的：小程序 → 电脑进 `incoming/`，电脑 → 小程序进 `outgoing/`。
+两边的目录、接口、保留期都对称，客户端不用记两套规则。
+
 ```text
-POST   /api/files/upload
-GET    /api/files
-GET    /api/incoming/{id}/download
-GET    /api/outgoing/{name}/download
-DELETE /api/incoming
-POST   /api/incoming/purge
+POST   /api/files/upload           小程序 → 电脑（进 incoming/）
+POST   /api/files/outgoing         电脑 → 小程序（进 outgoing/，网页「发送到小程序」用）
+GET    /api/files                  两边列表一起返回 {incoming, outgoing}
+GET    /api/incoming/{id}/download 取回小程序传上来的原件
+GET    /api/outgoing/{name}/download 取回电脑给的文件（按文件名）
+DELETE /api/incoming               批量删（{ids} 或 {all:true}）
+DELETE /api/outgoing               批量删（{names} 或 {all:true}）
 DELETE /api/incoming/{id}
 DELETE /api/outgoing/{name}
+POST   /api/incoming/purge          按 uploaded_at 清理
+POST   /api/outgoing/purge          按修改时间清理
 ```
 
-上传字段：
+`/api/files/upload` 上传字段：
 
 | 字段 | 必填 | 说明 |
 |---|---:|---|
@@ -153,20 +159,27 @@ DELETE /api/outgoing/{name}
 
 单文件最大 20MB。相同 SHA256 + 大小复用旧记录，响应里的 `duplicate=true` 表示电脑端已存在。
 
+`/api/files/outgoing` 只收 `file` 一个字段，响应 `{name, size, modified_at, duplicate}`：
+
+- 同名同内容 → `duplicate=true`，不新增文件；
+- 同名不同内容 → 另存为 `名字 (2).ext`，**不覆盖**（可能有人正拿着旧那份在下载）；
+- 复制而不是移动，电脑上的源文件不受影响。
+
 小程序「传输中心」页单次最多选 20 个文件，顺序上传，任一失败不影响其余。
 
 ### 保留期与清理
 
-接收文件默认保留 **30 天**，超期自动删除：
+`incoming/` 与 `outgoing/` 默认都保留 **30 天**，超期自动删除：
 
 - 电脑端启动时执行一次，之后每 6 小时执行一次；`-keep-days` / `INVOICE_KEEP_DAYS` 可改，≤0 表示关闭自动清理。
+- 两个目录都是副本（原件分别在手机和用户电脑的原位置），所以自动清理不会让用户丢东西。
 - 小程序端发送历史按同一口径在本机裁剪（`utils/filesend.js` 的 `RETENTION_DAYS`），不询问用户。
-- 时间是唯一口径：解析不出的 `uploaded_at` 一律不删，宁可留着也不误删。
-- 手动清理走下面两个接口，都是「先预览、再确认」，避免误触一次性清空。
+- 时间是唯一口径：解析不出的时间一律不删（incoming 看 `uploaded_at`，outgoing 看文件修改时间）。
+- 手动清理走 purge 接口，都是「先预览、再确认」，避免误触一次性清空。
 
-### POST /api/incoming/purge
+### POST /api/incoming/purge 与 POST /api/outgoing/purge
 
-按保留天数清理。
+按保留天数清理，两者请求与响应完全一致。
 
 ```json
 { "days": 30, "confirm": false }
@@ -183,19 +196,34 @@ DELETE /api/outgoing/{name}
 { "confirmed": false, "days": 30, "removed": 0 }
 ```
 
-### DELETE /api/incoming
+### DELETE /api/incoming 与 DELETE /api/outgoing
 
-批量删除，两种形态互斥：
+批量删除，两种形态互斥（incoming 用 `ids`，outgoing 用 `names`）：
 
 ```json
 { "ids": ["a1b2", "c3d4"] }
 ```
 
 ```json
+{ "names": ["a.pdf", "b.ofd"] }
+```
+
+```json
 { "all": true }
 ```
 
-`ids` 与 `all` 都不传返回 400。响应 `{"deleted": 2}` 表示实际删除数量；单个文件删除失败不中断其余，删除失败数在服务端日志里。
+既不传列表也不传 `all` 返回 400。响应 `{"deleted": 2}` 表示实际删除数量；单个文件删除失败不中断其余，删除失败数在服务端日志里。
+
+### 小程序取文件的两个动作
+
+微信没有「保存到手机磁盘」的通用接口，落地只有两条路：
+
+| 动作 | 接口 | 适用格式 |
+|---|---|---|
+| 转发到聊天 | `wx.shareFileMessage` | 全部（pdf/ofd/xml/zip…） |
+| 预览 | `wx.openDocument` | pdf、doc、docx、xls、xlsx、ppt、pptx |
+
+所以 OFD / XML / ZIP 只提供「转发」，不提供必定失败的「预览」。
 
 ## 发票台账接口
 
@@ -490,10 +518,13 @@ wx.downloadFile(电脑地址 + /api/invoices/export?<同样的查询串>)
 
 ```text
 desktop/data/
-├── incoming/     小程序上传进来的文件
-├── outgoing/     电脑提供给小程序下载的文件
+├── incoming/     小程序上传进来的文件（手机 → 电脑）
+├── outgoing/     电脑提供给小程序下载的文件（电脑 → 手机）
 ├── backup/       发票台账历史备份
 ├── invoices.csv  发票台账主文件
 ├── index.json    上传记录索引
 └── registry.json 设备与事件记录
 ```
+
+`outgoing/` 里的文件两种来源：网页「发送到小程序」上传，或用户直接把文件拷进这个目录。
+两者等价，小程序只认目录内容。

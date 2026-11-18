@@ -47,6 +47,16 @@ global.wx = {
       const ids = options.data.ids || []
       return options.success({ statusCode: 200, data: { deleted: ids.length || 1 } })
     }
+    if (options.url.indexOf('/api/outgoing/purge') >= 0) {
+      return options.success({
+        statusCode: 200,
+        data: { removed: 1, confirmed: options.data.confirm, days: options.data.days }
+      })
+    }
+    if (options.url.indexOf('/api/outgoing') >= 0) {
+      const names = options.data.names || []
+      return options.success({ statusCode: 200, data: { deleted: names.length || 1 } })
+    }
     options.success({ statusCode: 200, data: { ok: true } })
   },
   uploadFile(options) {
@@ -133,6 +143,27 @@ lanservice.heartbeat().then(function (data) {
   check('空查询不带问号', lastRequest.url, 'http://192.168.1.20:8765/api/invoices')
   check('导出地址', lanservice.exportURL('sort=created'), 'http://192.168.1.20:8765/api/invoices/export?sort=created')
   check('导出地址无查询串', lanservice.exportURL(''), 'http://192.168.1.20:8765/api/invoices/export')
+  check('待取下载地址编码文件名', lanservice.outgoingURL('报销单 1.pdf'),
+    'http://192.168.1.20:8765/api/outgoing/' + encodeURIComponent('报销单 1.pdf') + '/download')
+  check('待取下载地址空文件名', lanservice.outgoingURL(''), '')
+
+  return lanservice.deleteOutgoing(['a.pdf', '', 'b.ofd'])
+}).then(function (data) {
+  check('待取删除地址', lastRequest.url, 'http://192.168.1.20:8765/api/outgoing')
+  check('待取删除方法', lastRequest.method, 'DELETE')
+  check('待取删除过滤空名', lastRequest.data.names, ['a.pdf', 'b.ofd'])
+  check('待取删除返回', data.deleted, 2)
+
+  return lanservice.deleteOutgoing([])
+}).then(function () {
+  check('待取不传文件名表示清空', lastRequest.data.all, true)
+
+  return lanservice.purgeOutgoing(30, false)
+}).then(function (data) {
+  check('待取清理地址', lastRequest.url, 'http://192.168.1.20:8765/api/outgoing/purge')
+  check('待取清理只预览', lastRequest.data.confirm, false)
+  check('待取清理天数', lastRequest.data.days, 30)
+  check('待取清理预览数量', data.removed, 1)
 
   lanservice.setBase('')
   check('未连接时导出地址为空', lanservice.exportURL('sort=created'), '')

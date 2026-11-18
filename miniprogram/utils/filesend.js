@@ -8,6 +8,7 @@
  */
 
 const lanservice = require('./lanservice')
+const format = require('./format')
 
 const HISTORY_KEY = 'file_send_history'
 const MAX_HISTORY = 100
@@ -40,25 +41,9 @@ function lan() {
   return LAN
 }
 
-function human(bytes) {
-  const b = Number(bytes) || 0
-  if (b < 1024) return b + ' B'
-  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB'
-  return (b / 1024 / 1024).toFixed(2) + ' MB'
-}
-
-function timeText(ts) {
-  const d = new Date(Number(ts) || 0)
-  const p = function (n) { return n < 10 ? '0' + n : '' + n }
-  return (d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes())
-}
-
-/** 电脑端返回的是 RFC3339（UTC），转成本地「MM-DD HH:mm」 */
-function isoText(value) {
-  const d = new Date(String(value || ''))
-  if (isNaN(d.getTime())) return String(value || '')
-  return timeText(d.getTime())
-}
+const human = format.human
+const timeText = format.timeText
+const isoText = format.isoText
 
 function history() {
   try {

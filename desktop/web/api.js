@@ -9,10 +9,23 @@ function deleteJSON(url) {
   return requestJSON(url, { method: 'DELETE' })
 }
 
-function uploadOne(file, source, onProgress) {
+function sendJSON(url, method, body) {
+  return requestJSON(url, {
+    method: method,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body || {})
+  })
+}
+
+/**
+ * 带进度的单文件上传。url 决定文件去向，两个方向共用：
+ *   /api/files/upload   → 接收区（小程序传上来的）
+ *   /api/files/outgoing → 待取区（等小程序来取的）
+ */
+function postFile(url, file, fields, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
-    xhr.open('POST', '/api/files/upload')
+    xhr.open('POST', url)
 
     xhr.upload.onprogress = (event) => {
       if (!event.lengthComputable) return
@@ -31,19 +44,20 @@ function uploadOne(file, source, onProgress) {
 
     const form = new FormData()
     form.append('file', file)
-    form.append('source', source)
+    Object.keys(fields || {}).forEach((key) => form.append(key, fields[key]))
     xhr.send(form)
   })
 }
 
-async function uploadFiles(files, source, onProgress) {
+/** 顺序上传一批，逐个回报：onProgress(index, name, percent, state)，index 从 1 开始 */
+async function postFiles(url, files, fields, onProgress) {
   const result = []
   for (let i = 0; i < files.length; i++) {
     const file = files[i]
-    const record = await uploadOne(file, source, (percent) => {
-      onProgress(i + 1, files.length, file.name, percent, '上传中')
+    const record = await postFile(url, file, fields, (percent) => {
+      onProgress(i + 1, file.name, percent, '上传中')
     })
-    onProgress(i + 1, files.length, file.name, 100, record.duplicate ? '已存在' : '完成')
+    onProgress(i + 1, file.name, 100, record.duplicate ? '已存在' : '完成')
     result.push(record)
   }
   return result

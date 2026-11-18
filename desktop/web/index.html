@@ -48,7 +48,7 @@
             <div id="todayBytes" class="stat-sub"></div>
           </div>
           <div class="stat">
-            <div class="stat-label">电脑待取</div>
+            <div class="stat-label">待取文件</div>
             <div id="outgoingCount" class="stat-value">—</div>
             <div id="outgoingBytes" class="stat-sub"></div>
           </div>
@@ -78,14 +78,14 @@
       </section>
 
       <section class="card">
-        <h2>发送到电脑</h2>
+        <h2>发送到小程序</h2>
+        <p class="hint">选中的文件会复制到待取区，小程序在「传输 → 从电脑取」里就能下载并转发到聊天。源文件不动，待取副本到期自动清理。</p>
         <div id="dropZone" class="drop-zone">
           <strong>拖放文件到这里</strong>
-          <span class="hint">也可以点下面的按钮选择文件，支持一次选多个</span>
+          <span class="hint">也可以点下面的按钮选择文件，支持一次选多个，单个不超过 20MB</span>
         </div>
         <div class="row">
           <button id="chooseBtn" type="button">选择文件</button>
-          <input id="sourceInput" type="text" placeholder="来源，例如 web">
           <input id="fileInput" type="file" multiple hidden>
         </div>
         <div id="uploadProgress" class="progress-list"></div>
@@ -105,8 +105,8 @@
           <tbody id="incomingBody"></tbody>
         </table>
 
-        <h3 class="section-title">电脑待取文件</h3>
-        <p class="hint">把文件放进 <code>desktop/data/outgoing</code>，小程序就能看到并下载。</p>
+        <h3 class="section-title">待小程序取的文件</h3>
+        <p class="hint">用上面的「发送到小程序」加进来，或直接把文件拷进 <code>desktop/data/outgoing</code>。小程序取走后可按需删除，到期自动清理。</p>
         <table>
           <thead>
             <tr><th>文件名</th><th>大小</th><th>修改时间</th><th>操作</th></tr>

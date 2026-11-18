@@ -191,7 +191,11 @@ invoice-helper/
 │       ├── scanbatch.js         # 批量连续扫码（扫到取消为止，重复靠内存镜像判断）
 │       ├── exportflow.js        # 把已落盘文件逐个转发到微信聊天
 │       ├── lanservice.js        # 桌面端连接、心跳、查重、发票发送、台账只读拉取、导出地址
-│       ├── filesend.js          # 原件传输：发送历史（30 天）、电脑已收列表、批量删
+│       ├── filesend.js          # 原件上传：发送历史（30 天）、电脑已收列表、批量删
+│       ├── filetake.js          # 从电脑取：待取列表、下载、转发/预览、批量接收
+│       ├── transferops.js       # 传输页三个列表的删除与清理文案/调用
+│       ├── selection.js         # 列表勾选纯逻辑（切分段清空、剔除失效项）
+│       ├── format.js            # 文件大小与时间文本格式化
 │       ├── invoicesend.js       # 草稿转电脑台账字段、重复确认
 │       └── discover.js          # mDNS 自动发现电脑地址（安卓）
 ├── desktop/
@@ -213,7 +217,9 @@ invoice-helper/
 │   │   ├── scanbatch.test.js    # 批量扫码交互与重复提示回归，27 项
 │   │   ├── lanservice.test.js   # 地址、心跳节奏、查重、发送、台账拉取与导出地址，52 项
 │   │   ├── filesend.test.js     # 发送历史 30 天裁剪、电脑已收列表与删除，31 项
-│   │   ├── transfer.test.js     # 传输中心页：两个 tab、勾选、批量删、清理，21 项
+│   │   ├── filetake.test.js     # 取文件：格式判断、下载地址、批量接收容错，29 项
+│   │   ├── transfer.test.js     # 传输中心页：两个方向、勾选、批量删、清理、接收，41 项
+│   │   ├── selection.test.js    # 勾选逻辑：toggle / prune / mark / allSelected，13 项
 │   │   ├── invoicesend.test.js  # 草稿转换、查重发送与 200 张上限，18 项
 │   │   └── discover.test.js     # mDNS 自动发现与 iOS 兜底，21 项
 │   ├── desktop/                 # 电脑端联调测试预留；Go 单元测试在 desktop/internal 各包内
@@ -239,6 +245,7 @@ node test/miniprogram/collect.test.js
 node test/miniprogram/scanbatch.test.js
 node test/miniprogram/lanservice.test.js
 node test/miniprogram/filesend.test.js
+node test/miniprogram/filetake.test.js
 node test/miniprogram/transfer.test.js
 node test/miniprogram/invoicesend.test.js
 node test/miniprogram/discover.test.js
@@ -247,8 +254,8 @@ cd desktop
 go test ./...
 ```
 
-小程序十三套共 378 项检查（60 + 52 + 36 + 32 + 31 + 31 + 27 + 27 + 21 + 18 + 18 + 14 + 11），当前全绿。
-电脑端 Go 测试单独运行，覆盖文件保存、去重、删除、统计、设备心跳、状态总览、上传接口、下载接口、接收文件批量删除与按保留期清理、发票台账 CSV、判重（代码+号码）、搜索排序、导入导出、扫码结果查重接收、补录编辑、按录入时间清理、mDNS 端口解析、连接二维码和本地网页。
+小程序十五套共 451 项检查（60 + 63 + 41 + 36 + 32 + 31 + 31 + 29 + 27 + 27 + 18 + 18 + 14 + 13 + 11），当前全绿。
+电脑端 Go 测试单独运行，覆盖文件保存、去重、删除、统计、设备心跳、状态总览、上传接口、下载接口、待取文件入库与同名改名、待取/接收文件批量删除与按保留期清理、发票台账 CSV、判重（代码+号码）、搜索排序、导入导出、扫码结果查重接收、补录编辑、按录入时间清理、mDNS 端口解析、连接二维码和本地网页。
 
 ---
 
