@@ -119,13 +119,12 @@ Page({
     })
   },
 
-  /** 发送成功提示：有批次号就给「查看这批票」一键回看，批次号经 globalData 带给台账页 */
+  /** 发送成功提示：批次号只用来给「查看这批票」收敛列表，不写进文案 */
   showSentResult(summary) {
     const that = this
     const tip = '成功发送 ' + summary.sent + ' 张' +
       (summary.skipped ? '\n跳过重复 ' + summary.skipped + ' 张' : '') +
       (summary.left ? '\n未发送 ' + summary.left + ' 张（单次上限 200 张）' : '') +
-      (summary.batch ? '\n批次：' + summary.batch : '') +
       '\n电脑台账会把报销人为空的标成待补录。'
 
     const modal = {

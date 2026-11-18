@@ -12,7 +12,7 @@ const lanservice = require('./lanservice')
 
 const SORTS = ['created', 'number', 'issued', 'reimburser']
 
-const EMPTY = { items: [], duplicates: [], total: 0, duplicateGroups: 0, needFill: 0, latestBatch: '', syncedAt: 0 }
+const EMPTY = { items: [], duplicates: [], total: 0, duplicateGroups: 0, needFill: 0, latestCreatedAt: '', syncedAt: 0 }
 
 let cache = Object.assign({}, EMPTY)
 
@@ -31,12 +31,22 @@ function lan() {
 /**
  * 筛选条件 → 查询串。参数名与电脑端 GET /api/invoices 一致，
  * 页面只传语义化的开关，映射集中在这里。
+ *
+ * batch 只给「查看这批票」用：批次号对用户是内部概念，不进界面文案，
+ * 但收票页发完一批后仍然需要它把列表收敛到这一批。
  */
 function buildQuery(filters) {
   const f = filters || {}
   const parts = []
   const keyword = String(f.keyword || '').trim()
   if (keyword) parts.push('keyword=' + encodeURIComponent(keyword))
+  const batch = String(f.batch || '').trim()
+  if (batch) parts.push('batch=' + encodeURIComponent(batch))
+  // 录入时间按天比较，电脑端只取日期部分，这里传 YYYY-MM-DD
+  const createdFrom = String(f.createdFrom || '').trim()
+  if (createdFrom) parts.push('created_from=' + encodeURIComponent(createdFrom))
+  const createdTo = String(f.createdTo || '').trim()
+  if (createdTo) parts.push('created_to=' + encodeURIComponent(createdTo))
   if (f.onlyDuplicates) parts.push('only_duplicates=1')
   if (f.onlyNeedFill) parts.push('only_need_fill=1')
   parts.push('sort=' + (SORTS.indexOf(f.sort) >= 0 ? f.sort : 'created'))
@@ -52,8 +62,9 @@ function sync(filters) {
       total: Number(data && data.total) || 0,
       duplicateGroups: Number(data && data.duplicate_groups) || 0,
       needFill: Number(data && data.need_fill) || 0,
-      // 后端算的是全表最新批次，不随 keyword/sort 筛选漂移，可直接当「最近一次发送」的回看入口
-      latestBatch: String((data && data.latest_batch) || ''),
+      // 全表最新录入日期，不随 keyword/sort 筛选漂移，可当「最近一次录入」的回看入口。
+      // 电脑端给的是 "2026-11-18 19:26:42"，界面和筛选都只用日期部分。
+      latestCreatedAt: createdDate((data && data.latest_created_at) || ''),
       syncedAt: Date.now()
     }
     return snapshot()
@@ -78,9 +89,16 @@ function snapshot() {
     amountText: amount.toFixed(2),
     duplicateGroups: cache.duplicateGroups,
     needFill: cache.needFill,
-    latestBatch: cache.latestBatch,
+    latestCreatedAt: cache.latestCreatedAt,
     syncedAt: cache.syncedAt
   }
+}
+
+/** "2026-11-18 19:26:42" → "2026-11-18"；空值原样返回空串 */
+function createdDate(value) {
+  const text = String(value || '')
+  const cut = text.indexOf(' ')
+  return cut > 0 ? text.slice(0, cut) : text
 }
 
 /** 列表项 → 页面字段。金额是电脑端算好的字符串，原样展示 */
@@ -93,7 +111,6 @@ function card(item) {
     issueDate: item.issue_date || '',
     amount: item.total || '',
     reimburser: item.reimburser || '',
-    batch: item.batch || '',
     createdAt: item.created_at || '',
     duplicate: !!item.duplicate,
     needFill: !!item.need_fill

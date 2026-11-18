@@ -35,20 +35,33 @@
       </view>
     </view>
 
-    <view wx:if="{{latestBatch}}" class="card" bindtap="onLatestBatch" hover-class="btn-hover">
+    <view wx:if="{{latestCreatedAt}}" class="card" bindtap="onLatestCreated" hover-class="btn-hover">
       <view class="row">
-        <text class="small muted">最新批次 · 最近一次发送到电脑</text>
-        <text class="tiny {{keyword === latestBatch ? 'muted' : 'link'}}">{{keyword === latestBatch ? '点此取消筛选' : '查看这批 ›'}}</text>
+        <text class="small muted">最近录入 · {{latestCreatedAt}}</text>
+        <text class="tiny {{latestOn ? 'muted' : 'link'}}">{{latestOn ? '点此取消筛选' : '只看这天 ›'}}</text>
       </view>
-      <view class="mono" style="margin-top:8rpx">{{latestBatch}}</view>
+      <view class="tiny muted" style="margin-top:8rpx">电脑端最后一批发票的录入日期，点一下只看这天的票。</view>
     </view>
 
     <view class="card">
-      <input class="input" placeholder="搜索号码 / 代码 / 报销人 / 批次 / 金额" value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" />
+      <input class="input" placeholder="搜索号码 / 代码 / 报销人 / 金额" value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" />
+      <view class="date-row">
+        <picker class="date-slot" mode="date" value="{{createdFrom}}" bindchange="onCreatedFromChange">
+          <view class="date-cell {{createdFrom ? 'on' : ''}}">录入起 {{createdFrom || '不限'}}</view>
+        </picker>
+        <picker class="date-slot" mode="date" value="{{createdTo}}" bindchange="onCreatedToChange">
+          <view class="date-cell {{createdTo ? 'on' : ''}}">录入止 {{createdTo || '不限'}}</view>
+        </picker>
+      </view>
       <view class="filter-row">
         <view class="chip {{onlyDuplicates ? 'on' : ''}}" bindtap="onToggleDuplicates" hover-class="btn-hover">仅看重复</view>
         <view class="chip {{onlyNeedFill ? 'on' : ''}}" bindtap="onToggleNeedFill" hover-class="btn-hover">仅看待补录</view>
+        <view wx:if="{{batchFilter}}" class="chip on" bindtap="onClearBatch" hover-class="btn-hover">刚发的那批 ✕</view>
         <text wx:if="{{hasFilter}}" class="link" bindtap="onReset">重置</text>
+      </view>
+      <view wx:if="{{createdFrom || createdTo}}" class="filter-row">
+        <text class="tiny muted">已限定录入日期</text>
+        <text class="link" bindtap="onClearCreated">清除日期</text>
       </view>
       <view class="sort-bar">
         <view wx:for="{{sorts}}" wx:key="value" class="sort-btn {{item.on ? 'on' : ''}}" data-sort="{{item.value}}" bindtap="onSortChange" hover-class="btn-hover">{{item.label}}</view>

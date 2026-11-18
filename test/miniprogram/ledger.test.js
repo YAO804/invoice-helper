@@ -25,6 +25,14 @@ check('只看待补录', ledger.buildQuery({ onlyNeedFill: true }), 'only_need_f
 check('排序透传', ledger.buildQuery({ sort: 'number' }), 'sort=number')
 check('未知排序回落', ledger.buildQuery({ sort: 'whatever' }), 'sort=created')
 check('空白关键词不拼', ledger.buildQuery({ keyword: '   ' }), 'sort=created')
+check('批次只用于这一批回看', ledger.buildQuery({ batch: 'B1' }), 'batch=B1&sort=created')
+check('录入时间同一天', ledger.buildQuery({ createdFrom: '2026-11-18', createdTo: '2026-11-18' }),
+  'created_from=2026-11-18&created_to=2026-11-18&sort=created')
+check('只给起始日期', ledger.buildQuery({ createdFrom: '2026-11-01' }), 'created_from=2026-11-01&sort=created')
+check('组合条件顺序固定', ledger.buildQuery({
+  keyword: 'N1', batch: 'B1', createdFrom: '2026-11-01', createdTo: '2026-11-18',
+  onlyDuplicates: true, sort: 'issued'
+}), 'keyword=N1&batch=B1&created_from=2026-11-01&created_to=2026-11-18&only_duplicates=1&sort=issued')
 
 const remote = {
   items: [
@@ -36,7 +44,8 @@ const remote = {
   total: 3,
   duplicate_groups: 1,
   need_fill: 1,
-  latest_batch: 'B20261118-200000-001'
+  latest_batch: 'B20261118-200000-001',
+  latest_created_at: '2026-11-18 19:26:42'
 }
 
 let requestedQuery = ''
@@ -57,8 +66,9 @@ async function main() {
   check('合计元', snap.amountText, '236.50')
   check('重复组数', snap.duplicateGroups, 1)
   check('待补录数', snap.needFill, 1)
-  check('最新批次透传', snap.latestBatch, 'B20261118-200000-001')
+  check('最近录入日期只取日期部分', snap.latestCreatedAt, '2026-11-18')
   check('卡片字段齐全', snap.items[0].issueDate, '2026-08-01')
+  check('卡片不带批次号', snap.items[0].batch, undefined)
   check('金额原样展示', snap.items[0].amount, '113.00')
   check('重复标记', snap.items[0].duplicate, true)
   check('待补录标记', snap.items[1].needFill, true)
@@ -79,7 +89,7 @@ async function main() {
   console.log('\n--- 清空 ---')
   ledger.clear()
   check('清空后为空', ledger.snapshot().total, 0)
-  check('清空后无最新批次', ledger.snapshot().latestBatch, '')
+  check('清空后无最近录入日期', ledger.snapshot().latestCreatedAt, '')
   check('清空后无索引', ledger.identityIndex(), {})
 
   console.log('\n' + (failCount === 0 ? '全部通过' : failCount + ' 项失败'))

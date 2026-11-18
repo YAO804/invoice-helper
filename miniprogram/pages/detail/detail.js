@@ -41,7 +41,6 @@ Page({
         number: item.number || '',
         code: item.code || '',
         total: item.total || '',
-        batch: item.batch || '',
         createdAt: item.created_at || '',
         self: Number(item.id) === Number(invoice.id)
       }
@@ -56,7 +55,6 @@ Page({
         issueDate: invoice.issue_date || '',
         amount: invoice.total || '',
         reimburser: invoice.reimburser || '',
-        batch: invoice.batch || '',
         createdAt: invoice.created_at || '',
         duplicate: !!invoice.duplicate,
         needFill: !!invoice.need_fill

@@ -43,7 +43,7 @@ invoice-helper/
 │   └── README.md
 ├── shared/protocol.md          # 两端通信协议（当前 v0.9）
 ├── test/
-│   ├── miniprogram/            # 小程序 Node 回归测试（19 套 / 553 项检查）
+│   ├── miniprogram/            # 小程序 Node 回归测试（19 套 / 571 项检查）
 │   ├── desktop/                # 电脑端网页 Node 回归测试（10 套 / 196 项检查；Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
@@ -76,7 +76,7 @@ cd desktop && go run .
 **回归测试**（改动后必跑）：
 
 ```bash
-# 小程序 19 套，共 553 项检查
+# 小程序 19 套，共 571 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端网页 10 套，共 196 项检查
@@ -172,9 +172,9 @@ sort = created | issued | number | reimburser   // 默认 created（录入时间
 
 | 页面 | 职责 |
 |---|---|
-| `collect` | **首页**。四张卡：连接状态、扫码（单张/批量）、文件导入（把票的信息记进台账，XML 填全字段、OFD/PDF 只取名）、文件归档（把原件发到电脑，跳传输页）；未连接时只提示去设置。发送成功弹窗可「查看这批票」，批次号经 `globalData.pendingBatch` 带给台账页 |
-| `list` | **只读台账**：对齐电脑端（统计条、关键词、仅看重复、仅看待补录、四种排序），数据来自 `GET /api/invoices`，支持下拉刷新。「最新批次」卡片一键回看最近一次发送的那批票（用后端 `latest_batch`，全表口径），再点取消 |
-| `detail` | **只读详情**：8 个票面字段 + 同组重复记录；可复制号码，没有编辑/删除 |
+| `collect` | **首页**。四张卡：连接状态、扫码（单张/批量）、文件导入（把票的信息记进台账，XML 填全字段、OFD/PDF 只取名）、文件归档（把原件发到电脑，跳传输页）；未连接时只提示去设置。发送成功弹窗可「查看这批票」，批次号经 `globalData.pendingBatch` 带给台账页（只做筛选，不写进任何文案） |
+| `list` | **只读台账**：对齐电脑端（统计条、关键词、录入时间起止、仅看重复、仅看待补录、四种排序），数据来自 `GET /api/invoices`，支持下拉刷新。「最近录入」卡片显示全表最新录入日期，点一下只看那天，再点取消；录入批次不出现在界面（收票页带过来的批次号仅用于「只看刚发的那批」筛选，不显示原值） |
+| `detail` | **只读详情**：7 个票面字段（无录入批次）+ 同组重复记录；可复制号码，没有编辑/删除 |
 | `export` | 导出 CSV：选范围（全部/仅重复/仅待补录）→ 电脑端生成 → 下载 → 微信转发 |
 | `transfer` | **传输中心**：顶层分「发到电脑」「从电脑取」两个方向。发：会话文件上传，看「我的上传」「电脑已收」；取：看「电脑待取」，可单条接收（转发到聊天/预览）或批量接收。两边都支持勾选删除、全部删除、清理超 30 天 |
 | `settings` | 桌面端连接（自动搜索 / **一个扫码按钮同时认登录码和连接码** / 手填）、PIN 设置与修改、数据在哪、导出入口、关于 |
@@ -229,6 +229,7 @@ sort = created | issued | number | reimburser   // 默认 created（录入时间
 - 补录体验（2026-11-18）：报销人有值时旁边带复制按钮（复用 `.copy-cell` 委托，点它不会进编辑）；勾选后可用「批量填报销人」一次统一（走页面内模态框 `#batchReimburserModal`，不用 `window.prompt`，输入框挂同一个历史建议列表，Enter 即提交，留空表示清空）——串行 `PUT` 且必须带齐其余字段；`reimburser` / `kind` 输入框挂 `datalist`，建议来自台账历史值（`suggestionPool` 只增不减，避免筛选后丢历史）；补录弹窗粘贴扫码串或 Excel 制表符一行时，`parsePastedInvoice` 自动拆字段，认不出就放行原生粘贴。`reimburser-fill.test.js` 守着。
 - `ledger-stats.js`：顶部统计卡片兼筛选入口——点「重复组 / 待补录 / 最近录入」直接筛列表，再点一次取消，条件写回筛选面板（两处共用一份状态，卡片高亮跟 `aria-pressed` 走）。「最近录入」取后端 `latest_created_at`（全表）只显示日期，点一下把「录入时间起/止」都设成那天，再点清空；**卡片的日期必须来自后端全表口径**，取当前列表第一行的话一筛选它就跟着变。
 - 台账列与筛选（2026-11-18 调整）：**不再有「录入批次」列**，批次号对用户没意义；筛选面板也**去掉了录入批次与全局搜索**，改加「录入时间起/止」（后端 `created_from` / `created_to`，按 `created_at` 的日期部分比较）。`filter-panel.test.js` 守着「旧条件不许回来」和「colgroup/表头/行三处列数一致」。
+- 小程序同步同一口径（2026-11-18）：台账页「最新批次」卡片换成「最近录入 · 日期」，点一下把录入时间起止都设成那天（同桌面端逻辑）；筛选卡加两个 `picker mode="date"`（录入起/止）与「清除日期」；搜索框占位符不再提批次；详情页删掉「录入批次」行。收票页发送成功文案不再打印批次号，但「查看这批票」仍把批次号放 `globalData.pendingBatch`，台账页用 `batch=` 参数收敛列表并以「刚发的那批 ✕」chip 呈现，取消即清。`list.test.js` / `ledger.test.js` 守着。
 
 ### 数据目录（`desktop/data/`，不提交）
 
@@ -294,15 +295,15 @@ registry.json   设备与事件记录
   文本一律 `text/plain` + `nosniff`，`.html` / `.svg` 故意不在白名单里——预览响应与网页同源，按 HTML 渲染等于开 XSS 口子。
 - **小程序取文件的落地方式只有两种**：`wx.shareFileMessage` 转发到聊天（任何格式）和 `wx.openDocument` 预览（pdf/doc/docx/xls/xlsx/ppt/pptx）。OFD/XML/ZIP 不给「预览」，别给用户一个点了必然失败的入口。
 - **`duplicates` / `duplicate_groups` 按全量计算**，不受 `keyword` 等筛选影响；`items` / `total` / `need_fill` 才是筛选后的结果；`latest_batch` / `latest_created_at` 同样是全表口径。
-- **列表查询参数**：`number` / `code` / `kind` / `reimburser` / `keyword` / `batch` / `date_from` / `date_to`（开票日期）/ `created_from` / `created_to`（录入时间，按 `created_at` 的日期部分比较）/ `amount_min` / `amount_max` / `only_duplicates` / `only_need_fill` / `sort`。电脑端网页已不用 `keyword` 和 `batch`（改由 `created_from` / `created_to` 筛），但**后端保留这两个参数**——小程序批量发送后仍用 `keyword=批次号` 回看。
+- **列表查询参数**：`number` / `code` / `kind` / `reimburser` / `keyword` / `batch` / `date_from` / `date_to`（开票日期）/ `created_from` / `created_to`（录入时间，按 `created_at` 的日期部分比较）/ `amount_min` / `amount_max` / `only_duplicates` / `only_need_fill` / `sort`。电脑端网页已不用 `keyword` 和 `batch`（改由 `created_from` / `created_to` 筛），但**后端保留这两个参数**——小程序批量发送后仍用 `batch=批次号` 收敛「只看刚发的那批」。
 - **导出前必须先标记重复**：`Export` 若只 `markNeedFill` 不 `markDuplicates`，`only_duplicates` 会导出一张只剩表头的空表（2026-11-18 修复，有回归测试守着）。
 
 ---
 
 ## 9. 测试体系
 
-- **小程序 19 套 / 553 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
-  `lanservice 63`、`einvoice 60`、`transfer 41`、`draft 36`、`discover 33`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示）、`collect 31`、`filesend 31`、`filetake 29`、`settings 29`（自动搜索提示 + 两种二维码合并入口）、`ledger 29`（含 `latest_batch` 透传与清空）、`scanbatch 27`、`list 40`（最新批次一键回看、收票页带批次跳来）、`auth 24`、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`collect-send 12`（发送弹窗查看这批票：确认跳转、稍后不跳、无批次单按钮）、`fsx 11`。
+- **小程序 19 套 / 571 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
+  `lanservice 63`、`einvoice 60`、`transfer 41`、`draft 36`、`discover 33`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示）、`collect 31`、`filesend 31`、`filetake 29`、`settings 29`（自动搜索提示 + 两种二维码合并入口）、`ledger 34`（含 `latest_created_at` 取日期部分、批次参数拼装与清空）、`scanbatch 27`、`list 53`（最近录入按日期回看、录入时间手选与清除、收票页带批次跳来且不占搜索框）、`auth 24`、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`collect-send 12`（发送弹窗查看这批票：确认跳转、稍后不跳、无批次单按钮）、`fsx 11`。
 - **电脑端网页 10 套 / 196 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
   `invoice-row 25`（台账行渲染：9 列、不再有批次列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`reimburser-fill 28`（粘贴解析、建议池去重、复制按钮有无、批量填报销人走页面内模态框：打开/取消/提交/留空清空）、`stat-filter 21`（统计卡片与筛选面板双向同步、最近录入按日期筛并取全表口径）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`logout 10`（退出按钮绑定、POST logout、重载回登录态、失败提示）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）、`filter-panel 24`（查询参数拼装、不再发送 keyword/batch、重置与计数、colgroup/表头/行三处列数一致）。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。

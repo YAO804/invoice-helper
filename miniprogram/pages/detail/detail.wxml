@@ -36,10 +36,6 @@
       <text class="small grow right {{item.reimburser ? '' : 'warn'}}">{{item.reimburser || '待补录'}}</text>
     </view>
     <view class="kv">
-      <text class="tiny muted">录入批次</text>
-      <text class="small grow right">{{item.batch || '—'}}</text>
-    </view>
-    <view class="kv">
       <text class="tiny muted">录入时间</text>
       <text class="small grow right">{{item.createdAt || '—'}}</text>
     </view>

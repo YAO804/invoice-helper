@@ -4,6 +4,10 @@
  * 小程序不存台账，进页面就去问电脑端要；筛选和排序也由电脑端算，
  * 两端只有一套口径。这里能做的只有「看」和「跳详情」，
  * 增删改都在电脑端网页。
+ *
+ * 录入批次是内部概念，界面上一律不出现：收票页发完一批只在内存里
+ * 记一个批次号（globalData.pendingBatch），台账页拿它收敛列表，
+ * 用户看到的是「这一批」这种说法，不是批次号。
  */
 
 const ledger = require('../../utils/ledger')
@@ -31,19 +35,25 @@ Page({
     connected: false,
     baseText: '',
     keyword: '',
+    // 收票页带过来的批次号，只在内存里过滤用，不展示
+    batchFilter: '',
+    createdFrom: '',
+    createdTo: '',
     onlyDuplicates: false,
     onlyNeedFill: false,
     sort: 'created',
     sorts: SORT_LABELS.map(function (item) {
       return Object.assign({ on: item.value === 'created' }, item)
     }),
+    // 筛选状态派生值：有没有条件、是不是正好只看「最近录入」那天
     hasFilter: false,
+    latestOn: false,
     items: [],
     total: 0,
     amountText: '0.00',
     duplicateGroups: 0,
     needFill: 0,
-    latestBatch: '',
+    latestCreatedAt: '',
     loading: false,
     error: '',
     syncedText: ''
@@ -51,13 +61,11 @@ Page({
 
   onShow() {
     // 收票页「查看这批票」把批次号放在 globalData 带过来，只看这一次，读完就清
-    if (typeof getApp === 'function') {
-      const app = getApp()
-      const pending = app && app.globalData && app.globalData.pendingBatch
-      if (pending) {
-        app.globalData.pendingBatch = ''
-        this.syncFilterState({ keyword: pending })
-      }
+    const app = typeof getApp === 'function' ? getApp() : null
+    const pending = app && app.globalData ? app.globalData.pendingBatch : ''
+    if (pending) {
+      app.globalData.pendingBatch = ''
+      this.syncFilterState({ batchFilter: pending })
     }
     this.refresh()
   },
@@ -83,7 +91,8 @@ Page({
         amountText: '0.00',
         duplicateGroups: 0,
         needFill: 0,
-        latestBatch: '',
+        latestCreatedAt: '',
+        latestOn: false,
         loading: false,
         error: ''
       })
@@ -97,13 +106,15 @@ Page({
   load() {
     const that = this
     return ledger.sync(this.filters()).then(function (snap) {
+      const latest = snap.latestCreatedAt
       that.setData({
         items: snap.items,
         total: snap.total,
         amountText: snap.amountText,
         duplicateGroups: snap.duplicateGroups,
         needFill: snap.needFill,
-        latestBatch: snap.latestBatch,
+        latestCreatedAt: latest,
+        latestOn: !!latest && that.data.createdFrom === latest && that.data.createdTo === latest,
         syncedText: clockText(snap.syncedAt),
         loading: false
       })
@@ -115,7 +126,8 @@ Page({
         amountText: '0.00',
         duplicateGroups: 0,
         needFill: 0,
-        latestBatch: '',
+        latestCreatedAt: '',
+        latestOn: false,
         loading: false,
         error: error.message || '读取电脑台账失败'
       })
@@ -125,16 +137,25 @@ Page({
   filters() {
     return {
       keyword: this.data.keyword,
+      batch: this.data.batchFilter,
+      createdFrom: this.data.createdFrom,
+      createdTo: this.data.createdTo,
       onlyDuplicates: this.data.onlyDuplicates,
       onlyNeedFill: this.data.onlyNeedFill,
       sort: this.data.sort
     }
   },
 
+  /** 改筛选条件时顺带把派生状态算好，页面不用自己维护高亮 */
   syncFilterState(patch) {
     const next = Object.assign({}, this.data, patch)
+    const latest = String(next.latestCreatedAt || '')
     this.setData(Object.assign({
-      hasFilter: !!(String(next.keyword || '').trim() || next.onlyDuplicates || next.onlyNeedFill)
+      hasFilter: !!(
+        String(next.keyword || '').trim() || next.batchFilter ||
+        next.createdFrom || next.createdTo || next.onlyDuplicates || next.onlyNeedFill
+      ),
+      latestOn: !!latest && next.createdFrom === latest && next.createdTo === latest
     }, patch))
   },
 
@@ -156,11 +177,35 @@ Page({
     this.load()
   },
 
-  /** 一键回看最近一次发送的那批票；再点一次取消 */
-  onLatestBatch() {
-    const batch = this.data.latestBatch
-    if (!batch) return
-    this.syncFilterState({ keyword: this.data.keyword === batch ? '' : batch })
+  /** 「最近录入」是一个日期开关：点一下只看那天，再点一下清空 */
+  onLatestCreated() {
+    const date = this.data.latestCreatedAt
+    if (!date) return
+    const already = this.data.createdFrom === date && this.data.createdTo === date
+    this.syncFilterState({
+      createdFrom: already ? '' : date,
+      createdTo: already ? '' : date
+    })
+    this.load()
+  },
+
+  onCreatedFromChange(e) {
+    this.syncFilterState({ createdFrom: e.detail.value || '' })
+    this.load()
+  },
+
+  onCreatedToChange(e) {
+    this.syncFilterState({ createdTo: e.detail.value || '' })
+    this.load()
+  },
+
+  onClearCreated() {
+    this.syncFilterState({ createdFrom: '', createdTo: '' })
+    this.load()
+  },
+
+  onClearBatch() {
+    this.syncFilterState({ batchFilter: '' })
     this.load()
   },
 
@@ -177,11 +222,13 @@ Page({
   },
 
   onReset() {
-    this.setData({
+    this.syncFilterState({
       keyword: '',
+      batchFilter: '',
+      createdFrom: '',
+      createdTo: '',
       onlyDuplicates: false,
-      onlyNeedFill: false,
-      hasFilter: false
+      onlyNeedFill: false
     })
     this.load()
   },

@@ -22,6 +22,36 @@
   margin: 20rpx 0 0;
 }
 
+/* 录入时间起止：两个日期选择器并排，和下面的条件 chip 分成两行 */
+.date-row {
+  display: flex;
+  margin-top: 16rpx;
+}
+
+.date-slot {
+  flex: 1;
+  margin-right: 12rpx;
+}
+
+.date-slot:last-child {
+  margin-right: 0;
+}
+
+.date-cell {
+  font-size: 24rpx;
+  color: #6a6a65;
+  background: #f6f6f4;
+  border-radius: 10rpx;
+  padding: 16rpx 20rpx;
+  text-align: center;
+}
+
+.date-cell.on {
+  color: #0f6e56;
+  background: #e8f2ee;
+  font-weight: 500;
+}
+
 .chip {
   font-size: 24rpx;
   color: #6a6a65;

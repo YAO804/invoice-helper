@@ -40,7 +40,7 @@ check('确认按钮是查看这批票', modal.confirmText, '查看这批票')
 check('取消按钮是稍后', modal.cancelText, '稍后')
 check('文案含成功张数', modal.content.indexOf('成功发送 3 张') === 0, true)
 check('文案含跳过重复', modal.content.indexOf('跳过重复 1 张') > 0, true)
-check('文案含批次号', modal.content.indexOf('B-BATCH-001') > 0, true)
+check('文案不含批次号（内部概念不露给用户）', modal.content.indexOf('B-BATCH-001'), -1)
 
 modal.success({ confirm: true })
 check('批次号交给台账页', app.globalData.pendingBatch, 'B-BATCH-001')

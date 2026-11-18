@@ -36,7 +36,8 @@ const remote = {
   total: 2,
   duplicate_groups: 1,
   need_fill: 1,
-  latest_batch: 'B20261118-200000-001'
+  latest_batch: 'B20261118-200000-001',
+  latest_created_at: '2026-11-18 19:26:42'
 }
 
 const ledger = require('../../miniprogram/utils/ledger')
@@ -84,7 +85,8 @@ async function main() {
   check('合计元', page.data.amountText, '123.50')
   check('重复组数', page.data.duplicateGroups, 1)
   check('待补录数', page.data.needFill, 1)
-  check('最新批次已呈现', page.data.latestBatch, 'B20261118-200000-001')
+  check('最近录入日期已呈现', page.data.latestCreatedAt, '2026-11-18')
+  check('未点筛选时不高亮', page.data.latestOn, false)
   check('有同步时间文案', page.data.syncedText.indexOf('更新于') === 0, true)
   check('初始无筛选', page.data.hasFilter, false)
 
@@ -104,30 +106,53 @@ async function main() {
   await new Promise(function (r) { setTimeout(r, 0) })
   check('重置重新查询', queries[queries.length - 1], 'sort=created')
 
-  console.log('\n--- 最新批次一键回看 ---')
+  console.log('\n--- 最近录入一键回看 ---')
   page = newPage()
   await page.refresh()
-  page.onLatestBatch()
+  page.onLatestCreated()
   await new Promise(function (r) { setTimeout(r, 0) })
-  check('点一下按批次筛选', page.data.keyword, 'B20261118-200000-001')
-  check('批次进查询串', queries[queries.length - 1],
-    'keyword=' + encodeURIComponent('B20261118-200000-001') + '&sort=created')
+  check('点一下只筛这一天', [page.data.createdFrom, page.data.createdTo], ['2026-11-18', '2026-11-18'])
+  check('日期进查询串', queries[queries.length - 1],
+    'created_from=2026-11-18&created_to=2026-11-18&sort=created')
   check('筛选标记亮起', page.data.hasFilter, true)
-  page.onLatestBatch()
+  check('卡片高亮', page.data.latestOn, true)
+  page.onLatestCreated()
   await new Promise(function (r) { setTimeout(r, 0) })
-  check('再点一次取消', page.data.keyword, '')
+  check('再点一次取消', [page.data.createdFrom, page.data.createdTo], ['', ''])
+  check('取消后查询串干净', queries[queries.length - 1], 'sort=created')
+  check('取消后不高亮', page.data.latestOn, false)
+
+  console.log('\n--- 录入时间手选 ---')
+  page.onCreatedFromChange({ detail: { value: '2026-11-01' } })
+  await new Promise(function (r) { setTimeout(r, 0) })
+  check('起始日期写入状态', page.data.createdFrom, '2026-11-01')
+  check('起始日期进查询串', queries[queries.length - 1], 'created_from=2026-11-01&sort=created')
+  check('只选起始不算「最近录入」', page.data.latestOn, false)
+  page.onCreatedToChange({ detail: { value: '2026-11-18' } })
+  await new Promise(function (r) { setTimeout(r, 0) })
+  check('止日期进查询串', queries[queries.length - 1],
+    'created_from=2026-11-01&created_to=2026-11-18&sort=created')
+  page.onClearCreated()
+  await new Promise(function (r) { setTimeout(r, 0) })
+  check('清除日期', [page.data.createdFrom, page.data.createdTo], ['', ''])
+  check('清完无筛选标记', page.data.hasFilter, false)
 
   console.log('\n--- 收票页带批次跳来 ---')
   const app = { globalData: { pendingBatch: 'B-FROM-COLLECT' } }
   global.getApp = function () { return app }
   page = newPage()
   await page.onShow()
-  check('带入批次作为关键词', page.data.keyword, 'B-FROM-COLLECT')
+  check('批次进筛选状态', page.data.batchFilter, 'B-FROM-COLLECT')
+  check('不占用搜索框', page.data.keyword, '')
   check('一次性意图已清空', app.globalData.pendingBatch, '')
   check('带批次重新查询', queries[queries.length - 1],
-    'keyword=' + encodeURIComponent('B-FROM-COLLECT') + '&sort=created')
+    'batch=' + encodeURIComponent('B-FROM-COLLECT') + '&sort=created')
+  page.onClearBatch()
+  await new Promise(function (r) { setTimeout(r, 0) })
+  check('取消这一批', page.data.batchFilter, '')
+  check('取消后查询串干净', queries[queries.length - 1], 'sort=created')
   delete global.getApp
-  // 这一段的关键词是临时的，后续排序/防抖用例要用干净页面
+  // 这一段带过筛选条件，后续排序/防抖用例要用干净页面
   page = newPage()
   await page.refresh()
 
