@@ -1,4 +1,4 @@
-# 小程序与桌面端通信协议 v0.5
+# 小程序与桌面端通信协议 v0.6
 
 ## 基础约定
 
@@ -11,7 +11,9 @@
 - 当前版本没有 token，只允许在可信局域网内自用。
 - 小程序打开时每 20 秒上报一次心跳；桌面端按 45 秒窗口判断在线。
 
-### 电脑地址自动发现
+## 电脑地址连接（三级，按优先级）
+
+### 一级：mDNS 自动发现（仅安卓）
 
 桌面端启动时注册 mDNS 服务：
 
@@ -26,8 +28,37 @@ TXT: app=攒票小匣, version=1.0.0
 `wx.onLocalServiceFound` 返回 `ip` 和 `port`。小程序逐个请求 `/api/health` 验证，
 取第一个可达地址作为 `http://IP:PORT`。搜索会在找到后停止，微信最长运行 30 秒。
 
-iOS 微信 7.0.18 及以上不支持 mDNS，保留手动填写地址作为兜底。
+同一时间只能有一个 mDNS 扫描任务，重复 `start` 会报 `scan task already exist`；
+小程序侧用模块级互斥 + 失败自愈（先 `stop` 再重试一次）兜住。
+
+iOS 微信 7.0.18 及以上不支持 mDNS，直接跳过这一级。
 小程序首次启动且未配置地址时会自动尝试一次；失败后 10 分钟内不再重试。
+
+### 二级：扫码连接（安卓 / iOS 都可用）
+
+电脑端网页「连接小程序」卡片展示连接二维码，由 `GET /api/connect-qr.png` 生成。
+
+二维码内容：
+
+```text
+invoice-helper://connect?base=<urlencode 后的电脑地址>
+```
+
+例：`invoice-helper://connect?base=http%3A%2F%2F192.168.1.20%3A8765`
+
+小程序 `wx.scanCode` 扫描后：
+
+1. 解析 `base` 参数并 `decodeURIComponent`；也接受内容直接就是 `http://ip:port` 的二维码。
+2. 请求该地址的 `/api/health`，返回 200 且 `ok=true` 才保存。
+3. 保存后立即启动心跳。
+
+不是上述两种格式的二维码一律拒绝，不猜测地址。
+二维码编码的是电脑端**首选**网卡地址（优选 WLAN/以太网，过滤虚拟网卡），
+若手机不在同一网段，改用手动填写网页上列出的其它地址。
+
+### 三级：手动填地址（最后手段）
+
+在电脑端网页「连接小程序」卡片复制任一地址，填进小程序「设置 → 桌面端连接」。
 
 ## GET /api/health
 
@@ -42,6 +73,13 @@ iOS 微信 7.0.18 及以上不支持 mDNS，保留手动填写地址作为兜底
   "version": "0.2.0"
 }
 ```
+
+## GET /api/connect-qr.png
+
+返回连接二维码 PNG（`Content-Type: image/png`，320×320）。
+编码内容与 `GET /api/status` 的 `network.connect_code` 一致。
+
+未检测到局域网地址时返回 `503` 与纯文本提示。
 
 ## POST /api/devices/heartbeat
 
@@ -73,17 +111,19 @@ iOS 微信 7.0.18 及以上不支持 mDNS，保留手动填写地址作为兜底
 }
 ```
 
-`network.addresses` 给出检测到的局域网地址。
+`network.primary_url` 是首选地址，`network.addresses` 给出检测到的全部局域网地址，
+`network.connect_code` 是扫码用的连接串。
+
 `mini_program.online` 表示最近 45 秒内是否收到小程序心跳。
 `events` 是最近 80 条事件。
 
 ## 文件传输接口
 
 ```text
-POST /api/files/upload
-GET  /api/files
-GET  /api/incoming/{id}/download
-GET  /api/outgoing/{name}/download
+POST   /api/files/upload
+GET    /api/files
+GET    /api/incoming/{id}/download
+GET    /api/outgoing/{name}/download
 DELETE /api/incoming/{id}
 DELETE /api/outgoing/{name}
 ```
@@ -93,46 +133,74 @@ DELETE /api/outgoing/{name}
 | 字段 | 必填 | 说明 |
 |---|---:|---|
 | `file` | 是 | 文件本体 |
-| `source` | 否 | 来源标记，例如 `qr`、`xml`、`web` |
+| `source` | 否 | 来源标记，例如 `qr`、`xml`、`web`、`miniprogram`、`ledger` |
 | `device_id` | 否 | 小程序设备 ID |
 
-单文件最大 20MB。相同 SHA256 + 大小复用旧记录。
+单文件最大 20MB。相同 SHA256 + 大小复用旧记录，响应里的 `duplicate=true` 表示电脑端已存在。
+
+小程序「原件传输」页单次最多选 20 个文件，顺序上传，任一失败不影响其余。
 
 ## 发票台账接口
 
 台账文件：`desktop/data/invoices.csv`
 
-CSV 列：
+CSV 列（8 列）：
 
 ```text
-发票号码,发票代码,票种,开票日期,销方名称,销方税号,买方名称,买方税号,
-不含税金额,税额,价税合计,税率,录入批次,录入时间
+发票号码,发票代码,票种,开票日期,价税合计,报销人,录入批次,录入时间
 ```
 
-兼容旧版 12 列 CSV；缺少批次和录入时间时自动生成。
+读取按表头名定位列，兼容旧版 12/14 列 CSV（多余的列忽略，缺的列按空值处理）；
+缺少批次和录入时间时自动生成。
+
+### 判重口径
+
+```text
+identityKey = 发票代码 + "|" + 发票号码
+```
+
+- 数电票没有发票代码（20 位号码全国唯一），键退化为号码本身。
+- 老票必须「代码+号码」才唯一；只按 8 位号码会把跨地区、跨年份的票误判成同一张。
+- **金额与开票日期不参与判重**：补录和格式抖动会让同一张票算出不同的键，漏判即重复报销。
 
 ### POST /api/invoices/check
 
-发送前查重。小程序把本次发票号码一次性提交，避免重复票静默入库。
+发送前查重。小程序把本次发票一次性提交，避免重复票静默入库。
 
-请求：
+请求（推荐，带代码）：
 
 ```json
 {
-  "numbers": ["26932000001877489821", "26932000001295659876"]
+  "invoices": [
+    { "number": "26932000001877489821", "code": "" },
+    { "number": "12345678", "code": "033001900111" }
+  ]
 }
 ```
 
-响应 `matches` 以发票号码为键，值为台账中已有的那条记录：
+旧格式仍兼容（只有号码，按号码宽松匹配）：
+
+```json
+{ "numbers": ["26932000001877489821"] }
+```
+
+匹配规则：
+
+- 给了 `code`：按「代码+号码」精确匹配。
+- 没给 `code`：按号码匹配。查重只用于发送前提示，宁可多提示一次，也不要把真重复放过去。
+
+响应 `matches` **以发票号码为键**，值为台账中已有的那条记录：
 
 ```json
 {
   "matches": {
     "26932000001877489821": {
       "number": "26932000001877489821",
-      "seller_name": "宁波顺渝餐饮管理有限公司",
+      "code": "",
+      "kind": "数电票",
+      "issue_date": "2026-08-02",
       "total": "147.00",
-      "issue_date": "2026-08-02"
+      "reimburser": ""
     }
   }
 }
@@ -155,14 +223,8 @@ CSV 列：
       "code": "",
       "kind": "数电票",
       "issue_date": "2026-08-02",
-      "seller_name": "",
-      "seller_tax_id": "",
-      "buyer_name": "",
-      "buyer_tax_id": "",
-      "amount": "",
-      "tax": "",
       "total": "147.00",
-      "tax_rate": "",
+      "reimburser": "",
       "batch": "",
       "created_at": ""
     }
@@ -170,9 +232,9 @@ CSV 列：
 }
 ```
 
-- 单批最多 200 张，超出返回 400。
+- 单批最多 200 张，超出返回 400。小程序超限时先弹窗，用户选「只发前 200 张」或取消。
 - `batch` 和 `created_at` 留空时由电脑端自动生成。
-- 金额字段是普通元字符串；扫码草稿只有号码、日期、价税合计，销方/税额等留空，台账列表会标记「待补录」。
+- 金额是普通元字符串；扫码草稿只有号码、日期、价税合计，报销人留空，台账列表会标记「待补录」。
 - 重复票仍会写入并高亮，由用户自行删除。
 
 响应：
@@ -186,10 +248,15 @@ CSV 列：
 查询发票列表。支持参数：
 
 ```text
-keyword, number, code, kind, seller, buyer, batch,
+keyword, number, code, kind, reimburser, batch,
 date_from, date_to, amount_min, amount_max,
-only_duplicates=1, only_need_fill=1
+only_duplicates=1, only_need_fill=1,
+sort=created|issued|number|reimburser
 ```
+
+- `date_from` / `date_to` 比较的是**开票日期**。
+- `sort` 默认 `created`（录入时间倒序）；`reimburser` 排序时空值排最后。
+- `only_need_fill=1` 的判定是**报销人为空**。
 
 响应：
 
@@ -203,8 +270,7 @@ only_duplicates=1, only_need_fill=1
 }
 ```
 
-判重口径：**发票号码相同即为重复**。
-重复记录会写入台账并高亮显示，由用户自行选择删除，不自动删除。
+`duplicates` 是按 `identityKey` 聚合的重复组，每组带 `number`、`code`、`items`。
 
 ### PUT /api/invoices/{id}
 
@@ -213,16 +279,15 @@ only_duplicates=1, only_need_fill=1
 ```json
 {
   "number": "26932000001877489821",
-  "seller_name": "宁波顺渝餐饮管理有限公司",
-  "seller_tax_id": "91330200MA2XXX",
-  "buyer_name": "个人",
-  "amount": "100.00",
-  "tax": "13.00",
-  "total": "113.00",
-  "tax_rate": "13%"
+  "code": "",
+  "kind": "数电票",
+  "issue_date": "2026-08-02",
+  "total": "147.00",
+  "reimburser": "张三"
 }
 ```
 
+整条替换语义：没传的字段会被清空，客户端必须带上完整票面字段。
 `batch` 和 `created_at` 不允许覆盖，保持原值。写入前自动备份。
 
 响应：
@@ -284,11 +349,11 @@ POST /api/invoices/import?confirm=1
 { "imported": 2 }
 ```
 
-重复行仍会写入台账，方便用户对比后自行删除；只有缺发票号码的行会被跳过。
+判重与列表同口径（`identityKey`）。重复行仍会写入台账，方便用户对比后自行删除；只有缺发票号码的行会被跳过。
 
 ### GET /api/invoices/export
 
-导出 CSV。可使用查询参数筛选，也可用 `ids=1,2,3` 导出选中记录。
+导出 CSV（8 列）。可使用查询参数筛选，也可用 `ids=1,2,3` 导出选中记录。
 
 ### DELETE /api/invoices
 
