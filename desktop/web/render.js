@@ -167,21 +167,6 @@ function renderOutgoing(list, keyword) {
   `).join('')
 }
 
-function renderEvents(list) {
-  if (!list.length) {
-    $('eventList').innerHTML = '<p class="empty">暂无事件</p>'
-    return
-  }
-
-  $('eventList').innerHTML = list.slice(0, 12).map((item) => `
-    <div class="event-row">
-      <span class="event-kind ${esc(item.kind)}">${esc(item.kind)}</span>
-      <span>${esc(item.text)}</span>
-      <span class="muted tiny">${esc(item.at)}</span>
-    </div>
-  `).join('')
-}
-
 function renderUploadProgress(items) {
   $('uploadProgress').innerHTML = items.map((item) => `
     <div class="progress-row">

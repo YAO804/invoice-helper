@@ -176,7 +176,9 @@ code { background: var(--canvas); padding: 2px 5px; border-radius: 4px; }
 .event-list { display: grid; gap: 6px; }
 .event-row { display: grid; grid-template-columns: 76px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-muted); font-size: 13px; }
 .event-kind { color: var(--muted); background: var(--canvas); border-radius: 6px; padding: 2px 6px; text-align: center; }
+/* 接收/发送/删除有语义色，台账类操作保持中性灰——它是日常操作，不该抢眼 */
 .event-kind.upload { color: var(--success); background: var(--success-soft); }
+.event-kind.put { color: var(--accent); background: var(--accent-soft); }
 .event-kind.delete { color: var(--danger); background: var(--danger-soft); }
 
 /* ============ Ledger page ============ */

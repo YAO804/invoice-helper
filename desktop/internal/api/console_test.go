@@ -131,15 +131,17 @@ func TestIndexWiresPreviewScript(t *testing.T) {
 	body := rec.Body.String()
 
 	// 弹层的标记和脚本缺任何一个，文件名按钮都会变成「点了没反应」
-	for _, want := range []string{`id="previewModal"`, `id="closePreviewBtn"`, "/preview.js"} {
+	for _, want := range []string{`id="previewModal"`, `id="closePreviewBtn"`, "/preview.js", "/events.js"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("首页缺少 %s", want)
 		}
 	}
 
-	// preview.js 必须在 app.js 之前加载：它自己在加载时注册点击委托
-	if strings.Index(body, "/preview.js") > strings.Index(body, "/app.js") {
-		t.Fatal("preview.js 必须早于 app.js")
+	// 这两个脚本都在加载时注册点击委托 / 供 app.js 调用，必须早于 app.js
+	for _, name := range []string{"/preview.js", "/events.js"} {
+		if strings.Index(body, name) > strings.Index(body, "/app.js") {
+			t.Fatalf("%s 必须早于 app.js", name)
+		}
 	}
 }
 
