@@ -1,6 +1,9 @@
 package ledger
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestLatestBatch(t *testing.T) {
 	cases := []struct {
@@ -15,18 +18,42 @@ func TestLatestBatch(t *testing.T) {
 		{"全为空", []string{"", ""}, ""},
 		// 同一天不同毫秒：定长格式下字典序即时间序
 		{"同秒比毫秒", []string{"B20261118-093729-174", "B20261118-093729-099"}, "B20261118-093729-174"},
+		// 手动录入的批次是文字标签，不能因为它字典序大就当成最新批次
+		{"跳过手写批次", []string{"B20261118-093729-174", "手动录入"}, "B20261118-093729-174"},
+		{"没有系统批次号时按录入时间兜底", []string{"手动录入", "B1"}, "B1"},
 	}
 
 	for _, item := range cases {
 		t.Run(item.name, func(t *testing.T) {
 			list := []Invoice{}
 			for i, batch := range item.batch {
-				list = append(list, Invoice{ID: i + 1, Number: "N", Batch: batch})
+				list = append(list, Invoice{
+					ID:        i + 1,
+					Number:    "N",
+					Batch:     batch,
+					CreatedAt: fmt.Sprintf("2026-11-17 10:00:%02d", i),
+				})
 			}
 			if got := LatestBatch(list); got != item.want {
 				t.Fatalf("最新批次错误: got=%q want=%q", got, item.want)
 			}
 		})
+	}
+}
+
+func TestIsBatchID(t *testing.T) {
+	cases := map[string]bool{
+		"B20261118-093729-174": true,
+		"手动录入":                 false,
+		"B1":                   false,
+		"":                     false,
+		"20261118-093729-174":  false,
+		"B2026111X-093729-174": false,
+	}
+	for value, want := range cases {
+		if got := isBatchID(value); got != want {
+			t.Fatalf("isBatchID(%q) 应为 %v，实际 %v", value, want, got)
+		}
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 const (
 	// serviceVersion 会在控制台「服务状态」里显示。
 	// 用户报「界面没变化」时先看这里：版本没变就是还在跑旧进程，不是代码问题。
-	serviceVersion      = "0.4.0"
+	serviceVersion      = "0.5.0"
 	onlineWindowSeconds = 45
 )
 

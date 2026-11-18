@@ -83,7 +83,7 @@ invoice-helper://connect?base=<urlencode 后的电脑地址>
 {
   "ok": true,
   "name": "invoice-helper-desktop",
-  "version": "0.4.0"
+  "version": "0.5.0"
 }
 ```
 
@@ -422,7 +422,9 @@ sort=created|issued|number|reimburser
 **注意**：`duplicates` / `duplicate_groups` / `latest_batch` 始终按**全量台账**计算，不受 `keyword` 等筛选条件影响；
 `items` / `total` / `need_fill` 才是筛选后的结果。小程序据此实现「仅看重复」：
 它把筛选交给电脑端，同时用 `duplicates` 判断某条记录属于哪一组。
-`latest_batch` 取批次号字典序最大的那条（批次号形如 `B20261118-093729-174`，时间定长，字典序即时间序），
+`latest_batch` 是「最近一次导入/发送」的批次号：优先取形如 `B20261118-093729-174` 的系统批次号里最大的那个
+（格式定长，字典序即时间序）；一条都没有时才退回「录入时间最新的记录」的批次。
+手动录入的批次写的是 `手动录入` 这种文字标签，中文码位高于 ASCII，不能让它按字典序压过真正的批次号。
 台账为空时是空串——电脑端网页的「最新批次」卡片同时是筛选入口，所以它的值必须与当前筛选无关。
 
 小程序台账页的同步流程：

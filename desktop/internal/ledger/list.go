@@ -24,16 +24,45 @@ func (s *Store) ListWithMeta(query Query) ([]Invoice, []DuplicateGroup, string, 
 	return filter(all, query), groups, latest, nil
 }
 
-// LatestBatch 取批次号最大的那条。
-// 批次号形如 B20261118-093729-174：前缀固定、时间定长，字典序最大即最新。
+// LatestBatch 返回「最近一次导入/发送」的批次号。
+//
+// 不能直接取批次号字典序最大：手动录入的记录批次写的是「手动录入」这种文字标签，
+// 中文码位高于 ASCII，会永远压过真正的批次号（B20261118-...），
+// 卡片上就会显示「手动录入」而不是最新批次。
+// 所以优先在系统生成的批次号里取最大，一个都没有时才退回「录入时间最新的那条」。
 func LatestBatch(list []Invoice) string {
-	latest := ""
+	latestID := ""
 	for _, invoice := range list {
-		if invoice.Batch > latest {
-			latest = invoice.Batch
+		if isBatchID(invoice.Batch) && invoice.Batch > latestID {
+			latestID = invoice.Batch
 		}
 	}
-	return latest
+	if latestID != "" {
+		return latestID
+	}
+
+	newest, found := Invoice{}, false
+	for _, invoice := range list {
+		if !found || invoice.CreatedAt > newest.CreatedAt {
+			newest, found = invoice, true
+		}
+	}
+	return newest.Batch
+}
+
+// isBatchID 判断是不是系统生成的批次号（B + 日期-时间-毫秒）。
+// 全是数字和连字符、以 B 开头、至少带日期段，避免把 "B1" 这种手写的当成批次号。
+func isBatchID(value string) bool {
+	if len(value) < 10 || value[0] != 'B' {
+		return false
+	}
+	for i := 1; i < len(value); i++ {
+		ch := value[i]
+		if (ch < '0' || ch > '9') && ch != '-' {
+			return false
+		}
+	}
+	return true
 }
 
 func CountNeedFill(list []Invoice) int {
