@@ -18,6 +18,36 @@ function showToast(message) {
   showToast._timer = setTimeout(() => { box.hidden = true }, 1800)
 }
 
+/**
+ * datalist 建议池：只增不减。
+ * 直接拿当前列表会受筛选影响——一筛「待补录」就只剩空值，
+ * 建议池反而丢了最常用的历史报销人。
+ */
+const suggestionPool = { reimburser: new Set(), kind: new Set() }
+
+function orderedValues(set) {
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
+}
+
+function fillDatalist(id, values) {
+  const list = $(id)
+  if (!list) return
+  list.innerHTML = values.map((value) => '<option value="' + esc(value) + '"></option>').join('')
+}
+
+/** 把台账里已有的报销人/票种收进建议池，补录时可直接下拉选 */
+function refreshSuggestions() {
+  const items = (invoiceData && invoiceData.items) || []
+  items.forEach((item) => {
+    const who = String(item.reimburser || '').trim()
+    if (who) suggestionPool.reimburser.add(who)
+    const kind = String(item.kind || '').trim()
+    if (kind) suggestionPool.kind.add(kind)
+  })
+  fillDatalist('reimburserSuggestions', orderedValues(suggestionPool.reimburser))
+  fillDatalist('kindSuggestions', orderedValues(suggestionPool.kind))
+}
+
 async function copyInvoiceValue(button) {
   const text = button.dataset.copy || ''
   if (!text) return
@@ -55,7 +85,9 @@ function startReimburserEdit(cell) {
   input.value = original
   input.placeholder = '输入报销人'
   input.setAttribute('aria-label', '报销人')
+  // 关掉浏览器历史自动填充，但保留台账历史值的下拉建议
   input.autocomplete = 'off'
+  input.setAttribute('list', 'reimburserSuggestions')
 
   cell.dataset.editing = '1'
   cell.classList.add('cell-editing')
@@ -175,6 +207,7 @@ function renderInvoiceAll() {
   renderDuplicatePanel(invoiceData.duplicates || [])
   renderSelectionSummary(items, selectedInvoices)
   syncStatFilterState()
+  refreshSuggestions()
   const allChecked = items.length > 0 && items.every((item) => selectedInvoices.has(item.id))
   $('selectAll').checked = allChecked
 }
@@ -240,6 +273,34 @@ async function removeInvoices(ids) {
   }
 }
 
+/**
+ * 批量补录报销人：一次把选中的票统一成同一个姓名。
+ * PUT 是整条替换，必须逐条带上其余字段；串行更新，别用并发打满本地服务。
+ */
+async function fillReimburserForSelected() {
+  const ids = Array.from(selectedInvoices)
+  if (!ids.length) return alert('请先选择发票')
+
+  const answer = window.prompt('把选中的 ' + ids.length + ' 张发票的报销人统一设为（留空则清空）：')
+  if (answer === null) return
+  const value = answer.trim()
+
+  let done = 0
+  for (const id of ids) {
+    const item = (invoiceData.items || []).find((row) => row.id === id)
+    if (!item) continue
+    try {
+      await updateInvoice(id, invoicePayload(item, { reimburser: value }))
+      done++
+    } catch (error) {
+      // 单条失败不打断其余，最后按成功数反馈
+    }
+  }
+  showToast('已更新 ' + done + ' 张的报销人')
+  await refreshLedger()
+  if (window.refresh) window.refresh()
+}
+
 /** 补录与新增复用同一个弹窗：editingId 为 0 表示新增 */
 function openForm(item) {
   EDIT_FIELDS.forEach(([field, id]) => { $(id).value = (item && item[field]) || '' })
@@ -270,6 +331,67 @@ async function saveEdit() {
   } catch (error) {
     alert((creating ? '新增' : '补录') + '失败：' + error.message)
   }
+}
+
+/**
+ * 解析粘贴进弹窗的一行发票文本；认不出返回 null，让原生粘贴照常生效。
+ * 只认两种确定格式：
+ *   1. 数电票扫码串 01,31,,号码,金额(元),YYYYMMDD,,校验
+ *   2. Excel 一行（制表符分隔）：号码/代码/票种/日期/金额/报销人
+ * 宁可少认，也不要瞎猜——猜错一次用户就得手改六个字段。
+ */
+function parsePastedInvoice(text) {
+  const line = String(text || '').trim()
+  if (!line || line.indexOf('\n') >= 0) return null
+
+  const comma = line.split(',')
+  if (comma.length >= 6) {
+    const number = (comma[3] || '').trim()
+    const amount = (comma[4] || '').trim()
+    const date = (comma[5] || '').trim()
+    if (/^\d{8,20}$/.test(number) && /^\d+(\.\d+)?$/.test(amount) && /^\d{8}$/.test(date)) {
+      return {
+        number: number,
+        issue_date: date.slice(0, 4) + '-' + date.slice(4, 6) + '-' + date.slice(6, 8),
+        total: Number(amount).toFixed(2)
+      }
+    }
+  }
+
+  const cells = line.split('\t').map((cell) => cell.trim())
+  if (cells.length >= 4) {
+    return {
+      number: cells[0] || '',
+      code: cells[1] || '',
+      kind: cells[2] || '',
+      issue_date: cells[3] || '',
+      total: cells[4] || '',
+      reimburser: cells[5] || ''
+    }
+  }
+  return null
+}
+
+/** 弹窗里粘贴整行时自动拆字段；单值粘贴不拦 */
+function bindPasteParse() {
+  const modal = $('invoiceEditModal')
+  if (!modal) return
+  modal.addEventListener('paste', (event) => {
+    const text = (event.clipboardData && event.clipboardData.getData('text')) || ''
+    const parsed = parsePastedInvoice(text)
+    if (!parsed) return
+
+    let filled = 0
+    EDIT_FIELDS.forEach(([field, id]) => {
+      const value = parsed[field]
+      if (!value) return
+      $(id).value = value
+      filled++
+    })
+    if (!filled) return
+    event.preventDefault()
+    showToast('已按粘贴内容填入 ' + filled + ' 个字段')
+  })
 }
 
 function purgeRange(confirm) {
@@ -386,6 +508,9 @@ function bindLedgerEvents() {
       params.set('ids', Array.from(selectedInvoices).join(','))
       downloadInvoiceCSV(params)
     }
+    if (event.target.closest('#invoiceFillReimburserBtn')) {
+      fillReimburserForSelected()
+    }
     if (event.target.closest('#invoiceDeleteSelectedBtn')) {
       removeInvoices(Array.from(selectedInvoices))
     }
@@ -398,6 +523,7 @@ function bindLedgerEvents() {
   $('invoiceEditModal').addEventListener('click', (event) => {
     if (event.target.id === 'invoiceEditModal') closeEdit()
   })
+  bindPasteParse()
 
   setInterval(() => {
     if (!$('pageLedger').hidden) refreshLedger()

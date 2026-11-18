@@ -70,6 +70,8 @@ function renderDuplicateAlert(groups) {
   `
 }
 
+const COPY_ICON = '<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M0 6.75C0 5.78.78 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .14.11.25.25.25h7.5c.14 0 .25-.11.25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25v-7.5ZM5 1.75C5 .78 5.78 0 6.75 0h7.5c.97 0 1.75.78 1.75 1.75v7.5c0 .97-.78 1.75-1.75 1.75h-7.5A1.75 1.75 0 0 1 5 9.25v-7.5Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .14.11.25.25.25h7.5c.14 0 .25-.11.25-.25v-7.5a.25.25 0 0 0-.25-.25h-7.5Z"/></svg>'
+
 /**
  * 号码/代码做成可复制按钮。
  * 文字必须单独包一层 span 才能省略——直接给 inline-flex 的按钮加 text-overflow 不生效。
@@ -77,7 +79,7 @@ function renderDuplicateAlert(groups) {
 function copyCell(value) {
   const text = value || ''
   const hint = text ? '点击复制 ' + text : '点击复制'
-  return `<button type="button" class="copy-cell" data-copy="${esc(text)}" title="${esc(hint)}"><span class="copy-text">${esc(text)}</span><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M0 6.75C0 5.78.78 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .14.11.25.25.25h7.5c.14 0 .25-.11.25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25v-7.5ZM5 1.75C5 .78 5.78 0 6.75 0h7.5c.97 0 1.75.78 1.75 1.75v7.5c0 .97-.78 1.75-1.75 1.75h-7.5A1.75 1.75 0 0 1 5 9.25v-7.5Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .14.11.25.25.25h7.5c.14 0 .25-.11.25-.25v-7.5a.25.25 0 0 0-.25-.25h-7.5Z"/></svg></button>`
+  return `<button type="button" class="copy-cell" data-copy="${esc(text)}" title="${esc(hint)}"><span class="copy-text">${esc(text)}</span>${COPY_ICON}</button>`
 }
 
 /** 录入时间拆两行（日期在上、时间在下）：宽度几乎减半，信息一点没少 */
@@ -89,13 +91,17 @@ function createdCell(value) {
     `<div class="muted tiny">${esc(text.slice(cut + 1))}</div></td>`
 }
 
-/** 报销人可点击直接编辑，无需打开补录弹窗 */
+/** 报销人可点击直接编辑，无需打开补录弹窗；已填值时多给一个复制按钮，方便沿用到别的票 */
 function reimburserCell(item) {
   const value = item.reimburser || ''
   const label = value ? esc(value) : '<span class="muted">待补录</span>'
+  // 待补录没内容可复制，按钮只会挤占姓名位置；点它走 copy-cell 委托，不会进入编辑
+  const copy = value
+    ? `<button type="button" class="copy-cell reimburser-copy" data-copy="${esc(value)}" title="复制报销人 ${esc(value)}">${COPY_ICON}</button>`
+    : ''
   return `<td class="reimburser-cell" data-action="edit-reimburser" data-id="${item.id}"
     tabindex="0" role="button" title="点击填写报销人">
-    <span class="inline-value">${label}</span>
+    <span class="inline-value">${label}</span>${copy}
     <svg class="inline-pencil" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Zm1.414 1.06a.25.25 0 0 0-.354 0L3.464 11.1a.25.25 0 0 0-.064.108l-.497 1.74 1.74-.497a.25.25 0 0 0 .108-.064l8.612-8.612a.25.25 0 0 0 0-.354l-1.086-1.086Z"/></svg>
   </td>`
 }

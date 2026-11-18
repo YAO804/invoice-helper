@@ -341,10 +341,12 @@ tbody tr:last-child td { border-bottom: 0; }
 /* 报销人单元格：点击直接编辑 */
 /* 名字太长时自己截断，别把右边的铅笔图标挤出单元格 */
 .reimburser-cell .inline-value {
-  display: inline-block; max-width: calc(100% - 20px);
+  /* 右边要留出复制图标 + 铅笔两个位置，否则长名字会把图标顶出单元格 */
+  display: inline-block; max-width: calc(100% - 32px);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   vertical-align: bottom;
 }
+.reimburser-cell .reimburser-copy { margin-left: 4px; vertical-align: -1px; }
 .reimburser-cell { cursor: text; border-radius: 4px; transition: background 0.12s ease; }
 .reimburser-cell .inline-pencil {
   margin-left: 5px; color: var(--accent); opacity: 0;
