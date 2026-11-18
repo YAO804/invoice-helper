@@ -2,7 +2,7 @@
 
   <view class="card">
     <view class="card-t">桌面端连接与登录</view>
-    <view class="tiny muted" style="margin:8rpx 0 14rpx">首次使用：① 设置 PIN → ② 自动搜索或扫码连接电脑 → ③ 用「扫码登录电脑」扫网页上的二维码，浏览器就登录了。之后 PIN 自动带上，无感连接。</view>
+    <view class="tiny muted" style="margin:8rpx 0 14rpx">首次使用：① 设置 PIN → ② 点「扫码连接电脑」扫网页上的二维码。扫登录码会同时连地址并授权浏览器，扫「连接小程序」里的码只连地址，一个按钮都认得。之后 PIN 自动带上，无感连接。</view>
 
     <view class="tiny muted" style="margin:6rpx 0 10rpx">登录 PIN：{{pinMask}}</view>
     <view class="btn-row">
@@ -12,8 +12,7 @@
 
     <view wx:if="{{canDiscover}}" class="btn btn-block" style="margin-top:16rpx" bindtap="onDiscover" hover-class="btn-hover">{{discovering ? '正在搜索…' : '自动搜索电脑'}}</view>
     <view wx:if="{{discovering}}" class="btn btn-block btn-ghost" style="margin-top:12rpx" bindtap="onCancelDiscover" hover-class="btn-hover">停止搜索</view>
-    <view class="btn btn-block btn-ghost" style="margin-top:12rpx" bindtap="onScanConnect" hover-class="btn-hover">{{scanning ? '正在扫码…' : '扫码连接电脑（仅地址）'}}</view>
-    <view class="btn btn-block" style="margin-top:12rpx" bindtap="onScanLogin" hover-class="btn-hover">扫码登录电脑网页</view>
+    <view class="btn btn-block" style="margin-top:12rpx" bindtap="onScanConnect" hover-class="btn-hover">{{scanning ? '正在扫码…' : '扫码连接电脑'}}</view>
     <view wx:if="{{discoverTip}}" class="tiny muted" style="margin:10rpx 0">{{discoverTip}}</view>
     <view class="divider"></view>
     <view class="tiny muted" style="margin-bottom:12rpx">手动填地址（最后手段）：在电脑网页「连接小程序」里能看到可用地址。</view>

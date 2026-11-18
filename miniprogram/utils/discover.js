@@ -92,8 +92,8 @@ function parseConnectCode(raw) {
   return ''
 }
 
-/** 扫电脑上的二维码连过去：先解析，再探一次 /api/health，通了才用 */
-function scanConnectCode() {
+/** 只拿扫码原始串；设置页靠它区分「连接码」和「登录码」两种二维码 */
+function scanRaw() {
   return new Promise(function (resolve, reject) {
     wx.scanCode({
       onlyFromCamera: false,
@@ -101,7 +101,12 @@ function scanConnectCode() {
       success: function (res) { resolve((res && res.result) || '') },
       fail: function (err) { reject(new Error('扫码失败：' + ((err && err.errMsg) || ''))) }
     })
-  }).then(function (raw) {
+  })
+}
+
+/** 扫电脑上的二维码连过去：先解析，再探一次 /api/health，通了才用 */
+function scanConnectCode() {
+  return scanRaw().then(function (raw) {
     const url = parseConnectCode(raw)
     if (!url) return Promise.reject(new Error('这不是攒票小匣的连接二维码'))
     return verify(url).then(function (ok) {
@@ -116,5 +121,7 @@ module.exports = {
   scan: scan,
   cancel: cancel,
   parseConnectCode: parseConnectCode,
+  verifyUrl: verify,
+  scanRaw: scanRaw,
   scanConnectCode: scanConnectCode
 }

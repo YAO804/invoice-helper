@@ -2,6 +2,27 @@ const lanservice = require('../../utils/lanservice')
 const discover = require('../../utils/discover')
 const auth = require('../../utils/auth')
 
+/** 弹输入框要 PIN；取消或位数不够都返回空串，由调用方决定怎么提示 */
+function promptPIN(title, content) {
+  return new Promise(function (resolve) {
+    wx.showModal({
+      title: title,
+      content: content,
+      editable: true,
+      placeholderText: '例如 123456',
+      success: function (res) {
+        if (!res.confirm) return resolve('')
+        const pin = String(res.content || '').trim()
+        if (pin.length < 4) {
+          wx.showToast({ title: 'PIN 至少 4 位', icon: 'none' })
+          return resolve('')
+        }
+        resolve(pin)
+      }
+    })
+  })
+}
+
 Page({
   data: {
     desktopUrl: '',
@@ -84,72 +105,64 @@ Page({
     this.setData({ discovering: false, discoverTip: '已停止搜索' })
   },
 
-  /** 扫码兜底：扫电脑端网页上的二维码，比手输地址可靠，iOS 也能用 */
+  /**
+   * 一个入口认两种二维码：
+   * - 登录码（网页未登录时的遮罩）：连地址 + 用 PIN 授权网页登录
+   * - 连接码（网页已登录后的「连接小程序」）：只连地址
+   * 用户不用判断该点哪个按钮，扫哪个就办哪件事。
+   */
   async onScanConnect() {
     if (this.data.scanning) return
     this.setData({ scanning: true, discoverTip: '正在扫码…' })
     try {
-      const url = await discover.scanConnectCode()
-      lanservice.setBase(url)
-      lanservice.startAutoHeartbeat()
-      this.setData({
-        desktopUrl: url,
-        desktopStatus: '已扫码连接',
-        discoverTip: '已连接电脑：' + url,
-        scanning: false
-      })
-      wx.showToast({ title: '已连接电脑', icon: 'none' })
-    } catch (e) {
-      this.showConnectFailure(
-        (e && e.message) || '扫码连接失败，请手动填写地址',
-        '扫码连接失败'
-      )
-    }
-  },
-
-  /** 扫电脑网页的登录二维码：一次扫码同时连地址 + 授权网页登录 */
-  async onScanLogin() {
-    if (this.data.scanning) return
-    if (!auth.hasPIN()) {
-      wx.showToast({ title: '请先设置 PIN', icon: 'none' })
-      return
-    }
-    this.setData({ scanning: true, discoverTip: '正在扫码登录电脑…' })
-    try {
-      const base = await auth.scanLoginCode()
+      const raw = await discover.scanRaw()
+      const login = auth.parseLoginCode(raw)
+      const base = login ? await this.loginWithCode(login) : await this.connectWithCode(raw)
       lanservice.setBase(base)
       lanservice.startAutoHeartbeat()
       this.setData({
         desktopUrl: base,
-        desktopStatus: '已扫码登录',
-        discoverTip: '已登录电脑网页，可切到浏览器查看',
+        desktopStatus: login ? '已扫码登录' : '已扫码连接',
+        discoverTip: login
+          ? '已连接并登录电脑网页，可切到浏览器查看'
+          : '已连接电脑：' + base + '；如需登录网页，请扫电脑网页登录二维码',
         scanning: false
       })
-      wx.showToast({ title: '登录成功', icon: 'none' })
+      wx.showToast({ title: login ? '连接并登录成功' : '已连接电脑', icon: 'none' })
     } catch (e) {
-      this.showConnectFailure((e && e.message) || '扫码登录失败', '扫码登录失败')
+      const message = (e && e.message) || '扫码失败，请手动填写地址'
+      this.showConnectFailure(message, message.indexOf('401') >= 0 ? 'PIN 不正确' : '扫码失败')
     }
   },
 
+  /** 登录码必须先有 PIN；没有就当场问一个，别让用户再去找「设置 PIN」 */
+  async loginWithCode(login) {
+    if (!auth.hasPIN()) {
+      const pin = await promptPIN('设置 PIN', '扫码登录需要 PIN，请输入电脑端 PIN（默认 123456）')
+      if (!pin) throw new Error('尚未设置 PIN，已取消扫码登录')
+      auth.setPIN(pin)
+      this.refreshPINStatus()
+    }
+    await auth.confirmLogin(login.base, login.code)
+    return login.base
+  },
+
+  /** 连接码只带地址，探活通过才用 */
+  async connectWithCode(raw) {
+    const url = discover.parseConnectCode(raw)
+    if (!url) throw new Error('这不是攒票小匣的二维码')
+    const ok = await discover.verifyUrl(url)
+    if (!ok) throw new Error('扫到地址了但电脑没响应，确认在同一个 WiFi')
+    return url
+  },
+
   /** 首次设置 PIN：存在本机，之后所有请求自动带，无感登录 */
-  onSetupPIN() {
-    wx.showModal({
-      title: '设置 PIN',
-      content: '请输入 4 位以上数字，用于连接电脑端',
-      editable: true,
-      placeholderText: '例如 123456',
-      success: (res) => {
-        if (!res.confirm) return
-        const pin = String(res.content || '').trim()
-        if (pin.length < 4) {
-          wx.showToast({ title: 'PIN 至少 4 位', icon: 'none' })
-          return
-        }
-        auth.setPIN(pin)
-        this.refreshPINStatus()
-        wx.showToast({ title: 'PIN 已保存', icon: 'none' })
-      }
-    })
+  async onSetupPIN() {
+    const pin = await promptPIN('设置 PIN', '请输入 4 位以上数字，用于连接电脑端')
+    if (!pin) return
+    auth.setPIN(pin)
+    this.refreshPINStatus()
+    wx.showToast({ title: 'PIN 已保存', icon: 'none' })
   },
 
   /** 修改 PIN：需带当前 PIN，改完服务端旧会话全部失效 */
