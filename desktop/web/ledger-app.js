@@ -275,15 +275,33 @@ async function removeInvoices(ids) {
 
 /**
  * 批量补录报销人：一次把选中的票统一成同一个姓名。
- * PUT 是整条替换，必须逐条带上其余字段；串行更新，别用并发打满本地服务。
+ * 用页面内模态框而非 window.prompt：原生弹窗样式割裂、拦不住误输入，也挂不了历史建议。
  */
-async function fillReimburserForSelected() {
+function fillReimburserForSelected() {
   const ids = Array.from(selectedInvoices)
   if (!ids.length) return alert('请先选择发票')
 
-  const answer = window.prompt('把选中的 ' + ids.length + ' 张发票的报销人统一设为（留空则清空）：')
-  if (answer === null) return
-  const value = answer.trim()
+  const input = $('batchReimburserInput')
+  input.value = ''
+  $('batchReimburserHint').textContent =
+    '将把选中的 ' + ids.length + ' 张发票的报销人统一设为该姓名；留空表示清空。'
+  $('batchReimburserModal').hidden = false
+  input.focus()
+}
+
+function closeBatchReimburser() {
+  $('batchReimburserModal').hidden = true
+}
+
+/**
+ * PUT 是整条替换，必须逐条带上其余字段；串行更新，别用并发打满本地服务。
+ */
+async function confirmBatchReimburser() {
+  const ids = Array.from(selectedInvoices)
+  if (!ids.length) return closeBatchReimburser()
+
+  const value = ($('batchReimburserInput').value || '').trim()
+  closeBatchReimburser()
 
   let done = 0
   for (const id of ids) {
@@ -484,6 +502,10 @@ function bindLedgerEvents() {
     if (event.target.closest('#invoiceCreateBtn')) return openForm(null)
     if (event.target.closest('#saveEditBtn')) return saveEdit()
     if (event.target.closest('#closeEditBtn') || event.target.closest('#cancelEditBtn')) return closeEdit()
+    if (event.target.closest('#confirmBatchReimburserBtn')) return confirmBatchReimburser()
+    if (event.target.closest('#closeBatchReimburserBtn') || event.target.closest('#cancelBatchReimburserBtn')) {
+      return closeBatchReimburser()
+    }
     if (event.target.closest('#invoicePurgePreviewBtn')) return purgeRange(false)
     if (event.target.closest('#invoicePurgeBtn')) return purgeRange(true)
 
@@ -522,6 +544,13 @@ function bindLedgerEvents() {
 
   $('invoiceEditModal').addEventListener('click', (event) => {
     if (event.target.id === 'invoiceEditModal') closeEdit()
+  })
+
+  $('batchReimburserModal').addEventListener('click', (event) => {
+    if (event.target.id === 'batchReimburserModal') closeBatchReimburser()
+  })
+  $('batchReimburserInput').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') confirmBatchReimburser()
   })
   bindPasteParse()
 

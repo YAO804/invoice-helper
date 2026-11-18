@@ -22,24 +22,21 @@ const elements = {}
 function makeEl(id) {
   return {
     id, textContent: '', innerHTML: '', value: '', checked: false, hidden: true, files: [],
-    addEventListener() {}, setAttribute() {}, classList: { add() {}, remove() {} }
+    addEventListener() {}, setAttribute() {}, focus() {}, classList: { add() {}, remove() {} }
   }
 }
 global.$ = function (id) { return elements[id] || (elements[id] = makeEl(id)) }
 
 let alerts = []
 let updates = []
-let promptAnswer = ''
 global.document = {
   getElementById: global.$,
   addEventListener() {},
   querySelectorAll() { return [] },
   createElement() { return makeEl('created') }
 }
-global.window = {
-  prompt() { return promptAnswer },
-  refresh: null
-}
+// 故意不提供 window.prompt：批量填写必须走页面内模态框，一旦退回原生弹窗这里就会抛错
+global.window = { refresh: null }
 global.alert = function (message) { alerts.push(message) }
 global.confirm = function () { return true }
 global.updateInvoice = async function (id, payload) { updates.push({ id, payload }) }
@@ -105,16 +102,47 @@ async function batchFillsAll() {
     "{ id: 1, number: 'N1', code: '', kind: '数电票', issue_date: '2026-08-01', total: '1.00', reimburser: '' }," +
     "{ id: 3, number: 'N3', code: '', kind: '普通发票', issue_date: '2026-08-02', total: '2.00', reimburser: '王五' }" +
     ']')
-  promptAnswer = '李四'
   updates = []
-  await fillReimburserForSelected()
+  fillReimburserForSelected()
+  check('走页面内模态框，不再用原生 prompt', elements.batchReimburserModal.hidden, false)
+  check('提示写明本次张数', elements.batchReimburserHint.textContent.indexOf('2 张') >= 0, true)
+  check('打开时输入框是空的', elements.batchReimburserInput.value, '')
+
+  elements.batchReimburserInput.value = ' 李四 '
+  await confirmBatchReimburser()
+  check('提交后关闭弹窗', elements.batchReimburserModal.hidden, true)
   check('两张都更新', updates.length, 2)
   check('整条替换带齐其余字段', updates[0].payload,
     { number: 'N1', code: '', kind: '数电票', issue_date: '2026-08-01', total: '1.00', reimburser: '李四' })
   check('覆盖原有报销人', updates[1].payload.reimburser, '李四')
+  check('输入两侧空格被裁掉', updates[0].payload.reimburser, '李四')
 }
 
-batchNoSelection().then(batchFillsAll).then(function () {
+async function batchCancelKeepsData() {
+  vm.runInThisContext('selectedInvoices.clear(); selectedInvoices.add(1)')
+  updates = []
+  fillReimburserForSelected()
+  elements.batchReimburserInput.value = '不该保存'
+  closeBatchReimburser()
+  check('取消后关闭', elements.batchReimburserModal.hidden, true)
+  check('取消不发请求', updates.length, 0)
+}
+
+async function batchEmptyClears() {
+  // 上一次提交会走 refreshLedger，把 invoiceData 换成桩数据，这里重新铺一条
+  vm.runInThisContext('selectedInvoices.clear(); selectedInvoices.add(1)')
+  vm.runInThisContext("invoiceData.items = [" +
+    "{ id: 1, number: 'N1', code: '', kind: '数电票', issue_date: '2026-08-01', total: '1.00', reimburser: '张三' }" +
+    ']')
+  updates = []
+  fillReimburserForSelected()
+  elements.batchReimburserInput.value = '   '
+  await confirmBatchReimburser()
+  check('留空表示清空', updates.length, 1)
+  check('传给接口的是空串', updates[0].payload.reimburser, '')
+}
+
+batchNoSelection().then(batchFillsAll).then(batchCancelKeepsData).then(batchEmptyClears).then(function () {
   console.log('\n' + (failCount === 0 ? '全部通过' : failCount + ' 项失败'))
   process.exit(failCount === 0 ? 0 : 1)
 }).catch(function (e) {

@@ -321,6 +321,24 @@
     </div>
   </div>
 
+  <!-- 批量填报销人：用页面内模态框，不用 window.prompt（样式割裂且挂不了历史建议） -->
+  <div id="batchReimburserModal" class="modal" hidden>
+    <div class="modal-panel compact">
+      <div class="drawer-head">
+        <h2>批量填报销人</h2>
+        <button id="closeBatchReimburserBtn" type="button" class="btn btn-ghost">关闭</button>
+      </div>
+      <div class="modal-body one-col">
+        <label>报销人 <input id="batchReimburserInput" type="text" list="reimburserSuggestions" placeholder="输入姓名，留空则清空"></label>
+        <div id="batchReimburserHint" class="hint"></div>
+      </div>
+      <div class="row modal-actions">
+        <button id="confirmBatchReimburserBtn" type="button" class="btn">保存</button>
+        <button id="cancelBatchReimburserBtn" type="button" class="btn btn-ghost">取消</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 历史值建议：由台账数据动态填充，补录时下拉选，省去重输 -->
   <datalist id="reimburserSuggestions"></datalist>
   <datalist id="kindSuggestions"></datalist>
