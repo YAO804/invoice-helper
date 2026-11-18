@@ -214,9 +214,16 @@ function autoConnect(options) {
   })
 }
 
+/**
+ * 启动心跳：调用时立刻报一次，之后按 HEARTBEAT_MS 周期报。
+ *
+ * 每次都要补这一拍。之前写成「有 timer 就直接 return」，结果换地址（扫码/自动发现）
+ * 之后要等下一个 20 秒周期电脑端才看到设备，用户会以为没连上。
+ */
 function startAutoHeartbeat() {
-  if (timer || !getBase()) return
+  if (!getBase()) return
   heartbeat().catch(function () {})
+  if (timer) return
   timer = setInterval(function () {
     if (!getBase()) return stopAutoHeartbeat()
     heartbeat().catch(function () {})

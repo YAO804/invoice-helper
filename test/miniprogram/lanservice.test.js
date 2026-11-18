@@ -15,6 +15,7 @@ function check(name, actual, expected) {
 const storage = {}
 let lastRequest = null
 let lastUpload = null
+let heartbeatCount = 0
 let stubMatches = {}
 const stubSend = { added: 2, batch: 'B-TEST' }
 
@@ -23,6 +24,7 @@ global.wx = {
   setStorageSync(k, v) { storage[k] = v },
   request(options) {
     lastRequest = options
+    if (options.url.indexOf('/api/devices/heartbeat') >= 0) heartbeatCount++
     if (options.url.indexOf('/api/invoices/check') >= 0) {
       return options.success({ statusCode: 200, data: { matches: stubMatches } })
     }
@@ -134,6 +136,46 @@ lanservice.heartbeat().then(function (data) {
 
   lanservice.setBase('')
   check('未连接时导出地址为空', lanservice.exportURL('sort=created'), '')
+
+  // ---------- 心跳节奏 ----------
+  // 这里接管定时器：否则真定时器会把断言顺序搅乱。
+  // 重点是「每次 startAutoHeartbeat 都要立刻补报一拍」——扫码换地址后
+  // 若等下个 20 秒周期，桌面端看起来就像很久才连上。
+  let intervals = 0
+  let cleared = 0
+  let lastInterval = null
+  global.setInterval = function (fn, ms) {
+    intervals++
+    lastInterval = { fn: fn, ms: ms }
+    return lastInterval
+  }
+  global.clearInterval = function () { cleared++ }
+
+  lanservice.setBase('192.168.1.20:8765')
+  heartbeatCount = 0
+  lanservice.startAutoHeartbeat()
+  check('启动心跳立刻报一次', heartbeatCount, 1)
+  check('心跳周期 20 秒', lastInterval.ms, 20000)
+  check('只注册一个定时器', intervals, 1)
+
+  lanservice.setBase('192.168.1.30:8765')
+  lanservice.startAutoHeartbeat()
+  check('换地址后立刻补报', heartbeatCount, 2)
+  check('换地址不重复注册定时器', intervals, 1)
+  check('补报打到新地址', lastRequest.url, 'http://192.168.1.30:8765/api/devices/heartbeat')
+
+  lanservice.stopAutoHeartbeat()
+  check('停止心跳清掉定时器', cleared, 1)
+
+  heartbeatCount = 0
+  lanservice.startAutoHeartbeat()
+  check('停止后重启又立刻报一次', heartbeatCount, 1)
+
+  lanservice.setBase('')
+  check('清空地址顺带停止心跳', cleared, 2)
+  heartbeatCount = 0
+  lastInterval.fn()
+  check('定时器回调发现地址已清空就不再报', heartbeatCount, 0)
 
   console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
   process.exit(failCount === 0 ? 0 : 1)

@@ -136,4 +136,30 @@ function bindEvents() {
 
 bindEvents()
 refresh()
-setInterval(refresh, 5000)
+
+// 轮询间隔跟着状态走：还没连上时用户正盯着「小程序连接」这张卡，2 秒一次；
+// 连上之后没必要这么勤，回到 5 秒。
+const POLL_FAST_MS = 2000
+const POLL_IDLE_MS = 5000
+let pollTimer = null
+
+function nextPollDelay() {
+  const mini = statusData && statusData.mini_program
+  return mini && mini.online ? POLL_IDLE_MS : POLL_FAST_MS
+}
+
+function scheduleRefresh() {
+  clearTimeout(pollTimer)
+  pollTimer = setTimeout(async () => {
+    await refresh()
+    scheduleRefresh()
+  }, nextPollDelay())
+}
+
+scheduleRefresh()
+
+// 切回这个标签页时立刻刷新一次，别让用户等下一个轮询
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return
+  refresh().then(scheduleRefresh)
+})
