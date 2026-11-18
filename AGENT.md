@@ -43,7 +43,7 @@ invoice-helper/
 │   └── README.md
 ├── shared/protocol.md          # 两端通信协议（当前 v0.9）
 ├── test/
-│   ├── miniprogram/            # 小程序 Node 回归测试（17 套 / 519 项检查）
+│   ├── miniprogram/            # 小程序 Node 回归测试（18 套 / 531 项检查）
 │   ├── desktop/                # 电脑端网页 Node 回归测试（7 套 / 132 项检查；Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
@@ -76,7 +76,7 @@ cd desktop && go run .
 **回归测试**（改动后必跑）：
 
 ```bash
-# 小程序 17 套，共 519 项检查
+# 小程序 18 套，共 531 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端网页 7 套，共 132 项检查
@@ -172,7 +172,7 @@ sort = created | issued | number | reimburser   // 默认 created（录入时间
 
 | 页面 | 职责 |
 |---|---|
-| `collect` | **首页**。扫码/批量连续扫码/文件导入 → 内存草稿 → 查重 → 发送电脑台账；未连接时只提示去设置 |
+| `collect` | **首页**。四张卡：连接状态、扫码（单张/批量）、文件导入（把票的信息记进台账，XML 填全字段、OFD/PDF 只取名）、文件归档（把原件发到电脑，跳传输页）；未连接时只提示去设置 |
 | `list` | **只读台账**：对齐电脑端（统计条、关键词、仅看重复、仅看待补录、四种排序），数据来自 `GET /api/invoices`，支持下拉刷新 |
 | `detail` | **只读详情**：8 个票面字段 + 同组重复记录；可复制号码，没有编辑/删除 |
 | `export` | 导出 CSV：选范围（全部/仅重复/仅待补录）→ 电脑端生成 → 下载 → 微信转发 |
@@ -182,6 +182,7 @@ sort = created | issued | number | reimburser   // 默认 created（录入时间
 
 > 2026-11-18 下线：统计页、`edit`（手动录入/编辑）、`manage`（台账清理）、`review`（待复核）。
 > 这些活现在都在电脑端：新增发票走网页「新增发票」，补录点报销人单元格，删除/清理在台账页，待复核用「仅看待补录」筛选。
+> 收票页同日移除「查看台账」入口（tabBar 已直达）和 M0 入口（开发期残留，设置页仍保留入口）；文件导入与文件归档分卡，文案讲清区别。
 
 ### 工具（`utils/`，按职责拆分）
 
@@ -297,8 +298,8 @@ registry.json   设备与事件记录
 
 ## 9. 测试体系
 
-- **小程序 17 套 / 519 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
-  `lanservice 63`、`einvoice 60`、`transfer 41`、`draft 36`、`discover 33`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示）、`list 32`、`collect 31`、`filesend 31`、`filetake 29`、`settings 29`（自动搜索提示 + 两种二维码合并入口）、`ledger 27`、`scanbatch 27`、`auth 24`、`invoicesend 18`、`zip 14`、`selection 13`、`fsx 11`。
+- **小程序 18 套 / 531 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
+  `lanservice 63`、`einvoice 60`、`transfer 41`、`draft 36`、`discover 33`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示）、`list 32`、`collect 31`、`filesend 31`、`filetake 29`、`settings 29`（自动搜索提示 + 两种二维码合并入口）、`ledger 27`、`scanbatch 27`、`auth 24`、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`fsx 11`。
 - **电脑端网页 7 套 / 132 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
   `invoice-row 26`（台账行渲染：10 列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`stat-filter 18`（统计卡片与筛选面板双向同步、最新批次取全表）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。

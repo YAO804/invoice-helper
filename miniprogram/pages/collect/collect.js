@@ -131,20 +131,12 @@ Page({
     })
   },
 
-  onLedger() {
-    wx.switchTab({ url: '/pages/list/list' })
-  },
-
   onTransfer() {
     wx.switchTab({ url: '/pages/transfer/transfer' })
   },
 
   onSettings() {
     wx.switchTab({ url: '/pages/settings/settings' })
-  },
-
-  onM0() {
-    wx.navigateTo({ url: '/pages/index/index' })
   }
 })
 

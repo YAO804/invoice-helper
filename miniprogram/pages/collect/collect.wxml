@@ -23,20 +23,13 @@
   <view class="card">
     <view class="card-t" style="margin-bottom:14rpx">文件导入</view>
     <view class="btn btn-ghost btn-block" bindtap="onImport" hover-class="btn-hover">批量导入文件（最多 20 个）</view>
-    <view class="tiny muted" style="margin-top:14rpx">支持 .xml / .ofd / .pdf。文件需先以「文件」消息发到文件传输助手，发成图片会被改名。XML 能自动填全字段，OFD/PDF 只取到文件名、字段需在电脑端补。</view>
-    <view class="divider"></view>
-    <view class="btn btn-block" bindtap="onTransfer" hover-class="btn-hover">传到电脑 / 查看发送记录 ›</view>
-    <view class="tiny muted" style="margin-top:14rpx">把原件文件发给电脑端归档，可查看已发送哪些文件。</view>
+    <view class="tiny muted" style="margin-top:14rpx">从微信会话里选发票文件，把票的信息记进台账。XML 能自动填全号码、金额、日期、票种；OFD / PDF 只取到文件名，字段要到电脑端补。文件需先以「文件」消息发到文件传输助手，发成图片会被改名。</view>
   </view>
 
   <view class="card">
-    <view class="card-t" style="margin-bottom:14rpx">其他</view>
-    <view class="btn btn-grey btn-block" bindtap="onLedger" hover-class="btn-hover">查看台账</view>
-    <view class="tiny muted" style="margin-top:14rpx">台账、补录、删除、手动录入都在电脑端。手机端只做扫码和查看。</view>
-  </view>
-
-  <view class="card tech">
-    <view class="small muted" bindtap="onM0" hover-class="btn-hover">M0 技术验证 ›</view>
+    <view class="card-t" style="margin-bottom:14rpx">文件归档</view>
+    <view class="btn btn-block" bindtap="onTransfer" hover-class="btn-hover">把原件发到电脑 / 查看发送记录 ›</view>
+    <view class="tiny muted" style="margin-top:14rpx">把发票原件文件存到电脑留档，可查看已发送哪些文件。和上面的「文件导入」不同：导入是把票的信息记进台账，归档是把文件本身存起来。</view>
   </view>
 
   <view class="foot tiny muted">本工具仅做信息采集与归档辅助，不查验发票真伪。真伪以国家税务总局查验平台结果为准。</view>

@@ -1,7 +1,3 @@
-.tech {
-  padding: 16rpx 24rpx;
-}
-
 .foot {
   padding: 10rpx 8rpx;
   line-height: 1.7;
