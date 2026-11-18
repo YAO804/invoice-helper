@@ -93,9 +93,10 @@ Page({
         this.setData({ discoverTip: '已停止搜索', discovering: false })
         return
       }
+      const tip = (e && e.message) || '没有找到电脑，请扫码连接或手动填写地址'
       this.showConnectFailure(
-        (e && e.message) || '没有找到电脑，请扫码连接或手动填写地址',
-        '自动搜索未找到电脑'
+        tip,
+        tip.indexOf('找到电脑但连不上') >= 0 ? '找到电脑但连不上' : '自动搜索未找到电脑'
       )
     }
   },

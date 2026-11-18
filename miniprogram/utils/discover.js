@@ -22,10 +22,25 @@ function supported() {
   return typeof wx.startLocalServiceDiscovery === 'function' && platform() !== 'ios'
 }
 
+/**
+ * 微信 mDNS 只回一个 ip；电脑若有多块网卡，广播里可能夹带 169.254 链路本地地址。
+ * 这里先把不可能在手机局域网里访问到的地址挡掉，避免探活一个必失败的地址后
+ * 又把「没找到电脑」和「找到了但连不上」混成同一句提示。
+ */
+function validIP(ip) {
+  if (typeof ip !== 'string' || !/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return false
+  const parts = ip.split('.').map(Number)
+  if (parts.some(function (n) { return n < 0 || n > 255 })) return false
+  if (parts[0] === 0 || parts[0] === 127) return false          // 未指定 / 回环
+  if (parts[0] === 169 && parts[1] === 254) return false       // APIPA 链路本地
+  return true
+}
+
 function candidate(res) {
   const name = res && res.serviceName ? res.serviceName : ''
   if (name.indexOf(MATCH) < 0) return ''
   if (!res.ip || !res.port) return ''
+  if (!validIP(res.ip)) return ''
   return 'http://' + res.ip + ':' + res.port
 }
 
@@ -121,6 +136,8 @@ module.exports = {
   scan: scan,
   cancel: cancel,
   parseConnectCode: parseConnectCode,
+  validIP: validIP,
+  candidate: candidate,
   verifyUrl: verify,
   scanRaw: scanRaw,
   scanConnectCode: scanConnectCode

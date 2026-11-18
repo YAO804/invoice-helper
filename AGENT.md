@@ -43,7 +43,7 @@ invoice-helper/
 │   └── README.md
 ├── shared/protocol.md          # 两端通信协议（当前 v0.9）
 ├── test/
-│   ├── miniprogram/            # 小程序 Node 回归测试（17 套 / 507 项检查）
+│   ├── miniprogram/            # 小程序 Node 回归测试（17 套 / 519 项检查）
 │   ├── desktop/                # 电脑端网页 Node 回归测试（7 套 / 132 项检查；Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
@@ -76,7 +76,7 @@ cd desktop && go run .
 **回归测试**（改动后必跑）：
 
 ```bash
-# 小程序 17 套，共 507 项检查
+# 小程序 17 套，共 519 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端网页 7 套，共 132 项检查
@@ -252,6 +252,10 @@ registry.json   设备与事件记录
 ### 连接策略（三级，按优先级）
 
 1. **mDNS 自动发现**（仅安卓）：`_http._tcp.local.`，逐个 `/api/health` 验证取第一个可用地址。首次启动自动搜一次，失败后 10 分钟不重试。iOS 微信 7.0.18+ 不支持，直接跳过这一级。
+
+   ⚠️ **服务端广播的两个硬约束**（`discovery.Start`，改动前先读这段）：
+   - A 记录只能放有效局域网 IP。`Register(..., nil)` 会把所有网卡地址（含 `169.254.x.x` APIPA、VMware/蓝牙虚拟网卡）塞进同一条应答；微信 `onLocalServiceFound` 只回一个 `ip`，拿到无效地址后探活失败，最终被误报成「找不到电脑」。必须用 `RegisterProxy` 并通过 `ips` 参数只传 `api.LANAddresses()` 的结果。
+   - `ifaces` 参数必须保留**全部**组播网卡（`api.MulticastInterfaces()`），不能用裁剪后的有效网卡列表。只给单张网卡时 Windows 上 mDNS 组播收发异常，局域网内其他设备搜不到服务（已用独立进程 browse 实测：单网卡无效、全网卡有效）。小程序侧另有 `discover.js` 的 `validIP` 做二次过滤。
 2. **扫码连接**（兜底主力，安卓/iOS 都可用）：电脑端有两类二维码——未登录遮罩上的登录码 `invoice-helper://login?base=...&c=...`、已登录控制台里的连接码 `invoice-helper://connect?base=...`。设置页只有一个「扫码连接电脑」按钮，扫到哪类就办哪件事：登录码额外带 PIN 确认挑战码并授权网页（没 PIN 会现场问），连接码只探 `/api/health` 后保存地址。用户不需要二选一。
 3. **手动填地址**（最后手段）：地址在电脑端网页「连接小程序」里能看到，可复制。
 
@@ -293,8 +297,8 @@ registry.json   设备与事件记录
 
 ## 9. 测试体系
 
-- **小程序 17 套 / 507 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
-  `lanservice 63`、`einvoice 60`、`transfer 41`、`draft 36`、`list 32`、`collect 31`、`filesend 31`、`filetake 29`、`settings 27`（自动搜索提示 + 两种二维码合并入口）、`ledger 27`、`scanbatch 27`、`auth 24`、`discover 23`、`invoicesend 18`、`zip 14`、`selection 13`、`fsx 11`。
+- **小程序 17 套 / 519 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
+  `lanservice 63`、`einvoice 60`、`transfer 41`、`draft 36`、`discover 33`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示）、`list 32`、`collect 31`、`filesend 31`、`filetake 29`、`settings 29`（自动搜索提示 + 两种二维码合并入口）、`ledger 27`、`scanbatch 27`、`auth 24`、`invoicesend 18`、`zip 14`、`selection 13`、`fsx 11`。
 - **电脑端网页 7 套 / 132 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
   `invoice-row 26`（台账行渲染：10 列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`stat-filter 18`（统计卡片与筛选面板双向同步、最新批次取全表）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。

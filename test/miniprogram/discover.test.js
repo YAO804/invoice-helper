@@ -22,6 +22,9 @@ let failFirstStart = false
 let scanRaw = ''
 let scanFails = false
 let emitStopOnStop = true
+// 菜单：注入额外的回调（含无效 IP）或整体替换回调集合，用于验证多网卡场景
+let extraFound = []
+let overrideFound = null
 
 function emitFound(res) {
   if (foundHandler) foundHandler(res)
@@ -49,7 +52,12 @@ global.wx = {
       return
     }
     setTimeout(function () {
+      if (overrideFound) {
+        overrideFound.forEach(emitFound)
+        return
+      }
       emitFound({ serviceName: 'other-device', ip: '192.168.1.99', port: 9000 })
+      extraFound.forEach(emitFound)
       emitFound({ serviceName: 'invoice-helper-desktop', ip: '192.168.1.20', port: 8765 })
     }, 5)
   },
@@ -118,6 +126,53 @@ discover.scan({ settleMs: 10, timeoutMs: 200 }).then(function (url) {
       check('取消后可重新搜索', url, 'http://192.168.1.20:8765')
     })
   })
+}).then(function () {
+  console.log('\n--- 多网卡 / 无效 IP 过滤 ---')
+  // 复现真实故障：电脑广播里夹带 169.254 与回环地址，微信只回一个 ip。
+  // 无效地址必须被挡掉，有效地址不受影响。
+  extraFound = [
+    { serviceName: 'invoice-helper-desktop', ip: '169.254.158.28', port: 8765 },
+    { serviceName: 'invoice-helper-desktop', ip: '127.0.0.1', port: 8765 }
+  ]
+  return discover.scan({ settleMs: 10, timeoutMs: 300 }).then(function (url) {
+    check('无效 IP 不妨碍发现有效地址', url, 'http://192.168.1.20:8765')
+    extraFound = []
+  })
+}).then(function () {
+  console.log('\n--- 只有无效 IP ---')
+  overrideFound = [
+    { serviceName: 'invoice-helper-desktop', ip: '169.254.158.28', port: 8765 }
+  ]
+  return discover.scan({ settleMs: 10, timeoutMs: 300 }).then(function () {
+    check('全是无效 IP 应失败', false, true)
+  }, function (error) {
+    check('全无效时有指导性提示', error.message.indexOf('没有找到电脑') >= 0, true)
+    overrideFound = null
+  })
+}).then(function () {
+  console.log('\n--- 找到但连不上 ---')
+  overrideFound = [
+    { serviceName: 'invoice-helper-desktop', ip: '192.168.1.50', port: 8765 }
+  ]
+  return discover.scan({ settleMs: 10, timeoutMs: 300 }).then(function () {
+    check('探活失败应报错', false, true)
+  }, function (error) {
+    check('与「没找到」区分开', error.message.indexOf('找到电脑但连不上') >= 0, true)
+    overrideFound = null
+  })
+}).then(function () {
+  console.log('\n--- IP 校验纯函数 ---')
+  check('接受私网 192.168', discover.validIP('192.168.1.3'), true)
+  check('接受私网 10 段', discover.validIP('10.0.0.5'), true)
+  check('拒绝 169.254', discover.validIP('169.254.158.28'), false)
+  check('拒绝回环', discover.validIP('127.0.0.1'), false)
+  check('拒绝 IPv6 字面量', discover.validIP('fe80::1'), false)
+  check('候选过滤无效地址', discover.candidate({
+    serviceName: 'invoice-helper-desktop', ip: '169.254.1.1', port: 8765
+  }), '')
+  check('候选保留有效地址', discover.candidate({
+    serviceName: 'invoice-helper-desktop', ip: '192.168.1.3', port: 8765
+  }), 'http://192.168.1.3:8765')
 }).then(function () {
   console.log('\n--- 扫码连接 ---')
   check('解析连接串', discover.parseConnectCode('invoice-helper://connect?base=http%3A%2F%2F192.168.1.20%3A8765'),

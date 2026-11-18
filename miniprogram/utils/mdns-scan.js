@@ -138,9 +138,23 @@ function onDiscoveryStop(ctx) {
 function finalize(ctx) {
   if (ctx.settled || ctx.finalizing) return
   ctx.finalizing = true
-  ctx.deps.resolveUrls(unique(ctx.found)).then(
-    function (url) { settle(ctx, url, '') },
-    function () { settle(ctx, '', '没有找到可连接的电脑') }
+  const found = unique(ctx.found)
+  ctx.deps.resolveUrls(found).then(
+    function (url) {
+      if (url) {
+        settle(ctx, url, '')
+        return
+      }
+      // 探活全失败：区分「扫到了电脑但连不上」和「压根没扫到」，
+      // 前者多半是防火墙/不同网段，后者才是真的没发现，提示不能混为一谈。
+      const message = found.length
+        ? '找到电脑但连不上，请确认电脑端服务在运行、且手机与电脑在同一 WiFi'
+        : '没有找到电脑，请确认电脑端已开启、且手机与电脑在同一 WiFi，或改用扫码连接'
+      settle(ctx, '', message)
+    },
+    function () {
+      settle(ctx, '', '搜索电脑时出错，请改用扫码连接或手动填写地址')
+    }
   )
 }
 

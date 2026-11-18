@@ -77,6 +77,13 @@ async function main() {
   check('详情保留在页面', page.data.discoverTip, '没有找到可连接的电脑')
   check('搜索状态已复位', page.data.discovering, false)
 
+  console.log('\n--- 找到但连不上：toast 与详情都要区分 ---')
+  page = newPage(); reset()
+  lanservice.autoConnect = () => Promise.reject(new Error('找到电脑但连不上，请确认电脑端服务在运行、且手机与电脑在同一 WiFi'))
+  await page.onDiscover()
+  check('toast 区分连不上', toasts[0] && toasts[0].title, '找到电脑但连不上')
+  check('详情保留原因', page.data.discoverTip.indexOf('同一 WiFi') >= 0, true)
+
   console.log('\n--- 用户主动停止 ---')
   page = newPage(); reset()
   lanservice.autoConnect = () => Promise.reject(new Error('搜索已取消'))

@@ -67,6 +67,28 @@ func LANAddresses(port string) []NetworkAddress {
 	return result
 }
 
+// MulticastInterfaces 返回所有已启用且支持组播的网卡。
+//
+// 注意这里刻意「不过滤」虚拟网卡：zeroconf 用 ifaces 决定在哪些网卡加入 mDNS
+// 组播组、收发 224.0.0.251 的公告。实测只给一张有效网卡（单 WLAN）时，Windows
+// 上组播收发异常，同一局域网的另一进程搜不到服务；必须保留全部组播网卡，
+// 收发行为才与原版 Register(nil) 一致。
+// 要控制广播出去的 IP，用 RegisterProxy 的 ips 参数（见 discovery.Start），
+// 不要靠裁剪这里的网卡列表。
+func MulticastInterfaces() []net.Interface {
+	result := []net.Interface{}
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return result
+	}
+	for _, iface := range interfaces {
+		if iface.Flags&net.FlagUp != 0 && iface.Flags&net.FlagMulticast != 0 {
+			result = append(result, iface)
+		}
+	}
+	return result
+}
+
 func addressScore(iface string, ip net.IP) int {
 	name := strings.ToLower(iface)
 	if hasVirtualHint(name) {
