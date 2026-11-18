@@ -56,6 +56,8 @@ function renderStatus(data) {
 
 function renderAddresses(data) {
   const addresses = (data.network && data.network.addresses) || []
+  renderConnect(data.network || {})
+
   if (!addresses.length) {
     $('addressList').innerHTML = '<p class="hint">未检测到局域网地址，请检查网络连接。</p>'
     return
@@ -70,6 +72,25 @@ function renderAddresses(data) {
       <button type="button" class="secondary copy-btn" data-url="${esc(item.url)}">复制</button>
     </div>
   `).join('')
+}
+
+/** 二维码只在首选地址变化时重新拉取，避免 5 秒轮询每次都重新生成图片 */
+function renderConnect(network) {
+  const url = network.primary_url || ''
+  const box = $('connectBox')
+  if (!url) {
+    box.hidden = true
+    return
+  }
+
+  box.hidden = false
+  $('connectCode').textContent = network.connect_code || url
+
+  const img = $('connectQr')
+  if (img.dataset.url !== url) {
+    img.dataset.url = url
+    img.src = '/api/connect-qr.png?t=' + Date.now()
+  }
 }
 
 function renderDevices(list) {

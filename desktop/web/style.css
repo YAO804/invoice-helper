@@ -158,6 +158,11 @@ input[type="text"] { min-width: 180px; }
 .address-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 10px; margin: 12px 0; }
 .address-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; background: var(--canvas); }
 .address-label { font-size: 13px; color: #57606a; margin-bottom: 4px; }
+/* 扫码连接：二维码固定 160px，地址可能很长，允许换行不撑破卡片 */
+.connect-box { display: flex; align-items: center; gap: 16px; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 12px 0; background: var(--canvas); }
+.connect-qr { flex: none; width: 160px; height: 160px; padding: 6px; background: #fff; border: 1px solid var(--border); border-radius: 6px; image-rendering: pixelated; }
+.connect-info { display: grid; gap: 6px; min-width: 0; }
+.connect-info code { display: block; overflow-wrap: anywhere; font-size: 12px; color: var(--muted); }
 code { background: var(--canvas); padding: 2px 5px; border-radius: 4px; }
 .drop-zone { border: 2px dashed #a7d3f7; border-radius: 8px; padding: 24px; text-align: center; background: #f6fbff; margin-bottom: 12px; }
 .drop-zone strong { display: block; margin-bottom: 6px; font-size: 15px; }

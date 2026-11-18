@@ -57,7 +57,15 @@
 
       <section class="card">
         <h2>连接小程序</h2>
-        <p class="hint">在小程序「设置 → 桌面端连接」填入任一地址。小程序打开时会自动上报在线状态。</p>
+        <p class="hint">安卓微信进「设置 → 桌面端连接」点「扫码连接」，扫下面的码即可；扫不了再手动填地址。</p>
+        <div id="connectBox" class="connect-box" hidden>
+          <img id="connectQr" class="connect-qr" alt="小程序扫码连接这台电脑" width="160" height="160">
+          <div class="connect-info">
+            <div class="address-label">手机扫码直连</div>
+            <code id="connectCode"></code>
+            <p class="hint">扫码后会先探一次健康检查，通了才保存地址。</p>
+          </div>
+        </div>
         <div id="addressList" class="address-list"></div>
 
         <h3 class="section-title">最近设备</h3>

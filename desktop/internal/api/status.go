@@ -26,8 +26,9 @@ type serviceStatus struct {
 }
 
 type networkStatus struct {
-	PrimaryURL string           `json:"primary_url"`
-	Addresses  []NetworkAddress `json:"addresses"`
+	PrimaryURL  string           `json:"primary_url"`
+	ConnectCode string           `json:"connect_code"`
+	Addresses   []NetworkAddress `json:"addresses"`
 }
 
 type miniProgramStatus struct {
@@ -79,7 +80,7 @@ func newNetworkStatus(addresses []NetworkAddress) networkStatus {
 	if len(addresses) > 0 {
 		primary = addresses[0].URL
 	}
-	return networkStatus{PrimaryURL: primary, Addresses: addresses}
+	return networkStatus{PrimaryURL: primary, ConnectCode: ConnectCode(primary), Addresses: addresses}
 }
 
 func newMiniProgramStatus(devices []registry.Device) miniProgramStatus {

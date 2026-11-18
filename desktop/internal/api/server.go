@@ -40,6 +40,7 @@ func NewHandler(addr string, store *files.Store, invoiceLedger *ledger.Store, de
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", d.health)
 	mux.HandleFunc("GET /api/status", d.status)
+	mux.HandleFunc("GET /api/connect-qr.png", d.connectQR)
 	mux.HandleFunc("POST /api/devices/heartbeat", d.heartbeat)
 	mux.HandleFunc("POST /api/files/upload", d.uploadFile)
 	mux.HandleFunc("GET /api/files", d.listFiles)

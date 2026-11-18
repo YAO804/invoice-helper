@@ -19,6 +19,8 @@ let startOptions = null
 let stopCount = 0
 let startCount = 0
 let failFirstStart = false
+let scanRaw = ''
+let scanFails = false
 
 function emitFound(res) {
   if (foundHandler) foundHandler(res)
@@ -49,6 +51,10 @@ global.wx = {
       emitFound({ serviceName: 'other-device', ip: '192.168.1.99', port: 9000 })
       emitFound({ serviceName: 'invoice-helper-desktop', ip: '192.168.1.20', port: 8765 })
     }, 5)
+  },
+  scanCode(options) {
+    if (scanFails) return options.fail({ errMsg: 'scanCode:fail cancel' })
+    options.success({ result: scanRaw })
   },
   request(options) {
     if (options.url.indexOf('192.168.1.20') >= 0) {
@@ -85,6 +91,34 @@ discover.scan({ settleMs: 10, timeoutMs: 200 }).then(function (url) {
     check('already exist 自愈后仍发现电脑', url, 'http://192.168.1.20:8765')
     check('自愈时先 stop 再重试', stopCount, 2)
     check('重试后 start 两次', startCount, 2)
+  })
+}).then(function () {
+  console.log('\n--- 扫码连接 ---')
+  check('解析连接串', discover.parseConnectCode('invoice-helper://connect?base=http%3A%2F%2F192.168.1.20%3A8765'),
+    'http://192.168.1.20:8765')
+  check('直接给 http 地址也认', discover.parseConnectCode('http://192.168.1.20:8765/'),
+    'http://192.168.1.20:8765')
+  check('无关二维码不认', discover.parseConnectCode('WIFI:S:office;T:WPA;;'), '')
+  check('空内容不认', discover.parseConnectCode(''), '')
+  check('base 不是 http 不认', discover.parseConnectCode('invoice-helper://connect?base=ftp%3A%2F%2Fx'), '')
+
+  scanRaw = 'invoice-helper://connect?base=http%3A%2F%2F192.168.1.20%3A8765'
+  return discover.scanConnectCode().then(function (url) {
+    check('扫码得到可用地址', url, 'http://192.168.1.20:8765')
+
+    scanRaw = 'invoice-helper://connect?base=http%3A%2F%2F192.168.1.99%3A8765'
+    return discover.scanConnectCode().then(function () {
+      check('电脑没响应应拒绝', false, true)
+    }, function (error) {
+      check('电脑没响应有提示', error.message.indexOf('没响应') >= 0, true)
+    })
+  }).then(function () {
+    scanFails = true
+    return discover.scanConnectCode().then(function () {
+      check('取消扫码应拒绝', false, true)
+    }, function (error) {
+      check('取消扫码有提示', error.message.indexOf('扫码失败') >= 0, true)
+    })
   })
 }).then(function () {
   console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
