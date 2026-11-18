@@ -32,6 +32,16 @@ global.wx = {
     if (options.url.indexOf('/api/files') >= 0) {
       return options.success({ statusCode: 200, data: { incoming: [], outgoing: [] } })
     }
+    if (options.url.indexOf('/api/incoming/purge') >= 0) {
+      return options.success({
+        statusCode: 200,
+        data: { removed: 2, confirmed: options.data.confirm, days: options.data.days }
+      })
+    }
+    if (options.url.indexOf('/api/incoming') >= 0) {
+      const ids = options.data.ids || []
+      return options.success({ statusCode: 200, data: { deleted: ids.length || 1 } })
+    }
     options.success({ statusCode: 200, data: { ok: true } })
   },
   uploadFile(options) {
@@ -84,6 +94,28 @@ lanservice.heartbeat().then(function (data) {
   check('上传携带设备', lastUpload.formData.device_id.indexOf('mp-') === 0, true)
   check('上传来源', lastUpload.formData.source, 'miniprogram')
   check('上传返回解析', data.name, 'a.xml')
+
+  return lanservice.deleteIncoming(['r1', 'r2'])
+}).then(function (data) {
+  check('批量删除地址', lastRequest.url, 'http://192.168.1.20:8765/api/incoming')
+  check('批量删除方法', lastRequest.method, 'DELETE')
+  check('批量删除 ids', lastRequest.data.ids, ['r1', 'r2'])
+  check('批量删除返回', data.deleted, 2)
+
+  return lanservice.deleteIncoming([])
+}).then(function () {
+  check('不传 ids 表示清空全部', lastRequest.data.all, true)
+
+  return lanservice.purgeIncoming(30, false)
+}).then(function (data) {
+  check('清理地址', lastRequest.url, 'http://192.168.1.20:8765/api/incoming/purge')
+  check('清理提交保留天数', lastRequest.data.days, 30)
+  check('清理默认只预览', lastRequest.data.confirm, false)
+  check('清理预览数量', data.removed, 2)
+
+  return lanservice.purgeIncoming(30, true)
+}).then(function (data) {
+  check('确认清理后 confirmed', data.confirmed, true)
 
   console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
   process.exit(failCount === 0 ? 0 : 1)

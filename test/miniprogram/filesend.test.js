@@ -43,7 +43,10 @@ const fakeLan = {
     })
   },
   listFiles() {
-    return Promise.resolve({ incoming: [{ id: 'r1', name: 'a.xml', size: 100 }], outgoing: [] })
+    return Promise.resolve({
+      incoming: [{ id: 'r1', name: 'a.xml', size: 100, uploaded_at: '2026-11-18T00:43:27Z', source: 'miniprogram' }],
+      outgoing: []
+    })
   }
 }
 
@@ -108,6 +111,30 @@ filesend.sendList([
 }).then(function (r) {
   check('电脑端列表 incoming', r.incoming.length, 1)
   check('电脑端列表 outgoing', r.outgoing.length, 0)
-  console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
-  process.exit(failCount === 0 ? 0 : 1)
+  return filesend.remoteList()
+}).then(function (list) {
+  check('电脑端文件带可读大小', list[0].humanSize, '100 B')
+  check('电脑端文件带本地时间', list[0].timeText.length, 11)
+
+  console.log('\n--- 保留期与手动清理 ---')
+  const now = Date.now()
+  const day = 24 * 60 * 60 * 1000
+  storage.file_send_history = [
+    { id: 'old', name: 'old.xml', size: 10, status: 'ok', source: 'miniprogram', at: now - 31 * day },
+    { id: 'mid', name: 'mid.xml', size: 20, status: 'duplicate', source: 'ledger', at: now - 2 * day }
+  ]
+
+  check('超期记录不再展示', filesend.displayHistory().map(function (e) { return e.id }), ['mid'])
+  check('清理超期返回条数', filesend.purgeOldHistory(), 1)
+  check('清理后只剩保留期内记录', filesend.history().map(function (e) { return e.id }), ['mid'])
+  check('来源文案可读', filesend.displayHistory()[0].sourceLabel, '台账原件')
+  check('按 id 删除返回条数', filesend.removeHistory(['mid']), 1)
+  check('删除后为空', filesend.history().length, 0)
+  check('删除不存在的 id 返回 0', filesend.removeHistory(['nope']), 0)
+
+  filesend.sendList([{ path: '/tmp/c', name: 'c.xml', size: 100 }], 'miniprogram').then(function () {
+    check('新记录自动分配 id', !!filesend.history()[0].id, true)
+    console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
+    process.exit(failCount === 0 ? 0 : 1)
+  })
 })

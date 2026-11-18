@@ -70,14 +70,14 @@ function heartbeat() {
   })
 }
 
-function postJSON(path, data) {
+function requestJSON(method, path, data) {
   const base = getBase()
   if (!base) return Promise.reject(new Error('未配置桌面端地址'))
 
   return new Promise(function (resolve, reject) {
     wx.request({
       url: base + path,
-      method: 'POST',
+      method: method,
       header: { 'content-type': 'application/json' },
       data: data,
       success: function (res) {
@@ -91,24 +91,9 @@ function postJSON(path, data) {
   })
 }
 
-function getJSON(path) {
-  const base = getBase()
-  if (!base) return Promise.reject(new Error('未配置桌面端地址'))
-
-  return new Promise(function (resolve, reject) {
-    wx.request({
-      url: base + path,
-      method: 'GET',
-      success: function (res) {
-        if (res.statusCode >= 200 && res.statusCode < 300) return resolve(res.data)
-        reject(new Error('HTTP ' + res.statusCode))
-      },
-      fail: function (err) {
-        reject(new Error((err && err.errMsg) || '连接失败'))
-      }
-    })
-  })
-}
+function postJSON(path, data) { return requestJSON('POST', path, data) }
+function getJSON(path) { return requestJSON('GET', path) }
+function deleteJSON(path, data) { return requestJSON('DELETE', path, data) }
 
 /**
  * 发送前查重：把「代码+号码」一起提交。
@@ -137,6 +122,20 @@ function sendInvoices(invoices) {
 /** 电脑端已收到的文件列表 */
 function listFiles() {
   return getJSON('/api/files')
+}
+
+/**
+ * 删除电脑端已收文件。不传 ids 表示清空全部。
+ * 只删电脑端副本，手机里的台账记录和原件不受影响。
+ */
+function deleteIncoming(ids) {
+  const list = (ids || []).filter(function (id) { return !!id })
+  return deleteJSON('/api/incoming', list.length ? { ids: list } : { all: true })
+}
+
+/** 按保留天数清理电脑端文件；confirm=false 只返回将要删除的数量 */
+function purgeIncoming(days, confirm) {
+  return postJSON('/api/incoming/purge', { days: days, confirm: !!confirm })
 }
 
 /**
@@ -224,6 +223,8 @@ module.exports = {
   checkInvoiceNumbers: checkInvoiceNumbers,
   sendInvoices: sendInvoices,
   listFiles: listFiles,
+  deleteIncoming: deleteIncoming,
+  purgeIncoming: purgeIncoming,
   uploadFile: uploadFile,
   shouldAutoConnect: shouldAutoConnect,
   autoConnect: autoConnect,

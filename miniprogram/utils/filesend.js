@@ -17,6 +17,13 @@ const MAX_HISTORY = 100
 const MAX_FILES = 20
 const MAX_BYTES = 20 * 1024 * 1024
 
+// 发送记录与电脑端副本都只保留 30 天：传输记录是过程数据，久了没有查看价值，
+// 发票原件该留在台账和电脑的备份里，不该靠这里长期保存。
+const RETENTION_DAYS = 30
+const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000
+
+let seq = 0
+
 let WX = null
 let LAN = null
 let STORE = null
@@ -56,6 +63,13 @@ function timeText(ts) {
   return (d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes())
 }
 
+/** 电脑端返回的是 RFC3339（UTC），转成本地「MM-DD HH:mm」 */
+function isoText(value) {
+  const d = new Date(String(value || ''))
+  if (isNaN(d.getTime())) return String(value || '')
+  return timeText(d.getTime())
+}
+
 function history() {
   try {
     const list = wxApi().getStorageSync(HISTORY_KEY)
@@ -65,27 +79,57 @@ function history() {
   }
 }
 
+function writeHistory(list) {
+  try { wxApi().setStorageSync(HISTORY_KEY, list) } catch (e) {}
+  return list
+}
+
+/** 早于保留期的记录不再有意义，页面打开时顺手丢掉 */
+function isFresh(entry, now) {
+  const at = Number(entry && entry.at) || 0
+  return now - at <= RETENTION_MS
+}
+
+function purgeOldHistory() {
+  const now = Date.now()
+  const all = history()
+  const kept = all.filter(function (entry) { return isFresh(entry, now) })
+  const removed = all.length - kept.length
+  if (removed > 0) writeHistory(kept)
+  return removed
+}
+
 function addHistory(entry) {
   const list = history()
-  list.unshift(Object.assign({ at: Date.now() }, entry))
-  const kept = list.slice(0, MAX_HISTORY)
-  try { wxApi().setStorageSync(HISTORY_KEY, kept) } catch (e) {}
-  return kept
+  seq += 1
+  list.unshift(Object.assign({ id: 'f' + Date.now() + '-' + seq, at: Date.now() }, entry))
+  return writeHistory(list.slice(0, MAX_HISTORY))
+}
+
+function removeHistory(ids) {
+  const wanted = {}
+  ;(ids || []).forEach(function (id) { if (id) wanted[id] = true })
+  const all = history()
+  const kept = all.filter(function (entry) { return !wanted[entry.id] })
+  const removed = all.length - kept.length
+  if (removed > 0) writeHistory(kept)
+  return removed
 }
 
 function clearHistory() {
-  try { wxApi().setStorageSync(HISTORY_KEY, []) } catch (e) {}
-  return []
+  return writeHistory([])
 }
 
-/** 展示用：给历史条目补上 humanSize / timeText / 状态文案 */
+/** 展示用：补 id / humanSize / timeText / 状态与来源文案，只给保留期内的记录 */
 function displayHistory() {
-  const labels = { ok: '已送达', duplicate: '已存在', fail: '失败' }
-  return history().map(function (e) {
-    return Object.assign({}, e, {
-      humanSize: human(e.size),
-      timeText: timeText(e.at),
-      statusLabel: labels[e.status] || e.status
+  const statusLabels = { ok: '已送达', duplicate: '已存在', fail: '失败' }
+  const now = Date.now()
+  return history().filter(function (entry) { return isFresh(entry, now) }).map(function (entry) {
+    return Object.assign({}, entry, {
+      humanSize: human(entry.size),
+      timeText: timeText(entry.at),
+      statusLabel: statusLabels[entry.status] || entry.status,
+      sourceLabel: entry.source === 'ledger' ? '台账原件' : '会话文件'
     })
   })
 }
@@ -206,12 +250,28 @@ function remoteFiles() {
   })
 }
 
+/** 电脑端已收文件 → 展示结构（带大小与本地时间文本） */
+function remoteList() {
+  return remoteFiles().then(function (data) {
+    return data.incoming.map(function (file) {
+      return Object.assign({}, file, {
+        humanSize: human(file.size),
+        timeText: isoText(file.uploaded_at)
+      })
+    })
+  })
+}
+
 module.exports = {
   setEnv: setEnv,
   human: human,
   timeText: timeText,
+  isoText: isoText,
+  RETENTION_DAYS: RETENTION_DAYS,
   history: history,
   displayHistory: displayHistory,
+  purgeOldHistory: purgeOldHistory,
+  removeHistory: removeHistory,
   clearHistory: clearHistory,
   chooseFiles: chooseFiles,
   sendOne: sendOne,
@@ -219,5 +279,6 @@ module.exports = {
   sendFromChat: sendFromChat,
   ledgerFiles: ledgerFiles,
   sendLedgerFiles: sendLedgerFiles,
-  remoteFiles: remoteFiles
+  remoteFiles: remoteFiles,
+  remoteList: remoteList
 }

@@ -32,7 +32,7 @@ invoice-helper/
 ├── project.config.json         # 微信开发者工具配置，appid 与 miniprogramRoot 在此
 ├── miniprogram/                # 微信小程序端（采集）
 │   ├── app.js/.json/.wxss      # 全局；onLaunch 初始化 store + 心跳 + 自动发现
-│   ├── pages/                  # 11 个页面，每个必须有 .js/.json/.wxml（缺 .json 会白屏）
+│   ├── pages/                  # 10 个页面，每个必须有 .js/.json/.wxml（缺 .json 会白屏）
 │   └── utils/                  # 全部业务逻辑，页面只做数据组装与事件转发
 ├── desktop/                    # 电脑端 Go 服务 + 本地网页（台账）
 │   ├── main.go                 # 入口：启动 HTTP 服务 + mDNS 广播
@@ -41,9 +41,9 @@ invoice-helper/
 │   ├── web/                    # 纯 HTML/CSS/JS，由 embed 嵌入二进制
 │   ├── data/                   # 运行时数据，不提交 Git（保留 .gitkeep）
 │   └── README.md
-├── shared/protocol.md          # 两端通信协议（当前 v0.6）
+├── shared/protocol.md          # 两端通信协议（当前 v0.7）
 ├── test/
-│   ├── miniprogram/            # 小程序 Node 回归测试（14 套 / 404 项检查）
+│   ├── miniprogram/            # 小程序 Node 回归测试（15 套 / 439 项检查）
 │   ├── desktop/                # 电脑端联调预留（Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
@@ -75,7 +75,7 @@ cd desktop && go run .
 **回归测试**（改动后必跑）：
 
 ```bash
-# 小程序 14 套，共 404 项检查
+# 小程序 15 套，共 439 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端
@@ -157,14 +157,15 @@ basis = created | issued                        // 仅小程序「归月口径�
 |---|---|
 | `collect` | **首页**。扫码/批量连续扫码/文件导入/手动入口，完成后询问是否发送电脑台账 |
 | `list` | 台账列表，长按删除、跳转详情/编辑 |
-| `stats` | 统计（分类、来源、月份） |
 | `settings` | 排序与归月口径、桌面端连接（自动搜索/扫码/手填）、数据备份、关于 |
 | `detail` / `edit` | 发票详情 / 手动录入编辑 |
 | `export` | 台账 CSV / 原件清单 / 原件转发；默认范围=本次扫码，支持自定义 |
 | `manage` | 台账清理：勾选删除、按导入时间区间删除 |
 | `review` | 待复核清单 |
-| `transfer` | **原件传输**：从微信会话选文件或复用台账已存原件，上传到电脑端并展示发送记录 |
+| `transfer` | **传输中心**：上传原件（会话文件 / 台账已存），分「我的上传」「电脑已收」两段查看记录，支持勾选删除、全部删除、清理超 30 天 |
 | `index` | M0 技术验证页（保留） |
+
+> 统计页已下线（2026-11-18），tabBar 由「统计」换成「传输」；`utils/stats.js` 一并删除。
 
 ### 工具（`utils/`，按职责拆分）
 
@@ -175,9 +176,10 @@ basis = created | issued                        // 仅小程序「归月口径�
 - `batch.js` / `batchmark.js`：批量落库与来源升级合并 / 记住最后一次批次。
 - `archive.js` / `fsx.js` / `zip.js`：原件复制与摘要 / 私有目录读写与 30 天 TTL 清理 / ZIP-OFD 结构探测。
 - `csv.js` / `export.js` / `exportsel.js` / `exportflow.js`：CSV 拼装、导出范围与内容选择、逐个转发。
-- `category.js` / `labels.js` / `stats.js` / `review.js` / `purge.js`：分类预填、文案枚举、统计聚合、待复核原因、清理筛选。
+- `category.js` / `labels.js` / `review.js` / `purge.js`：分类预填、文案枚举、待复核原因、清理筛选。
 - `lanservice.js`：桌面端地址/心跳/查重/发送/上传。
-- `filesend.js`：原件上传（微信会话 / 台账已存），本地留 100 条发送历史，单文件 20MB、单次 20 个。
+- `filesend.js`：原件上传（微信会话 / 台账已存），本地留 100 条发送历史，单文件 20MB、单次 20 个；
+  发送记录与电脑端副本都只保留 **30 天**，`purgeOldHistory()` 在页面打开时顺手清超期记录。
 - `invoicesend.js`：扫码草稿转电脑台账字段、重复确认、**200 张上限提示**。
 - `discover.js`：三级连接——mDNS 自动发现（安卓）→ 解析电脑网页二维码 → 手填地址兜底。
 
@@ -190,9 +192,9 @@ basis = created | issued                        // 仅小程序「归月口径�
 | 包 | 职责 |
 |---|---|
 | `api` | 全部 HTTP 路由、请求校验、JSON 响应；`network.go` 优选 WLAN/以太网、过滤虚拟网卡；`connect.go` 生成扫码连接串与二维码 PNG |
-| `config` | `-addr` / `-data` 与环境变量，默认 `:8765` / `data` |
+| `config` | `-addr` / `-data` / `-keep-days` 与环境变量，默认 `:8765` / `data` / `30` |
 | `discovery` | mDNS 广播 `_http._tcp.`，实例名 `invoice-helper-desktop` |
-| `files` | 文件传输数据层，SHA256+大小去重，单文件上限 20MB |
+| `files` | 文件传输数据层，SHA256+大小去重，单文件上限 20MB；`purge.go` 负责按保留期/按 id/清空三种删除 |
 | `ledger` | 发票台账：CSV 读写、备份、判重、搜索、导入导出、补录、按录入时间清理；`identity.go` 定义判重键 |
 | `registry` | 设备心跳与事件注册表；45 秒窗口判断在线 |
 
@@ -215,7 +217,7 @@ registry.json   设备与事件记录
 
 ---
 
-## 8. 通信协议（v0.6，详见 shared/protocol.md）
+## 8. 通信协议（v0.7，详见 shared/protocol.md）
 
 - 基础：`http://电脑IPv4:8765`，局域网直连，不要求 HTTPS/合法域名，无 token（仅可信局域网自用）。
 - 心跳：小程序每 20 秒 `POST /api/devices/heartbeat`，电脑 45 秒窗口判在线。
@@ -242,17 +244,20 @@ registry.json   设备与事件记录
 | POST | `/api/invoices/import` | CSV 导入（默认预览，`?confirm=1` 写入） |
 | GET | `/api/invoices/export` | CSV 导出（支持 `ids=1,2,3`） |
 | DELETE | `/api/invoices` | 按 id 批量删除 |
+| DELETE | `/api/incoming` | 批量删接收文件（`{ids:[...]}` 指定，`{all:true}` 清空） |
+| POST | `/api/incoming/purge` | 按保留天数清理接收文件（`{days, confirm}`，先预览再确认） |
 | GET/DELETE | `/api/incoming/{id}` `/api/outgoing/{name}` | 文件下载与删除 |
 
 - **单次发送上限 200 张**：小程序超限时先弹提示，用户选「只发前 200 张」或取消，不静默截断。
 - **台账只传解析字段，不传原件**；原件走独立的传输页（`/api/files/upload`），两条链路互不影响。
+- **接收文件保留 30 天**：电脑端启动时清一次、之后每 6 小时清一次（`-keep-days` 可改，≤0 关闭自动清理）；小程序端发送历史同样按 30 天裁剪。两端都可手动清理。
 
 ---
 
 ## 9. 测试体系
 
-- **小程序 14 套 / 404 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
-  `einvoice 60`、`store 82`、`collect 35`、`p0 28`、`export 28`、`scanbatch 27`、`lanservice 25`、`filesend 23`、`discover 21`、`exportsel 19`、`invoicesend 17`、`purge 14`、`zip 14`、`fsx 11`。
+- **小程序 15 套 / 439 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
+  `einvoice 60`、`store 82`、`collect 35`、`lanservice 35`、`filesend 33`、`export 28`、`scanbatch 27`、`p0 22`、`transfer 21`、`discover 21`、`exportsel 19`、`invoicesend 17`、`purge 14`、`zip 14`、`fsx 11`。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。
 - 起服务冒烟：启动 `go run .` 后 `curl /api/health`、`/api/connect-qr.png` 应返回 200；台账接收/补录/清理接口应返回 200。
 
@@ -260,7 +265,7 @@ registry.json   设备与事件记录
 
 ## 10. 当前状态与已知限制
 
-**已完成里程碑**：M0 技术验证（真机全通过）→ M1 本地数据层 → M2 扫码 → M3 文件导入 → M5 导出 → P0（tabBar/分类/待复核）→ 批量扫码与导出优化 → 台账清理 → 仓库分层 → 电脑端最小文件服务 → 控制台 v0.2 → 电脑台账 v1 → 扫码结果发送台账 → 补录/按录入时间清理 → 地址自动发现 → 界面重排与行内补录 → 字段精简加报销人 → 原件传输页 → 判重口径统一 + 扫码连接。
+**已完成里程碑**：M0 技术验证（真机全通过）→ M1 本地数据层 → M2 扫码 → M3 文件导入 → M5 导出 → P0（tabBar/分类/待复核）→ 批量扫码与导出优化 → 台账清理 → 仓库分层 → 电脑端最小文件服务 → 控制台 v0.2 → 电脑台账 v1 → 扫码结果发送台账 → 补录/按录入时间清理 → 地址自动发现 → 界面重排与行内补录 → 字段精简加报销人 → 原件传输页 → 判重口径统一 + 扫码连接 → 传输中心（统计页下线，30 天保留 + 手动/全部/自定义清理）。
 
 **已知限制 / 待真机验收**：
 
@@ -270,5 +275,7 @@ registry.json   设备与事件记录
 - 小程序扫码草稿只有号码/日期/金额，写入台账后需人工补报销人；电脑端可在台账页点报销人单元格直接改。
 - 小程序导出 CSV 是 8 列 + 「来源」共 9 列；电脑台账 8 列（设计差异，非 bug）。
 - 「清理台账」入口目前在台账页，未加到收票页（用户尚未确认是否要加）。
+- 30 天保留是**时间**口径，不是容量口径：一次传几千张仍会占满磁盘，暂无限额。
+- 传输页两栏删除范围不同：删「我的上传」只清小程序本地历史（电脑端已收文件不动）；删「电脑已收」才真正删电脑磁盘文件。页脚有说明，但仍需真机确认用户不会误读。
 
 **详细踩坑与决策**：见 `docs/spike.md`、`docs/miniprogram-plan.md` §5/§7/§8、`README-M0.md` §6。

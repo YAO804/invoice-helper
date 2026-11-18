@@ -4,26 +4,32 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 const (
-	defaultAddr    = ":8765"
-	defaultDataDir = "data"
+	defaultAddr     = ":8765"
+	defaultDataDir  = "data"
+	defaultKeepDays = 30
 )
 
 type Config struct {
-	Addr    string
-	DataDir string
+	Addr     string
+	DataDir  string
+	KeepDays int
 }
 
 func Load() Config {
 	addr := flag.String("addr", env("INVOICE_ADDR", defaultAddr), "监听地址，例如 :8765")
 	dataDir := flag.String("data", env("INVOICE_DATA_DIR", defaultDataDir), "运行时数据目录")
+	keepDays := flag.Int("keep-days", envInt("INVOICE_KEEP_DAYS", defaultKeepDays),
+		"接收文件保留天数，超过后自动清理；0 表示不自动清理")
 	flag.Parse()
 
 	return Config{
-		Addr:    fallback(*addr, defaultAddr),
-		DataDir: filepath.Clean(fallback(*dataDir, defaultDataDir)),
+		Addr:     fallback(*addr, defaultAddr),
+		DataDir:  filepath.Clean(fallback(*dataDir, defaultDataDir)),
+		KeepDays: *keepDays,
 	}
 }
 
@@ -32,6 +38,18 @@ func env(key string, fallbackValue string) string {
 		return value
 	}
 	return fallbackValue
+}
+
+func envInt(key string, fallbackValue int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallbackValue
+	}
+	number, err := strconv.Atoi(value)
+	if err != nil {
+		return fallbackValue
+	}
+	return number
 }
 
 func fallback(value string, fallbackValue string) string {

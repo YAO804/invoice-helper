@@ -2,14 +2,13 @@
   "pages": [
     "pages/collect/collect",
     "pages/list/list",
-    "pages/stats/stats",
+    "pages/transfer/transfer",
     "pages/settings/settings",
     "pages/detail/detail",
     "pages/edit/edit",
     "pages/export/export",
     "pages/manage/manage",
     "pages/review/review",
-    "pages/transfer/transfer",
     "pages/index/index"
   ],
   "window": {
@@ -27,7 +26,7 @@
     "list": [
       { "pagePath": "pages/collect/collect", "text": "收票" },
       { "pagePath": "pages/list/list", "text": "台账" },
-      { "pagePath": "pages/stats/stats", "text": "统计" },
+      { "pagePath": "pages/transfer/transfer", "text": "传输" },
       { "pagePath": "pages/settings/settings", "text": "设置" }
     ]
   },

@@ -1,4 +1,4 @@
-# 小程序与桌面端通信协议 v0.6
+# 小程序与桌面端通信协议 v0.7
 
 ## 基础约定
 
@@ -124,6 +124,8 @@ POST   /api/files/upload
 GET    /api/files
 GET    /api/incoming/{id}/download
 GET    /api/outgoing/{name}/download
+DELETE /api/incoming
+POST   /api/incoming/purge
 DELETE /api/incoming/{id}
 DELETE /api/outgoing/{name}
 ```
@@ -138,7 +140,49 @@ DELETE /api/outgoing/{name}
 
 单文件最大 20MB。相同 SHA256 + 大小复用旧记录，响应里的 `duplicate=true` 表示电脑端已存在。
 
-小程序「原件传输」页单次最多选 20 个文件，顺序上传，任一失败不影响其余。
+小程序「传输中心」页单次最多选 20 个文件，顺序上传，任一失败不影响其余。
+
+### 保留期与清理
+
+接收文件默认保留 **30 天**，超期自动删除：
+
+- 电脑端启动时执行一次，之后每 6 小时执行一次；`-keep-days` / `INVOICE_KEEP_DAYS` 可改，≤0 表示关闭自动清理。
+- 小程序端发送历史按同一口径在本机裁剪（`utils/filesend.js` 的 `RETENTION_DAYS`），不询问用户。
+- 时间是唯一口径：解析不出的 `uploaded_at` 一律不删，宁可留着也不误删。
+- 手动清理走下面两个接口，都是「先预览、再确认」，避免误触一次性清空。
+
+### POST /api/incoming/purge
+
+按保留天数清理。
+
+```json
+{ "days": 30, "confirm": false }
+```
+
+| 字段 | 说明 |
+|---|---|
+| `days` | 保留天数，必须 > 0；≤0 返回 400 |
+| `confirm` | `false` 只数不删，`true` 才真正删除 |
+
+响应：
+
+```json
+{ "confirmed": false, "days": 30, "removed": 0 }
+```
+
+### DELETE /api/incoming
+
+批量删除，两种形态互斥：
+
+```json
+{ "ids": ["a1b2", "c3d4"] }
+```
+
+```json
+{ "all": true }
+```
+
+`ids` 与 `all` 都不传返回 400。响应 `{"deleted": 2}` 表示实际删除数量；单个文件删除失败不中断其余，删除失败数在服务端日志里。
 
 ## 发票台账接口
 

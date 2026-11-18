@@ -3,16 +3,21 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"invoice-helper/desktop/internal/api"
 	"invoice-helper/desktop/internal/config"
 	"invoice-helper/desktop/internal/discovery"
+	"invoice-helper/desktop/internal/files"
 )
+
+// retentionInterval 是后台清理的检查间隔。保留期以天为单位，6 小时足够及时。
+const retentionInterval = 6 * time.Hour
 
 func main() {
 	cfg := config.Load()
 
-	handler, err := api.NewServer(cfg)
+	handler, fileStore, err := api.NewServer(cfg)
 	if err != nil {
 		log.Fatal("初始化桌面端服务失败: ", err)
 	}
@@ -23,6 +28,8 @@ func main() {
 	}
 	log.Printf("数据目录: %s", cfg.DataDir)
 
+	startRetention(fileStore, cfg.KeepDays)
+
 	server, err := discovery.Start(cfg.Addr)
 	if err != nil {
 		log.Printf("局域网自动发现不可用: %v", err)
@@ -32,4 +39,35 @@ func main() {
 	}
 
 	log.Fatal(http.ListenAndServe(cfg.Addr, handler))
+}
+
+// startRetention 启动接收文件的保留期清理：启动时先跑一次，之后定期检查。
+// keepDays <= 0 表示关闭自动清理，文件只能由用户在页面上手动删。
+func startRetention(store *files.Store, keepDays int) {
+	if keepDays <= 0 {
+		log.Printf("接收文件自动清理已关闭")
+		return
+	}
+
+	purge := func() {
+		removed, err := store.PurgeOlderThan(keepDays)
+		if err != nil {
+			log.Printf("清理超期接收文件失败: %v", err)
+			return
+		}
+		if removed > 0 {
+			log.Printf("已清理 %d 个超过 %d 天的接收文件", removed, keepDays)
+		}
+	}
+
+	purge()
+	log.Printf("接收文件保留 %d 天，每 %v 检查一次", keepDays, retentionInterval)
+
+	go func() {
+		ticker := time.NewTicker(retentionInterval)
+		defer ticker.Stop()
+		for range ticker.C {
+			purge()
+		}
+	}()
 }

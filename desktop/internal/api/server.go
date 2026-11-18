@@ -10,22 +10,24 @@ import (
 	"invoice-helper/desktop/internal/registry"
 )
 
-func NewServer(cfg config.Config) (http.Handler, error) {
+// NewServer 组装真实运行所需的服务，并把 files.Store 交回给调用方，
+// 以便 main 启动接收文件保留期清理（清理是后台任务，不该藏在构造函数里）。
+func NewServer(cfg config.Config) (http.Handler, *files.Store, error) {
 	store, err := files.New(cfg.DataDir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	invoiceLedger, err := ledger.New(cfg.DataDir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	deviceRegistry, err := registry.New(cfg.DataDir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return NewHandler(cfg.Addr, store, invoiceLedger, deviceRegistry), nil
+	return NewHandler(cfg.Addr, store, invoiceLedger, deviceRegistry), store, nil
 }
 
 func NewHandler(addr string, store *files.Store, invoiceLedger *ledger.Store, deviceRegistry *registry.Registry) http.Handler {
@@ -53,6 +55,8 @@ func NewHandler(addr string, store *files.Store, invoiceLedger *ledger.Store, de
 	mux.HandleFunc("GET /api/invoices/export", d.exportInvoices)
 	mux.HandleFunc("DELETE /api/invoices", d.deleteInvoices)
 	mux.HandleFunc("DELETE /api/incoming/{id}", d.deleteIncoming)
+	mux.HandleFunc("DELETE /api/incoming", d.deleteIncomingBatch)
+	mux.HandleFunc("POST /api/incoming/purge", d.purgeIncoming)
 	mux.HandleFunc("DELETE /api/outgoing/{name}", d.deleteOutgoing)
 	mux.HandleFunc("GET /api/incoming/{id}/download", d.downloadIncoming)
 	mux.HandleFunc("GET /api/outgoing/{name}/download", d.downloadOutgoing)

@@ -78,7 +78,8 @@ Page({
   },
 
   onTransfer() {
-    wx.navigateTo({ url: '/pages/transfer/transfer' })
+    // 传输页现在是 tabBar 页面，只能用 switchTab
+    wx.switchTab({ url: '/pages/transfer/transfer' })
   },
 
   onReview() {

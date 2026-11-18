@@ -1,5 +1,5 @@
 /**
- * P0 回归测试：分类、来源文案、统计聚合、待复核清单。
+ * P0 回归测试：分类、来源文案、待复核清单。
  *
  *   node test/miniprogram/p0.test.js
  */
@@ -40,7 +40,6 @@ global.wx = {
 
 const category = require('../../miniprogram/utils/category')
 const labels = require('../../miniprogram/utils/labels')
-const stats = require('../../miniprogram/utils/stats')
 const review = require('../../miniprogram/utils/review')
 const store = require('../../miniprogram/utils/store')
 
@@ -93,20 +92,6 @@ store.upsertInvoice({
 check('按分类筛选', store.listInvoices({ category: '餐饮' }).map(function (x) { return x.id }), [a.id])
 check('无匹配分类', store.listInvoices({ category: '住宿' }).length, 0)
 check('待复核数量', store.reviewList().length, 2)
-
-console.log('--- 统计聚合 ---')
-const list = store.listInvoices({ sortBy: 'issued' })
-const sum = stats.summary(list)
-check('汇总（张数/价税合计分）', [sum.count, sum.totalCent], [4, 35000])
-
-const cats = stats.byCategory(list)
-check('分类名称按金额降序', cats.map(function (x) { return x.name }), ['办公', '餐饮', '未分类'])
-check('分类占比', cats.map(function (x) { return x.percent }), [57, 29, 14])
-check('分类金额', cats[0].amountText, '200.00')
-
-const sources = stats.bySource(list)
-check('来源名称', sources.map(function (x) { return x.name }), ['XML', 'OFD', '手录'])
-check('来源占比', sources[0].percent, 86)
 
 console.log('--- 待复核原因 ---')
 check('缺号码', review.reasons({ invoice_no: '', anomaly: [] }), ['缺发票号码'])
