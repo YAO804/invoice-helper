@@ -242,6 +242,13 @@ code { background: var(--canvas); padding: 2px 5px; border-radius: 4px; }
   font-size: 12px;
 }
 .selected-count { font-weight: 600; color: var(--text); }
+/* 合计比张数更需要被一眼看到：用主题色，数字等宽避免勾选时抖动 */
+.selected-summary { display: inline-flex; align-items: center; gap: 10px; }
+.selected-total {
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
 .table-wrap { overflow: auto; max-height: 640px; }
 
 table { width: 100%; border-collapse: separate; border-spacing: 0; }

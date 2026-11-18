@@ -217,7 +217,7 @@ sort = created | issued | number | reimburser   // 默认 created（录入时间
 - `index.html`：控制台 + 发票台账两个 tab。
 - `app.js` / `render.js` / `api.js`：控制台（状态、连接二维码与地址、设备、发送到小程序、两边文件列表、事件）。
 - `preview.js`：文件预览弹层——PDF 用 iframe 交给浏览器内置阅读器、图片用 img、文本抓下来塞 `pre`（>512KB 拒绝预览）；可预览类型只认后端返回的 `preview` 字段。
-- `ledger-app.js` / `ledger-render.js` / `ledger-api.js`：台账（搜索、排序、筛选、导入、补录、行内改报销人、清理、重复抽屉、导出、号码点击复制）。
+- `ledger-app.js` / `ledger-render.js` / `ledger-api.js`：台账（搜索、排序、筛选、导入、补录、行内改报销人、清理、重复抽屉、导出、号码点击复制；勾选后显示张数与合计金额，金额按分求和避免浮点尾数）。
 
 ### 数据目录（`desktop/data/`，不提交）
 

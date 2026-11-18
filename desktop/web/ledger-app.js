@@ -133,7 +133,12 @@ function toggleSelectAll(checked) {
     else selectedInvoices.delete(Number(box.dataset.id))
   })
   $('selectAll').checked = checked
-  $('invoiceSelectedCount').textContent = '已选 ' + selectedInvoices.size + ' 张'
+  renderSelectionSummary(currentItems(), selectedInvoices)
+}
+
+/** 当前列表数据，汇总与全选都从这里取，避免各写一份 invoiceData.items */
+function currentItems() {
+  return (invoiceData && invoiceData.items) || []
 }
 
 function buildInvoiceParams() {
@@ -168,7 +173,7 @@ function renderInvoiceAll() {
   renderDuplicateAlert(invoiceData.duplicates || [])
   renderInvoiceTable(items, selectedInvoices)
   renderDuplicatePanel(invoiceData.duplicates || [])
-  $('invoiceSelectedCount').textContent = '已选 ' + selectedInvoices.size + ' 张'
+  renderSelectionSummary(items, selectedInvoices)
   const allChecked = items.length > 0 && items.every((item) => selectedInvoices.has(item.id))
   $('selectAll').checked = allChecked
 }
@@ -321,7 +326,7 @@ function bindLedgerEvents() {
     const id = Number(event.target.dataset.id)
     if (event.target.checked) selectedInvoices.add(id)
     else selectedInvoices.delete(id)
-    $('invoiceSelectedCount').textContent = '已选 ' + selectedInvoices.size + ' 张'
+    renderSelectionSummary(currentItems(), selectedInvoices)
     const boxes = Array.from(document.querySelectorAll('.invoice-check'))
     $('selectAll').checked = boxes.length > 0 && boxes.every((box) => box.checked)
   })

@@ -7,6 +7,52 @@ function renderInvoiceStats(data) {
   $('lastInvoiceRefresh').textContent = '更新于 ' + new Date().toLocaleTimeString()
 }
 
+/**
+ * 台账金额是字符串（"287.61"），求和必须换算成分。
+ * 直接累加浮点，几十张之后就会出现 2982.3399999999997 这种尾巴。
+ * 顺手去掉千分位逗号：CSV 导入的数据里可能有 "1,234.56"。
+ */
+function toCents(value) {
+  const text = String(value || '').trim().replace(/,/g, '')
+  if (!text) return 0
+  const num = Number(text)
+  return isFinite(num) ? Math.round(num * 100) : 0
+}
+
+/** 千分位分组。不用 toLocaleString，免得不同环境的 locale 数据让显示不一致 */
+function groupThousands(digits) {
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+function money(cents) {
+  const abs = Math.abs(cents)
+  const yuan = String(Math.floor(abs / 100))
+  const fen = String(abs % 100).padStart(2, '0')
+  return (cents < 0 ? '-' : '') + '¥' + groupThousands(yuan) + '.' + fen
+}
+
+/**
+ * 选中汇总：张数 + 合计金额。
+ * 金额为空的行不计入（按 0 算会让合计悄悄偏小），但要单独提示张数，
+ * 否则用户会以为合计就是选中的全部。
+ */
+function renderSelectionSummary(items, selected) {
+  const picked = (items || []).filter((item) => selected.has(item.id))
+  $('invoiceSelectedCount').textContent = '已选 ' + picked.length + ' 张'
+
+  const box = $('invoiceSelectedTotal')
+  if (!picked.length) {
+    box.hidden = true
+    box.textContent = ''
+    return
+  }
+
+  const cents = picked.reduce((sum, item) => sum + toCents(item.total), 0)
+  const missing = picked.filter((item) => !String(item.total || '').trim()).length
+  box.hidden = false
+  box.textContent = '合计 ' + money(cents) + (missing ? '（' + missing + ' 张无金额）' : '')
+}
+
 function renderDuplicateAlert(groups) {
   const box = $('duplicateAlert')
   if (!groups || !groups.length) {

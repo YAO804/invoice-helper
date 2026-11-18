@@ -250,6 +250,9 @@ node test/miniprogram/transfer.test.js
 node test/miniprogram/invoicesend.test.js
 node test/miniprogram/discover.test.js
 
+# 电脑端网页的金额计算与选中汇总
+node test/desktop/ledger-render.test.js
+
 cd desktop
 go test ./...
 ```
