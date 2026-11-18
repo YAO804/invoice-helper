@@ -133,6 +133,42 @@ input, select, textarea {
 input:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
 input[type="text"] { min-width: 180px; }
 
+/*
+ * 历史值下拉（suggest.js 的浮层，替代原生 datalist）。
+ * 原生弹出层是浏览器画的：字号 16px、行高 40px、无边框大圆角，
+ * 跟这里 13px 的输入框差一截。自己画就按输入框的规格来——
+ * 同样的字号、6px 圆角、1px 边框，最多 8 条，多了滚动。
+ */
+.suggest-panel {
+  position: fixed;
+  z-index: 70;
+  padding: 4px;
+  max-height: 216px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(31, 35, 40, .14);
+}
+.suggest-item {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.suggest-item:hover, .suggest-item.active { background: var(--accent-soft); color: var(--accent); }
+
 /* ---------- Toast ---------- */
 .toast {
   position: fixed;
@@ -275,27 +311,34 @@ tbody tr:hover { background: #f6fbff; }
 tbody tr:last-child td { border-bottom: 0; }
 /*
  * 台账表：固定布局 + 百分比列宽。
- * 10 列要在一行里装下，就不能再让内容决定宽度（以前 min-width: 1680px，
+ * 9 列要在一行里装下，就不能再让内容决定宽度（以前 min-width: 1680px，
  * 屏幕不到这个宽度就出横向滚动条）。超长的值用 ellipsis 截断、hover 看 title，
  * 保证行高稳定、列不会互相挤。
+ *
+ * 百分比按内容重新分配过：原来的「号码 18% / 票种 7%」是反的——号码最大 20 位、
+ * 小字号只要 175px 就够，票种是 9 个汉字、7% 只剩 72px 永远显示成「增值税电子…」。
+ * 这版给票种 17%，把号码压到 17%、开票日期压到 9%（10 个字符够用），合计正好 100%。
  */
 .invoice-table { table-layout: fixed; width: 100%; }
-/* 左右内边距比通用表格小 2px：10 列各让出 4px，等于多出半个号码列 */
+/* 左右内边距比通用表格小 2px：9 列各让出 4px，等于多出半个号码列 */
 .invoice-table th, .invoice-table td { padding: 9px 6px; overflow: hidden; text-overflow: ellipsis; }
 .invoice-table .col-check { width: 3%; }
-.invoice-table .col-number { width: 18%; }
+.invoice-table .col-number { width: 17%; }
 .invoice-table .col-code { width: 11%; }
-.invoice-table .col-kind { width: 7%; }
+.invoice-table .col-kind { width: 17%; }
 .invoice-table .col-issued { width: 9%; }
 .invoice-table .col-total { width: 7%; }
 .invoice-table .col-reimburser { width: 14%; }
-/* 编号类字段（号码/代码/批次）用小一号字：20 位号码是常态，小一号就不必截断 */
+/* 编号类字段（号码/代码）用小一号字：20 位号码是常态，小一号就不必截断 */
 .invoice-table .col-number, .invoice-table .col-code { font-size: 12px; }
 .invoice-table .col-number { font-variant-numeric: tabular-nums; }
-/* 批次号宁可省略也不能折行——尾巴上的毫秒被挤到第二行会看成另一个号 */
-.invoice-table .col-created { width: 14%; }
-.invoice-table .col-actions { width: 9%; }
+/* 录入时间拆两行（日期/时间），12% 就够；行高稳定，不会被挤成三行 */
+.invoice-table .col-created { width: 12%; }
+.invoice-table .col-actions { width: 10%; }
 .invoice-table td.num, .invoice-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+/* 金额右对齐后紧贴下一列，给右边多留一点，别和报销人糊在一起 */
+.invoice-table td.num, .invoice-table th.num { padding-right: 14px; }
+.invoice-table .reimburser-cell { padding-left: 10px; }
 .col-actions { text-align: right; }
 /* 号码/代码被截断时，文字部分自己省略，复制图标不能被挤掉 */
 .invoice-table .copy-cell { max-width: 100%; }

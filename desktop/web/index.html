@@ -308,10 +308,10 @@
       <div class="modal-body">
         <label>发票号码 <input id="editNumber" type="text"></label>
         <label>发票代码 <input id="editCode" type="text"></label>
-        <label>票种 <input id="editKind" type="text" list="kindSuggestions"></label>
+        <label>票种 <input id="editKind" type="text"></label>
         <label>开票日期 <input id="editIssueDate" type="text" placeholder="YYYY-MM-DD"></label>
         <label>价税合计 <input id="editTotal" type="text" placeholder="0.00"></label>
-        <label>报销人 <input id="editReimburser" type="text" list="reimburserSuggestions" placeholder="由报销人自行补录"></label>
+        <label>报销人 <input id="editReimburser" type="text" placeholder="由报销人自行补录"></label>
       </div>
       <div class="row modal-actions">
         <button id="saveEditBtn" type="button" class="btn">保存补录</button>
@@ -328,7 +328,7 @@
         <button id="closeBatchReimburserBtn" type="button" class="btn btn-ghost">关闭</button>
       </div>
       <div class="modal-body one-col">
-        <label>报销人 <input id="batchReimburserInput" type="text" list="reimburserSuggestions" placeholder="输入姓名，留空则清空"></label>
+        <label>报销人 <input id="batchReimburserInput" type="text" placeholder="输入姓名，留空则清空"></label>
         <div id="batchReimburserHint" class="hint"></div>
       </div>
       <div class="row modal-actions">
@@ -338,13 +338,10 @@
     </div>
   </div>
 
-  <!-- 历史值建议：由台账数据动态填充，补录时下拉选，省去重输 -->
-  <datalist id="reimburserSuggestions"></datalist>
-  <datalist id="kindSuggestions"></datalist>
-
   <script src="/api.js"></script>
   <script src="/login.js"></script>
   <script src="/render.js"></script>
+  <script src="/suggest.js"></script>
   <script src="/events.js"></script>
   <script src="/preview.js"></script>
   <script src="/app.js"></script>

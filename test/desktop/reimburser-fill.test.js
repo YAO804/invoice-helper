@@ -51,6 +51,7 @@ global.esc = function (value) {
 }
 
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'ledger-render.js'), 'utf8'), { filename: 'ledger-render.js' })
+vm.runInThisContext(fs.readFileSync(path.join(WEB, 'suggest.js'), 'utf8'), { filename: 'suggest.js' })
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'ledger-app.js'), 'utf8'), { filename: 'ledger-app.js' })
 
 console.log('--- 粘贴解析 ---')
@@ -85,8 +86,9 @@ vm.runInThisContext("invoiceData = { items: [" +
   "{ id: 3, reimburser: '', kind: '数电票' }" +
   '], duplicates: [] }')
 refreshSuggestions()
-check('报销人建议去重', elements.reimburserSuggestions.innerHTML, '<option value="张三"></option>')
-check('票种建议去重', (elements.kindSuggestions.innerHTML.match(/<option/g) || []).length, 2)
+check('报销人建议去重', suggestStore.reimburser, ['张三'])
+check('票种建议去重（按拼音排序）', suggestStore.kind, ['普通发票', '数电票'])
+check('建议不再塞进原生 datalist', elements.reimburserSuggestions, undefined)
 
 console.log('\n--- 批量填报销人 ---')
 alerts = []

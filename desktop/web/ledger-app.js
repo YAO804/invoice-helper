@@ -29,12 +29,6 @@ function orderedValues(set) {
   return Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
 }
 
-function fillDatalist(id, values) {
-  const list = $(id)
-  if (!list) return
-  list.innerHTML = values.map((value) => '<option value="' + esc(value) + '"></option>').join('')
-}
-
 /** 把台账里已有的报销人/票种收进建议池，补录时可直接下拉选 */
 function refreshSuggestions() {
   const items = (invoiceData && invoiceData.items) || []
@@ -44,8 +38,8 @@ function refreshSuggestions() {
     const kind = String(item.kind || '').trim()
     if (kind) suggestionPool.kind.add(kind)
   })
-  fillDatalist('reimburserSuggestions', orderedValues(suggestionPool.reimburser))
-  fillDatalist('kindSuggestions', orderedValues(suggestionPool.kind))
+  setSuggestValues('reimburser', orderedValues(suggestionPool.reimburser))
+  setSuggestValues('kind', orderedValues(suggestionPool.kind))
 }
 
 async function copyInvoiceValue(button) {
@@ -85,9 +79,8 @@ function startReimburserEdit(cell) {
   input.value = original
   input.placeholder = '输入报销人'
   input.setAttribute('aria-label', '报销人')
-  // 关掉浏览器历史自动填充，但保留台账历史值的下拉建议
-  input.autocomplete = 'off'
-  input.setAttribute('list', 'reimburserSuggestions')
+  // 关掉浏览器历史自动填充，改用台账历史值的下拉（suggest.js 的浮层）
+  attachSuggest(input, 'reimburser')
 
   cell.dataset.editing = '1'
   cell.classList.add('cell-editing')
@@ -130,6 +123,8 @@ function startReimburserEdit(cell) {
       finish(false)
     }
   })
+  // 从下拉建议里选一条就当场存下，不用再按回车
+  input.addEventListener('change', () => finish(true))
   input.addEventListener('blur', () => finish(true))
 }
 
@@ -437,6 +432,11 @@ function closeDrawer() {
 }
 
 function bindLedgerEvents() {
+  // 历史值下拉统一走页面内浮层（suggest.js）：原生 datalist 的弹出层没法跟页面风格对齐
+  attachSuggest($('editKind'), 'kind')
+  attachSuggest($('editReimburser'), 'reimburser')
+  attachSuggest($('batchReimburserInput'), 'reimburser')
+
   ;['invNumber', 'invReimburser', 'invDateFrom', 'invDateTo',
     'invCreatedFrom', 'invCreatedTo', 'invAmountMin', 'invAmountMax'].forEach((id) => {
     $(id).addEventListener('input', scheduleLedgerRefresh)
