@@ -31,8 +31,8 @@
 invoice-helper/
 ├── project.config.json         # 微信开发者工具配置，appid 与 miniprogramRoot 在此
 ├── miniprogram/                # 微信小程序端（采集）
-│   ├── app.js/.json/.wxss      # 全局；onLaunch 初始化 store + 心跳 + 自动发现
-│   ├── pages/                  # 10 个页面，每个必须有 .js/.json/.wxml（缺 .json 会白屏）
+│   ├── app.js/.json/.wxss      # 全局；onLaunch / onShow 都起一次心跳（会立刻补报一拍）
+│   ├── pages/                  # 7 个页面，每个必须有 .js/.json/.wxml（缺 .json 会白屏）
 │   └── utils/                  # 全部业务逻辑，页面只做数据组装与事件转发
 ├── desktop/                    # 电脑端 Go 服务 + 本地网页（台账）
 │   ├── main.go                 # 入口：启动 HTTP 服务 + mDNS 广播
@@ -43,7 +43,7 @@ invoice-helper/
 │   └── README.md
 ├── shared/protocol.md          # 两端通信协议（当前 v0.8）
 ├── test/
-│   ├── miniprogram/            # 小程序 Node 回归测试（13 套 / 371 项检查）
+│   ├── miniprogram/            # 小程序 Node 回归测试（13 套 / 378 项检查）
 │   ├── desktop/                # 电脑端联调预留（Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
@@ -76,7 +76,7 @@ cd desktop && go run .
 **回归测试**（改动后必跑）：
 
 ```bash
-# 小程序 13 套，共 371 项检查
+# 小程序 13 套，共 378 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端
@@ -231,6 +231,9 @@ registry.json   设备与事件记录
 
 - 基础：`http://电脑IPv4:8765`，局域网直连，不要求 HTTPS/合法域名，无 token（仅可信局域网自用）。
 - 心跳：小程序每 20 秒 `POST /api/devices/heartbeat`，电脑 45 秒窗口判在线。
+  `startAutoHeartbeat()` 每次调用都会**立刻补报一拍**（启动、扫码换地址、从后台回到前台），
+  不等下一个周期；电脑网页在未连接时按 2 秒轮询 `/api/status`，连上后降到 5 秒。
+  ⚠️ 别把「立即报一次」挪到「是否已有定时器」的判断之后——那样换地址等于没连上，用户要等 20 秒。
 
 ### 连接策略（三级，按优先级）
 
@@ -269,8 +272,8 @@ registry.json   设备与事件记录
 
 ## 9. 测试体系
 
-- **小程序 13 套 / 371 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
-  `einvoice 60`、`lanservice 42`、`draft 36`、`list 32`、`collect 31`、`filesend 31`、`ledger 27`、`scanbatch 27`、`discover 21`、`transfer 21`、`invoicesend 18`、`zip 14`、`fsx 11`。
+- **小程序 13 套 / 378 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
+  `einvoice 60`、`lanservice 52`、`draft 36`、`list 32`、`collect 31`、`filesend 31`、`ledger 27`、`scanbatch 27`、`transfer 21`、`discover 18`、`invoicesend 18`、`zip 14`、`fsx 11`。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。
 - 起服务冒烟：启动 `go run .` 后 `curl /api/health`、`/api/connect-qr.png` 应返回 200；台账接收/补录/手动录入/清理/导出接口应返回 200。
 
