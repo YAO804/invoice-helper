@@ -44,7 +44,7 @@ invoice-helper/
 ├── shared/protocol.md          # 两端通信协议（当前 v0.9）
 ├── test/
 │   ├── miniprogram/            # 小程序 Node 回归测试（19 套 / 571 项检查）
-│   ├── desktop/                # 电脑端网页 Node 回归测试（11 套 / 220 项检查；Go 单测在 desktop/internal 各包内）
+│   ├── desktop/                # 电脑端网页 Node 回归测试（11 套 / 225 项检查；Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
 ├── scripts/                    # 图标生成、CRC 校准等开发脚本
@@ -79,7 +79,7 @@ cd desktop && go run .
 # 小程序 19 套，共 571 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
-# 电脑端网页 11 套，共 220 项检查
+# 电脑端网页 11 套，共 225 项检查
 for f in test/desktop/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端
@@ -229,7 +229,7 @@ sort = created | issued | number | reimburser   // 默认 created（录入时间
 - `ledger-app.js` / `ledger-render.js` / `ledger-api.js` / `ledger-stats.js`：台账（搜索、排序、筛选、导入、补录、行内改报销人、清理、重复抽屉、导出、号码点击复制；勾选后显示张数与合计金额，金额按分求和避免浮点尾数）。
 - 补录体验（2026-11-18）：报销人有值时旁边带复制按钮（复用 `.copy-cell` 委托，点它不会进编辑）；勾选后可用「批量填报销人」一次统一（走页面内模态框 `#batchReimburserModal`，不用 `window.prompt`，输入框挂同一个历史建议列表，Enter 即提交，留空表示清空）——串行 `PUT` 且必须带齐其余字段；`reimburser` / `kind` 输入框挂自绘浮层（`suggest.js`，**不再用原生 `datalist`**——它的字号/行高/圆角由浏览器定，跟页面差一截且限制不了条数），建议来自台账历史值（`suggestionPool` 只增不减，避免筛选后丢历史）；浮层聚焦列全部、打字才过滤、上下键 + 回车可选、Esc 只收浮层，选中后补发 `change` 让行内编辑直接落库；补录弹窗粘贴扫码串或 Excel 制表符一行时，`parsePastedInvoice` 自动拆字段，认不出就放行原生粘贴。`reimburser-fill.test.js` 守着。
 - `ledger-stats.js`：顶部统计卡片兼筛选入口——点「重复组 / 待补录 / 最近录入」直接筛列表，再点一次取消，条件写回筛选面板（两处共用一份状态，卡片高亮跟 `aria-pressed` 走）。「最近录入」取后端 `latest_created_at`（全表）只显示日期，点一下把「录入时间起/止」都设成那天，再点清空；**卡片的日期必须来自后端全表口径**，取当前列表第一行的话一筛选它就跟着变。
-- 台账列宽（2026-11-18 重排）：9 列百分比为 check 3 / number 17 / code 11 / kind 17 / issued 9 / total 7 / reimburser 14 / created 12 / actions 10（合计 100）。旧版「号码 18% / 票种 7%」是反的——号码最多 20 位、12px 字 175px 就够，票种是 9 个汉字、7% 只剩 72px，永远显示成「增值税电子…」。金额列右对齐后额外留 14px 右边距、报销人列 10px 左内边距，避免「160.79 蔡文姬」糊在一起。
+- 台账列宽（2026-11-18 重排）：9 列百分比为 check 3 / number 17 / code 11 / kind 17 / issued 9 / total 7 / reimburser 14 / created 12 / actions 10（合计 100）。旧版「号码 18% / 票种 7%」是反的——号码最多 20 位、12px 字 175px 就够，票种是 9 个汉字、7% 只剩 72px，永远显示成「增值税电子…」。金额列右对齐后额外留 14px 右边距、报销人列 10px 左内边距，避免「160.79 蔡文姬」糊在一起。**表头一律居中**（`thead th` + `thead th.num` + `thead th.col-actions` 三条选择器必须成套写，否则 `.invoice-table th.num` 的特异性会把金额表头留在右对齐），数据行不动：文字左、金额右、操作右；金额表头额外把右内边距从 14px 收回 6px，否则居中后视觉上偏左 4px。
 - 台账列与筛选（2026-11-18 调整）：**不再有「录入批次」列**，批次号对用户没意义；筛选面板也**去掉了录入批次与全局搜索**，改加「录入时间起/止」（后端 `created_from` / `created_to`，按 `created_at` 的日期部分比较）。`filter-panel.test.js` 守着「旧条件不许回来」和「colgroup/表头/行三处列数一致」。
 - 小程序同步同一口径（2026-11-18）：台账页「最新批次」卡片换成「最近录入 · 日期」，点一下把录入时间起止都设成那天（同桌面端逻辑）；筛选卡加两个 `picker mode="date"`（录入起/止）与「清除日期」；搜索框占位符不再提批次；详情页删掉「录入批次」行。收票页发送成功文案不再打印批次号，但「查看这批票」仍把批次号放 `globalData.pendingBatch`，台账页用 `batch=` 参数收敛列表并以「刚发的那批 ✕」chip 呈现，取消即清。`list.test.js` / `ledger.test.js` 守着。
 
@@ -306,8 +306,8 @@ registry.json   设备与事件记录
 
 - **小程序 19 套 / 571 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
   `lanservice 63`、`einvoice 60`、`transfer 41`、`draft 36`、`discover 33`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示）、`collect 31`、`filesend 31`、`filetake 29`、`settings 29`（自动搜索提示 + 两种二维码合并入口）、`ledger 34`（含 `latest_created_at` 取日期部分、批次参数拼装与清空）、`scanbatch 27`、`list 53`（最近录入按日期回看、录入时间手选与清除、收票页带批次跳来且不占搜索框）、`auth 24`、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`collect-send 12`（发送弹窗查看这批票：确认跳转、稍后不跳、无批次单按钮）、`fsx 11`。
-- **电脑端网页 11 套 / 220 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
-  `invoice-row 25`（台账行渲染：9 列、不再有批次列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`reimburser-fill 29`（粘贴解析、建议池去重、复制按钮有无、批量填报销人走页面内模态框：打开/取消/提交/留空清空）、`suggest 23`（自绘历史值浮层：聚焦展开、打字过滤、最多 8 条、上下键 + 回车选值、Esc 只收浮层、选完补发 change、数据刷新同步）、`stat-filter 21`（统计卡片与筛选面板双向同步、最近录入按日期筛并取全表口径）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`logout 10`（退出按钮绑定、POST logout、重载回登录态、失败提示）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）、`filter-panel 24`（查询参数拼装、不再发送 keyword/batch、重置与计数、colgroup/表头/行三处列数一致）。
+- **电脑端网页 11 套 / 225 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
+  `invoice-row 25`（台账行渲染：9 列、不再有批次列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`reimburser-fill 29`（粘贴解析、建议池去重、复制按钮有无、批量填报销人走页面内模态框：打开/取消/提交/留空清空）、`suggest 23`（自绘历史值浮层：聚焦展开、打字过滤、最多 8 条、上下键 + 回车选值、Esc 只收浮层、选完补发 change、数据刷新同步）、`stat-filter 21`（统计卡片与筛选面板双向同步、最近录入按日期筛并取全表口径）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`logout 10`（退出按钮绑定、POST logout、重载回登录态、失败提示）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）、`filter-panel 29`（查询参数拼装、不再发送 keyword/batch、重置与计数、colgroup/表头/行三处列数一致、表头居中规则不许被改回左对齐）。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。
 - 起服务冒烟：启动 `go run .` 后 `curl /api/health`、`/api/connect-qr.png` 应返回 200；台账接收/补录/手动录入/清理/导出接口应返回 200。
 

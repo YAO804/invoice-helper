@@ -110,5 +110,15 @@ check('colgroup 9 列', (colgroup.match(/<col /g) || []).length, 9)
 // <th 会匹配到 <thead 本身，所以要带上后一个字符一起判断
 check('表头 9 列', (thead.match(/<th[ >]/g) || []).length, 9)
 
+console.log('\n--- 表头对齐 ---')
+// 表头居中、数据行按内容对齐。表头跟着列左对齐时，宽屏上标签全挤在列首，
+// 看着就像没对齐，所以这条规则一旦被改回 left 要能立刻发现。
+const css = fs.readFileSync(path.join(WEB, 'style.css'), 'utf8')
+check('台账表头居中', /\.invoice-table thead th\s*,[^{]*\{[^}]*text-align:\s*center/.test(css), true)
+check('金额表头也居中（不被 th.num 的右对齐压住）', /\.invoice-table thead th\.num[^{]*\{[^}]*text-align:\s*center/.test(css), true)
+check('操作表头也居中', /\.invoice-table thead th\.col-actions[^{]*\{[^}]*text-align:\s*center/.test(css), true)
+check('金额表头补回右内边距，避免偏左 4px', /\.invoice-table thead th\.num\s*\{[^}]*padding-right:\s*6px/.test(css), true)
+check('数据行没被顺手居中', /\.invoice-table td[^,{]*\{[^}]*text-align:\s*center/.test(css), false)
+
 console.log('\n合计 ' + (pass + fail) + ' 项：PASS ' + pass + ' · FAIL ' + fail)
 if (fail) process.exitCode = 1
