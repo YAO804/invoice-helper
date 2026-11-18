@@ -1,26 +1,8 @@
 <view class="page">
 
   <view class="card">
-    <view class="card-t">台账排序</view>
-    <view class="tiny muted" style="margin:8rpx 0 18rpx">影响台账列表和导出顺序，默认按录入时间（最新在前）。</view>
-    <view class="row sort-bar">
-      <view class="sort-btn {{sortBy === 'created' ? 'on' : ''}}" data-sort="created" bindtap="onSortChange" hover-class="btn-hover">录入时间</view>
-      <view class="sort-btn {{sortBy === 'number' ? 'on' : ''}}" data-sort="number" bindtap="onSortChange" hover-class="btn-hover">发票号码</view>
-      <view class="sort-btn {{sortBy === 'issued' ? 'on' : ''}}" data-sort="issued" bindtap="onSortChange" hover-class="btn-hover">开票日期</view>
-      <view class="sort-btn {{sortBy === 'reimburser' ? 'on' : ''}}" data-sort="reimburser" bindtap="onSortChange" hover-class="btn-hover">报销人</view>
-    </view>
-    <view class="divider"></view>
-    <view class="card-t">月份归组口径</view>
-    <view class="tiny muted" style="margin:8rpx 0 18rpx">决定台账和统计页按哪个月份分组筛选。</view>
-    <view class="row sort-bar">
-      <view class="sort-btn {{basis === 'created' ? 'on' : ''}}" data-basis="created" bindtap="onBasisChange" hover-class="btn-hover">按录入月</view>
-      <view class="sort-btn {{basis === 'issued' ? 'on' : ''}}" data-basis="issued" bindtap="onBasisChange" hover-class="btn-hover">按开票月</view>
-    </view>
-  </view>
-
-  <view class="card">
     <view class="card-t">桌面端连接</view>
-    <view class="tiny muted" style="margin:8rpx 0 14rpx">优先自动搜索（仅安卓）；搜不到就扫电脑网页上的二维码；都不行再手动填地址。</view>
+    <view class="tiny muted" style="margin:8rpx 0 14rpx">优先自动搜索（仅安卓）；搜不到就扫电脑网页上的二维码；都不行再手动填地址。台账、补录、删除都在电脑端，小程序连不上就没有数据可看。</view>
     <view wx:if="{{canDiscover}}" class="btn btn-block" bindtap="onDiscover" hover-class="btn-hover">{{discovering ? '正在搜索…' : '自动搜索电脑'}}</view>
     <view class="btn btn-block btn-ghost" style="margin-top:12rpx" bindtap="onScanConnect" hover-class="btn-hover">{{scanning ? '正在扫码…' : '扫码连接电脑'}}</view>
     <view wx:if="{{discoverTip}}" class="tiny muted" style="margin:10rpx 0">{{discoverTip}}</view>
@@ -35,15 +17,17 @@
   </view>
 
   <view class="card">
-    <view class="card-t">数据与备份</view>
-    <view class="btn btn-ghost btn-block" style="margin-top:16rpx" bindtap="onExport" hover-class="btn-hover">导出与备份</view>
-    <view class="btn btn-grey btn-block" style="margin-top:16rpx" bindtap="onReview" hover-class="btn-hover">待复核（{{reviewCount}}）</view>
-    <view class="tiny muted" style="margin-top:14rpx">数据默认只存在这台手机的私有目录，不上传云端；如已配置桌面端，发送文件时会上传到同一局域网的电脑。原件默认保留 30 天，清理前请先导出留底。</view>
+    <view class="card-t">数据在哪</view>
+    <view class="tiny muted" style="margin-top:10rpx;line-height:1.8">
+      发票台账与原件都在你自己的电脑上，小程序不保存发票数据，只是电脑端的一个查看/扫码入口。
+      换手机、清缓存都不会丢数据；反过来，电脑不开机时小程序就没有台账可看。
+    </view>
+    <view class="btn btn-ghost btn-block" style="margin-top:16rpx" bindtap="onExport" hover-class="btn-hover">导出 CSV（从电脑端下载）</view>
   </view>
 
   <view class="card">
     <view class="card-t">关于</view>
-    <view class="tiny muted" style="margin-top:10rpx;line-height:1.8">攒票小匣：个人自用的发票信息采集与本地归档辅助。不自动查验、不判断真伪，真伪以国家税务总局查验平台结果为准。</view>
+    <view class="tiny muted" style="margin-top:10rpx;line-height:1.8">攒票小匣：个人自用的发票信息采集与归档辅助。不自动查验、不判断真伪，真伪以国家税务总局查验平台结果为准。</view>
   </view>
 
   <view class="card tech">

@@ -1,27 +1,23 @@
 /**
- * 按用户勾选顺序逐个转发；微信一次只能发一个文件。
- * 每个文件发之前都弹确认，让用户有机会关掉上一个"已发送"浮层，
- * 否则连续调用 shareFileMessage 会被微信拒绝（fail cancel / can not ...）。
+ * 按顺序把多个文件转发到微信聊天。
+ *
+ * 微信一次只能发一个文件，且连续调用 shareFileMessage 会被拒绝
+ * （fail cancel / can not ...），所以每个文件发之前都弹确认，
+ * 让用户有机会关掉上一个"已发送"浮层。
+ *
+ * 文件由调用方先落盘（导出走电脑端下载），这里只负责转发。
  */
 
-const exporter = require('./export')
-
 function shareOptions(task, resolve) {
-  const opts = {
+  wx.shareFileMessage({
+    filePath: task.path,
+    fileName: task.name,
     success: function () { resolve({ ok: true }) },
     fail: function (err) {
       const message = (err && err.errMsg) || ''
       resolve({ ok: false, cancelled: /cancel/i.test(message), message: message })
     }
-  }
-  if (task.kind === 'csv') {
-    opts.filePath = exporter.writeCsv(task.name, task.text)
-    opts.fileName = task.name
-  } else {
-    opts.filePath = task.path
-    opts.fileName = task.name
-  }
-  return opts
+  })
 }
 
 function share(task, index, total) {
@@ -33,7 +29,7 @@ function share(task, index, total) {
       cancelText: '结束',
       success: function (r) {
         if (!r.confirm) return resolve({ ok: false, cancelled: true })
-        wx.shareFileMessage(shareOptions(task, resolve))
+        shareOptions(task, resolve)
       },
       fail: function () { resolve({ ok: false, cancelled: true }) }
     })
@@ -41,7 +37,7 @@ function share(task, index, total) {
 }
 
 function run(tasks) {
-  const list = tasks || []
+  const list = (tasks || []).filter(function (task) { return task && task.path })
   return list.reduce(function (chain, task, i) {
     return chain.then(function (prev) {
       if (prev && (!prev.ok || prev.cancelled)) return prev

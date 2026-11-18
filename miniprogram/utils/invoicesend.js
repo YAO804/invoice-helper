@@ -1,25 +1,7 @@
 const lanservice = require('./lanservice')
-const store = require('./store')
+const draft = require('./draft')
 
 const MAX_SEND = 200
-
-function money(cents) {
-  const value = Number(cents) || 0
-  return value > 0 ? store.yuan(value) : ''
-}
-
-function toInvoice(draft) {
-  return {
-    number: draft.invoice_no || '',
-    code: draft.invoice_code || '',
-    kind: draft.invoice_type || '',
-    issue_date: draft.issue_date || '',
-    total: money(draft.total_cent),
-    reimburser: draft.reimburser || '',
-    batch: '',
-    created_at: ''
-  }
-}
 
 function matchText(match) {
   return '价税合计 ' + (match.total || '-') + ' / ' + (match.issue_date || '-')
@@ -91,8 +73,9 @@ function sendChecked(invoices, left) {
   })
 }
 
+/** 草稿数组 → 电脑端。返回 { sent, skipped, batch, left, error } */
 function send(drafts) {
-  const invoices = (drafts || []).map(toInvoice).filter(function (invoice) {
+  const invoices = (drafts || []).map(draft.toInvoice).filter(function (invoice) {
     return !!invoice.number
   })
   if (!invoices.length) return Promise.resolve({ sent: 0, skipped: 0, batch: '', left: 0 })
@@ -105,6 +88,6 @@ function send(drafts) {
 }
 
 module.exports = {
-  toInvoice: toInvoice,
+  MAX_SEND: MAX_SEND,
   send: send
 }

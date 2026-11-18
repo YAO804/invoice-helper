@@ -5,10 +5,7 @@
     "pages/transfer/transfer",
     "pages/settings/settings",
     "pages/detail/detail",
-    "pages/edit/edit",
     "pages/export/export",
-    "pages/manage/manage",
-    "pages/review/review",
     "pages/index/index"
   ],
   "window": {

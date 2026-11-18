@@ -1,50 +1,36 @@
 <view class="page">
 
-  <view class="card">
-    <view class="card-t">导出范围</view>
-    <view class="chips">
-      <view wx:for="{{scopes}}" wx:key="value" class="chip {{scope === item.value ? 'on' : ''}}" data-value="{{item.value}}" bindtap="onScopeChange" hover-class="btn-hover">{{item.name}}</view>
+  <view wx:if="{{!connected}}" class="card">
+    <view class="row">
+      <text class="card-t">导出要用电脑端的数据</text>
+      <text class="badge badge-grey">未连接</text>
     </view>
-    <picker wx:if="{{scope === 'month'}}" mode="selector" range="{{monthOptions}}" value="{{monthIndex}}" bindchange="onMonthChange">
-      <view class="picker-box row">
-        <text>月份：{{currentMonthText}}</text>
-        <text class="muted tiny">切换 ›</text>
+    <view class="tiny muted" style="margin-top:10rpx">台账只在电脑上，CSV 由电脑端生成。先连上电脑再来导出。</view>
+    <view class="btn btn-block" style="margin-top:18rpx" bindtap="onConnect" hover-class="btn-hover">去连接电脑</view>
+  </view>
+
+  <block wx:else>
+    <view class="card">
+      <view class="card-t">导出范围</view>
+      <view class="sort-bar" style="margin-top:16rpx">
+        <view wx:for="{{scopes}}" wx:key="key" class="sort-btn {{item.on ? 'on' : ''}}" data-key="{{item.key}}" bindtap="onScopeChange" hover-class="btn-hover">{{item.name}}</view>
       </view>
-    </picker>
-    <view class="row small" style="margin-top:16rpx"><text class="muted">发票</text><text>{{count}} 张</text></view>
-    <view class="row small" style="margin-top:12rpx"><text class="muted">价税合计</text><text class="amount">¥{{amountText}}</text></view>
-    <view class="row small" style="margin-top:12rpx"><text class="muted">关联原件</text><text>{{fileCount}} 个</text></view>
-    <view wx:if="{{scope === 'batch' && !hasBatch}}" class="tiny warn" style="margin-top:14rpx">还没有批量扫码记录。</view>
-  </view>
-
-  <view wx:if="{{scope === 'custom'}}" class="card">
-    <view class="card-t">勾选要导出的发票</view>
-    <view wx:for="{{customList}}" wx:key="id" class="pick-row" data-id="{{item.id}}" bindtap="onToggleCustom" hover-class="btn-hover">
-      <view class="check {{item.checked ? 'on' : ''}}"><text wx:if="{{item.checked}}">✓</text></view>
-      <view class="grow" style="margin-left:16rpx">
-        <view class="small ellipsis">{{item.title}}</view>
-        <view class="tiny muted mono">{{item.no}}</view>
+      <view class="row small" style="margin-top:20rpx">
+        <text class="muted">发票</text>
+        <text>{{loading ? '读取中…' : count + ' 张'}}</text>
       </view>
-      <text class="small amount">¥{{item.amountText}}</text>
+      <view class="row small" style="margin-top:12rpx">
+        <text class="muted">价税合计</text>
+        <text class="amount">¥{{amountText}}</text>
+      </view>
     </view>
-    <view wx:if="{{!customList.length}}" class="tiny muted" style="margin-top:16rpx">台账里还没有发票。</view>
-  </view>
 
-  <view wx:if="{{expiredTip}}" class="card warn-card">
-    <view class="small warn">{{expiredTip}}</view>
-  </view>
-
-  <view class="card">
-    <view class="card-t">导出内容</view>
-    <view class="chips">
-      <view wx:for="{{contents}}" wx:key="key" class="chip {{item.on ? 'on' : ''}}" data-key="{{item.key}}" bindtap="onToggleContent" hover-class="btn-hover">{{item.name}}</view>
+    <view class="card">
+      <view class="btn btn-block" bindtap="onExport" hover-class="btn-hover">{{exporting ? '正在导出…' : '导出 CSV 并转发'}}</view>
+      <view class="tiny muted" style="margin-top:14rpx">文件由电脑端生成后下载到手机，再通过微信转发（可以发给「文件传输助手」存档）。CSV 带 UTF-8 BOM，Excel 可直接打开。</view>
     </view>
-    <view class="btn btn-block" style="margin-top:12rpx" bindtap="onExport" hover-class="btn-hover">导出所选</view>
-    <view class="tiny muted" style="margin-top:14rpx">微信一次只能转发一个文件，会依次弹出；中途取消即停止。CSV 已带 UTF-8 BOM，可直接用 Excel 打开。</view>
-    <view class="divider"></view>
-    <view class="btn btn-danger btn-block" bindtap="onCleanExpired" hover-class="btn-hover">清理 30 天前原件</view>
-  </view>
+  </block>
 
-  <view class="foot tiny muted">导出前先确认上面的范围和内容。数据只存本机，定期导出是唯一可靠的保险。</view>
+  <view class="foot tiny muted">电脑端网页也能导出（支持当前筛选和勾选记录），数据量大时用电脑更顺手。</view>
 
 </view>

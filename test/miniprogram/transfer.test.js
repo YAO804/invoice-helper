@@ -46,8 +46,7 @@ filesend.setEnv({
   lanservice: {
     getBase() { return 'http://192.168.1.20:8765' },
     listFiles() { return Promise.resolve({ incoming: remoteFiles, outgoing: [] }) }
-  },
-  store: { listInvoices() { return [] } }
+  }
 })
 
 let pageConfig = null

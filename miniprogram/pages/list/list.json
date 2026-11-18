@@ -1,4 +1,5 @@
 {
-  "navigationBarTitleText": "攒票小匣",
-  "enablePullDownRefresh": false
+  "navigationBarTitleText": "台账",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
 }

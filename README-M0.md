@@ -180,26 +180,19 @@ invoice-helper/
 ├── project.config.json          # 开发者工具配置（miniprogramRoot 指向 miniprogram/）
 ├── miniprogram/
 │   ├── app.js / app.json / app.wxss / sitemap.json
-│   ├── pages/index/             # 唯一的验证页，五个卡片
+│   ├── pages/                  # collect / list / detail / export / transfer / settings / index
 │   └── utils/
 │       ├── einvoice.js          # XML 树 + 完整路径取值、标签 dump、二维码解析（无 CRC 计算）
 │       ├── zip.js               # ZIP/OFD 容器结构探测（零依赖，不解压）
-│       ├── fsx.js               # 私有目录读写、目录统计、30 天过期清理
-│       ├── store.js             # M1 台账：按月分片、索引、增删改查、金额分
-│       ├── archive.js           # M3 原件复制到私有目录 + 摘要
-│       ├── collect.js           # M2/M3 扫码与文件导入草稿
-│       ├── csv.js / export.js   # M5 CSV 拼装、导出、到期提醒
-│       ├── category.js          # P0 消费场景预填规则（只预填，不强制）
-│       ├── labels.js            # P0 来源/时间等枚举 → 页面文案
-│       ├── review.js            # P0 待复核原因汇总
-│       ├── scanbatch.js         # 批量连续扫码（扫到取消为止）
-│       ├── batchmark.js         # 记住最后一次批量扫码标记
-│       ├── exportsel.js         # 导出范围/内容选择解析
-│       ├── exportflow.js        # 按勾选顺序逐个转发
-│       ├── purge.js             # 台账清理：按 id 或导入时间区间删除
-│       ├── lanservice.js        # 桌面端连接、心跳、查重、发票发送与接收文件清理
+│       ├── fsx.js               # 私有目录读写（只剩 M0 验证页在用）
+│       ├── draft.js             # 纯函数：二维码/XML → 草稿、金额分↔元、判重键、号码校验
+│       ├── ledger.js            # 电脑台账的内存镜像：查询串、sync、卡片映射、判重索引
+│       ├── collect.js           # 扫码与文件导入草稿（不落盘）
+│       ├── scanbatch.js         # 批量连续扫码（扫到取消为止，重复靠内存镜像判断）
+│       ├── exportflow.js        # 把已落盘文件逐个转发到微信聊天
+│       ├── lanservice.js        # 桌面端连接、心跳、查重、发票发送、台账只读拉取、导出地址
 │       ├── filesend.js          # 原件传输：发送历史（30 天）、电脑已收列表、批量删
-│       ├── invoicesend.js       # 扫码草稿转电脑台账字段、重复确认
+│       ├── invoicesend.js       # 草稿转电脑台账字段、重复确认
 │       └── discover.js          # mDNS 自动发现电脑地址（安卓）
 ├── desktop/
 │   ├── internal/                # 电脑端 Go 模块目录：api / files / ledger / registry / config
@@ -207,23 +200,21 @@ invoice-helper/
 │   ├── data/                    # 运行时数据，不提交 Git
 │   └── README.md                # 电脑端目录约定
 ├── shared/
-│   └── protocol.md              # 小程序与桌面端通信协议 v0.7
+│   └── protocol.md              # 小程序与桌面端通信协议 v0.8
 ├── test/
 │   ├── miniprogram/
 │   │   ├── einvoice.test.js     # 真实 XML 树 1:1 回归，60 项断言
 │   │   ├── zip.test.js          # 手工构造 zip + S4 真机结构回归，14 项
 │   │   ├── fsx.test.js          # 私有目录与 TTL 清理回归，11 项
-│   │   ├── store.test.js        # 台账 + 排序口径 + 批量落库 + 来源升级回归，82 项（内存 FS）
-│   │   ├── collect.test.js      # 扫码/文件导入 + 批量入口回归，35 项（模拟 wx API）
-│   │   ├── export.test.js       # M5 CSV/导出/到期提醒回归，28 项
-│   │   ├── p0.test.js           # P0 分类/待复核回归，22 项
+│   │   ├── draft.test.js        # 金额换算、判重键、号码校验、二维码/XML 映射，36 项
+│   │   ├── ledger.test.js       # 查询串、远程快照、判重索引、重复组，27 项
+│   │   ├── list.test.js         # 台账页：未连接空态、筛选排序请求、错误兜底，32 项
+│   │   ├── collect.test.js      # 扫码/文件导入回归，31 项（模拟 wx API）
 │   │   ├── scanbatch.test.js    # 批量扫码交互与重复提示回归，27 项
-│   │   ├── exportsel.test.js    # 导出范围/勾选/逐个转发回归，19 项
-│   │   ├── purge.test.js        # 台账清理：时间区间与删除回归，14 项
-│   │   ├── lanservice.test.js   # 地址、心跳、查重、发送与接收文件清理，35 项
-│   │   ├── filesend.test.js     # 发送历史 30 天裁剪、电脑已收列表与删除，33 项
+│   │   ├── lanservice.test.js   # 地址、心跳、查重、发送、台账拉取与导出地址，42 项
+│   │   ├── filesend.test.js     # 发送历史 30 天裁剪、电脑已收列表与删除，31 项
 │   │   ├── transfer.test.js     # 传输中心页：两个 tab、勾选、批量删、清理，21 项
-│   │   ├── invoicesend.test.js  # 扫码草稿转换、查重发送与 200 张上限，17 项
+│   │   ├── invoicesend.test.js  # 草稿转换、查重发送与 200 张上限，18 项
 │   │   └── discover.test.js     # mDNS 自动发现与 iOS 兜底，21 项
 │   ├── desktop/                 # 电脑端联调测试预留；Go 单元测试在 desktop/internal 各包内
 │   └── integration/             # 小程序与电脑端联调测试，后续添加
@@ -241,13 +232,11 @@ invoice-helper/
 node test/miniprogram/einvoice.test.js
 node test/miniprogram/zip.test.js
 node test/miniprogram/fsx.test.js
-node test/miniprogram/store.test.js
+node test/miniprogram/draft.test.js
+node test/miniprogram/ledger.test.js
+node test/miniprogram/list.test.js
 node test/miniprogram/collect.test.js
-node test/miniprogram/export.test.js
-node test/miniprogram/p0.test.js
 node test/miniprogram/scanbatch.test.js
-node test/miniprogram/exportsel.test.js
-node test/miniprogram/purge.test.js
 node test/miniprogram/lanservice.test.js
 node test/miniprogram/filesend.test.js
 node test/miniprogram/transfer.test.js
@@ -258,7 +247,7 @@ cd desktop
 go test ./...
 ```
 
-小程序十五套共 439 项检查（60 + 82 + 35 + 35 + 33 + 28 + 27 + 22 + 21 + 21 + 19 + 17 + 14 + 14 + 11），当前全绿。
+小程序十三套共 371 项检查（60 + 42 + 36 + 32 + 31 + 31 + 27 + 27 + 21 + 21 + 18 + 14 + 11），当前全绿。
 电脑端 Go 测试单独运行，覆盖文件保存、去重、删除、统计、设备心跳、状态总览、上传接口、下载接口、接收文件批量删除与按保留期清理、发票台账 CSV、判重（代码+号码）、搜索排序、导入导出、扫码结果查重接收、补录编辑、按录入时间清理、mDNS 端口解析、连接二维码和本地网页。
 
 ---

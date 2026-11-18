@@ -1,72 +1,64 @@
-<view class="page" wx:if="{{inv}}">
+<view class="page" wx:if="{{item}}">
 
   <view class="card">
     <view class="row">
-      <text class="card-t grow">{{title}}</text>
-      <text class="badge">{{sourceText}}</text>
+      <text class="small mono grow">{{item.number || '无号码'}}</text>
+      <text wx:if="{{item.duplicate}}" class="badge badge-warn">重复</text>
+      <text wx:if="{{item.needFill}}" class="badge badge-grey">待补录</text>
     </view>
-    <view class="row" style="margin-top:12rpx" bindtap="onCopyNo">
-      <text class="tiny muted mono grow">{{no}}</text>
-      <text class="tiny muted">点击复制</text>
-    </view>
-    <view class="tiny muted" style="margin-top:8rpx">{{date}} · {{statusText}}</view>
-    <view wx:if="{{verifiedText}}" class="tiny muted">核验时间 {{verifiedText}}</view>
+    <view class="tiny muted" style="margin-top:8rpx">{{item.kind || '票种待补'}}</view>
+    <view class="amount-xl" style="margin-top:16rpx">{{item.amount ? '¥' + item.amount : '金额待补'}}</view>
   </view>
 
   <view class="card">
-    <view class="row">
-      <text class="small muted">价税合计</text>
-      <text class="amount-xl">¥{{totalText}}</text>
+    <view class="kv" data-value="{{item.number}}" bindtap="onCopy" hover-class="btn-hover">
+      <text class="tiny muted">发票号码</text>
+      <text class="small mono grow right">{{item.number || '—'}}</text>
     </view>
-    <view class="divider"></view>
-    <view class="row small">
-      <text class="muted">报销人</text><text class="grow right">{{reimburser}}</text>
+    <view class="kv" data-value="{{item.code}}" bindtap="onCopy" hover-class="btn-hover">
+      <text class="tiny muted">发票代码</text>
+      <text class="small mono grow right">{{item.code || '—'}}</text>
     </view>
-    <view class="row small" style="margin-top:12rpx" wx:if="{{note}}">
-      <text class="muted">备注</text><text class="grow right">{{note}}</text>
+    <view class="kv">
+      <text class="tiny muted">票种</text>
+      <text class="small grow right">{{item.kind || '—'}}</text>
     </view>
-  </view>
-
-  <view wx:if="{{anomaly.length}}" class="card">
-    <view class="small strong warn" style="margin-bottom:12rpx">离线校验提示（≠ 真伪判断）</view>
-    <view wx:for="{{anomaly}}" wx:key="*this" class="tiny warn" style="line-height:1.7">· {{item}}</view>
-  </view>
-
-  <view class="card" wx:if="{{items.length}}">
-    <view class="small strong" style="margin-bottom:16rpx">明细（{{items.length}} 行）</view>
-    <view wx:for="{{items}}" wx:key="line_no" class="item">
-      <view class="small">{{item.name}}</view>
-      <view class="row tiny muted" style="margin-top:8rpx">
-        <text>明细合计</text>
-        <text>¥{{item.totalText}}</text>
-      </view>
+    <view class="kv">
+      <text class="tiny muted">开票日期</text>
+      <text class="small grow right">{{item.issueDate || '—'}}</text>
     </view>
-  </view>
-
-  <view class="card" wx:if="{{meta.rows.length}}">
-    <view class="row" style="margin-bottom:16rpx">
-      <text class="small strong">原始文件信息</text>
-      <text wx:if="{{meta.hasSignature}}" class="badge">含税务签名</text>
+    <view class="kv">
+      <text class="tiny muted">价税合计</text>
+      <text class="small grow right">{{item.amount || '—'}}</text>
     </view>
-    <view wx:for="{{meta.rows}}" wx:key="k" class="row small meta-row">
-      <text class="muted tiny">{{item.k}}</text>
-      <text class="grow right tiny">{{item.v}}</text>
+    <view class="kv">
+      <text class="tiny muted">报销人</text>
+      <text class="small grow right {{item.reimburser ? '' : 'warn'}}">{{item.reimburser || '待补录'}}</text>
+    </view>
+    <view class="kv">
+      <text class="tiny muted">录入批次</text>
+      <text class="small grow right">{{item.batch || '—'}}</text>
+    </view>
+    <view class="kv">
+      <text class="tiny muted">录入时间</text>
+      <text class="small grow right">{{item.createdAt || '—'}}</text>
     </view>
   </view>
 
-  <view class="card" wx:if="{{rawQr}}">
-    <view class="small strong" style="margin-bottom:10rpx">二维码原文</view>
-    <view class="tiny muted mono" style="word-break:break-all">{{rawQr}}</view>
+  <view wx:if="{{item.duplicate && groupMore}}" class="card">
+    <view class="small strong warn" style="margin-bottom:4rpx">同一张票共录入 {{group.length}} 次</view>
+    <view class="tiny muted" style="margin-bottom:12rpx">判重只看「发票代码 + 号码」，与金额、日期无关。留哪张由电脑端决定。</view>
+    <view wx:for="{{group}}" wx:key="id" class="dup-row">
+      <text class="tiny mono">{{item.code || '无代码'}} · {{item.number}}</text>
+      <text class="tiny {{item.self ? 'amount' : 'muted'}}">{{item.self ? '当前' : '¥' + (item.total || '—')}}</text>
+      <text class="tiny muted">{{item.createdAt}}</text>
+    </view>
   </view>
 
   <view class="card">
-    <view class="btn btn-ghost btn-block" bindtap="onEdit" hover-class="btn-hover">编辑这张票</view>
-    <view class="btn btn-grey btn-block" style="margin-top:16rpx" bindtap="onVerify" hover-class="btn-hover">
-      {{statusText === '已人工核验' ? '取消核验标记' : '标记已人工核验'}}
-    </view>
-    <view class="btn btn-danger btn-block" style="margin-top:16rpx" bindtap="onDelete" hover-class="btn-hover">删除记录</view>
+    <view class="btn btn-ghost btn-block" bindtap="onCopy" data-value="{{item.number}}" hover-class="btn-hover">复制发票号码</view>
   </view>
 
-  <view class="foot tiny muted">签名节点存在只说明文件结构完整，不代表发票已验真。真伪以国家税务总局查验平台结果为准。</view>
+  <view class="foot tiny muted">小程序只读。补录报销人、删除重复、修改字段请到电脑端台账页操作。</view>
 
 </view>

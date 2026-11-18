@@ -40,23 +40,25 @@ global.wx = {
 }
 
 const invoicesend = require('../../miniprogram/utils/invoicesend')
+const draftMaker = require('../../miniprogram/utils/draft')
 
 function draft(number) {
   return {
-    invoice_no: number,
-    invoice_code: '',
-    invoice_type: '数电票',
+    number: number,
+    code: '',
+    kind: '数电票',
     issue_date: '2026-08-01',
     total_cent: 10500,
     reimburser: ''
   }
 }
 
-const converted = invoicesend.toInvoice(draft('N1'))
+const converted = draftMaker.toInvoice(draft('N1'))
 check('转换发票号码', converted.number, 'N1')
 check('转换价税合计', converted.total, '105.00')
 check('转换报销人', converted.reimburser, '')
 check('已删字段不进入传输', converted.seller_name, undefined)
+check('金额为 0 时留空', draftMaker.toInvoice({ number: 'N0', total_cent: 0 }).total, '')
 
 stubMatches = { N1: { number: 'N1', seller_name: '甲公司' } }
 modalConfirm = false

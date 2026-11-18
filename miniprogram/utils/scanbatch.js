@@ -1,10 +1,11 @@
 /**
- * 连续扫码：扫到用户取消为止，不做场次隔离，草稿统一进主台账。
+ * 连续扫码：扫到用户取消为止，草稿只放在内存里，扫码结束一次性发送。
  * 微信原生扫码界面不能加按钮，只能在进入前后给出明确的结束方式。
  */
 
 const collect = require('./collect')
-const store = require('./store')
+const ledger = require('./ledger')
+const draft = require('./draft')
 
 const SKIPPABLE = /无法识别|链接型|字段不足/
 const CONFIRM_EVERY = 10
@@ -32,17 +33,17 @@ function notice() {
 function askContinue(count) {
   return modal({
     title: '已扫 ' + count + ' 张',
-    content: '继续扫码，还是结束并保存？',
+    content: '继续扫码，还是结束并发送？',
     confirmText: '继续扫',
     cancelText: '结束'
   })
 }
 
-/** 重复由用户定夺：号码+日期+金额相同也可能只是某次扫错 */
+/** 重复由用户定夺：代码+号码相同也可能是上次误扫，不能一律丢掉 */
 function askDuplicate(where) {
   return modal({
     title: '这张票可能重复',
-    content: '和' + where + '的票一样（号码 + 日期 + 金额）。要收下，还是跳过？',
+    content: '和' + where + '的票一样（发票代码 + 号码）。要收下，还是跳过？',
     confirmText: '仍然收下',
     cancelText: '跳过'
   })
@@ -61,12 +62,15 @@ function done(drafts, cancelled, duplicates) {
   return { ok: true, drafts: drafts, cancelled: !!cancelled, duplicates: duplicates }
 }
 
-/** 本批次还没落库，重复要靠 seen 记；台账里的重复靠 store 查 */
-function accept(draft, seen) {
-  if (!draft.invoice_no) return { keep: true, where: '' }
-  const key = store.dedupeKey(draft)
+/**
+ * 本批次还没发送，批次内重复靠 seen 记；
+ * 电脑台账里已有的靠内存镜像查（没同步过就查不到，发送前还有一次服务端查重兜底）。
+ */
+function accept(item, seen) {
+  if (!item.number) return { keep: true, where: '' }
+  const key = draft.dedupeKey(item)
   if (seen[key]) return { keep: false, where: '本批次前面' }
-  if (store.findDuplicate(draft)) return { keep: false, where: '台账里' }
+  if (ledger.findDuplicate(item)) return { keep: false, where: '电脑台账里' }
   seen[key] = true
   return { keep: true, where: '' }
 }
@@ -77,17 +81,17 @@ function scanBatch() {
   const seen = {}
   let duplicates = 0
 
-  function handle(draft) {
-    const r = accept(draft, seen)
+  function handle(item) {
+    const r = accept(item, seen)
     if (r.keep) {
-      drafts.push(draft)
+      drafts.push(item)
       return Promise.resolve(true)
     }
     duplicates++
     return askDuplicate(r.where).then(function (keep) {
       if (keep) {
-        seen[store.dedupeKey(draft)] = true
-        drafts.push(draft)
+        seen[draft.dedupeKey(item)] = true
+        drafts.push(item)
       } else {
         wx.showToast({ title: '已跳过重复票', icon: 'none' })
       }

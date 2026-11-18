@@ -1,47 +1,25 @@
-.sort-bar {
-  margin-bottom: 16rpx;
-}
+/* 台账页：统计条 + 筛选 + 只读卡片列表 */
 
-.summary {
-  padding: 28rpx 30rpx;
-}
-
-.sum-amount {
-  font-size: 62rpx;
-  font-weight: 500;
-  color: #0f6e56;
-  line-height: 1.3;
-  margin: 16rpx 0 12rpx;
-}
-
-.quick {
+.stats {
   display: flex;
-  padding: 18rpx 24rpx;
+  margin-top: 20rpx;
 }
 
-.quick-item {
+.stat-cell {
   flex: 1;
+  text-align: center;
+}
+
+.stat-n {
+  font-size: 38rpx;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.filter-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 26rpx;
-  color: #4a4a46;
-}
-
-.quick-item + .quick-item {
-  border-left: 1rpx solid #ecece8;
-}
-
-.quick-n {
-  font-size: 34rpx;
-  color: #0f6e56;
-  margin-right: 12rpx;
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 20rpx -6rpx 0;
+  margin: 20rpx 0 0;
 }
 
 .chip {
@@ -50,7 +28,7 @@
   background: #ecece8;
   border-radius: 999rpx;
   padding: 10rpx 22rpx;
-  margin: 0 6rpx 12rpx;
+  margin-right: 12rpx;
 }
 
 .chip.on {
@@ -58,16 +36,16 @@
   color: #ffffff;
 }
 
-.search {
-  margin-top: 8rpx;
+.filter-row .link {
+  margin-left: auto;
 }
 
-.invoice {
+.inv {
   padding: 24rpx 26rpx;
 }
 
 .amount-lg {
-  font-size: 34rpx;
+  font-size: 32rpx;
   font-weight: 500;
   color: #0f6e56;
   margin-left: 16rpx;

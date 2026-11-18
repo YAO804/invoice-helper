@@ -41,9 +41,9 @@ invoice-helper/
 │   ├── web/                    # 纯 HTML/CSS/JS，由 embed 嵌入二进制
 │   ├── data/                   # 运行时数据，不提交 Git（保留 .gitkeep）
 │   └── README.md
-├── shared/protocol.md          # 两端通信协议（当前 v0.7）
+├── shared/protocol.md          # 两端通信协议（当前 v0.8）
 ├── test/
-│   ├── miniprogram/            # 小程序 Node 回归测试（15 套 / 439 项检查）
+│   ├── miniprogram/            # 小程序 Node 回归测试（13 套 / 371 项检查）
 │   ├── desktop/                # 电脑端联调预留（Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
@@ -69,13 +69,14 @@ invoice-helper/
 # 启动电脑端（默认 :8765，数据目录 desktop/data/）
 cd desktop && go run .
 # 自定义：go run . -addr :9000 -data ./data
-# 环境变量：INVOICE_ADDR / INVOICE_DATA_DIR
+# 自定义：go run . -keep-days 30
+# 环境变量：INVOICE_ADDR / INVOICE_DATA_DIR / INVOICE_KEEP_DAYS
 ```
 
 **回归测试**（改动后必跑）：
 
 ```bash
-# 小程序 15 套，共 439 项检查
+# 小程序 13 套，共 371 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端
@@ -90,11 +91,12 @@ go vet ./...
 
 1. **每次修改代码后必须提交 Git**：测试通过后立即 `git add` + `git commit`，写清楚改了什么；出错可回溯。不要攒着一次性提交。提交后推送 `main`。
 2. **代码要优美**：单文件超过约 200 行考虑拆分，单函数超过约 40 行考虑拆分。
-3. **页面只做数据组装和事件转发**，业务逻辑放 `miniprogram/utils/`；数据访问统一走 `utils/store.js`。
+3. **页面只做数据组装和事件转发**，业务逻辑放 `miniprogram/utils/`；台账数据一律经 `utils/ledger.js` / `utils/lanservice.js` 走后端接口，页面不许自己发请求。
 4. **重复逻辑抽成共用函数**，不在多个文件复制粘贴；命名能看出用途；注释只写「为什么」。
 5. **每个小程序页面必须有 `.js` / `.json` / `.wxml` 三件套**，缺 `.json` 会白屏（踩过）。
-6. **判重口径改动必须两端同步**：`miniprogram/utils/store.js` 的 `dedupeKey` 与 `desktop/internal/ledger/identity.go` 的 `identityKey` 是同一套规则，只改一边就是埋雷。
-7. 已知历史债：`utils/store.js`（512 行）、`utils/einvoice.js`（434 行）偏长，是早期快速验证产物。触碰时顺手拆，不要继续堆逻辑。
+6. **判重口径改动必须两端同步**：`miniprogram/utils/draft.js` 的 `dedupeKey` 与 `desktop/internal/ledger/identity.go` 的 `identityKey` 是同一套规则，只改一边就是埋雷。
+7. 已知历史债：`utils/einvoice.js`（434 行）偏长，是早期快速验证产物。触碰时顺手拆，不要继续堆逻辑。
+8. **小程序不存台账**：不要重新引入本地持久化，否则又会出现两端对账问题。草稿只放内存。
 
 > 项目约定另记录在 `.workbuddy/memory/MEMORY.md`（不进 Git），每日工作日志在 `.workbuddy/memory/YYYY-MM-DD.md`。
 
@@ -109,13 +111,23 @@ go vet ./...
 ```
 
 - 读取按**表头名**定位列，所以旧版 12/14 列 CSV 仍能打开，缺的列按空值处理；写入一律 8 列（UTF-8 BOM，Excel 直接开）。
-- 金额是**普通元字符串**（如 `"147.00"`）；小程序内部用**整数分**存储，显示层除 100。
-- 每次写入（接收/导入/补录/清理）前自动备份上一版到 `desktop/data/backup/`。
+- 金额是**普通元字符串**（如 `"147.00"`）；小程序内部草稿用**整数分**，发送前才转成字符串元。
+- 每次写入（接收/导入/补录/手动录入/清理）前自动备份上一版到 `desktop/data/backup/`。
 
-### 小程序台账记录（`invoices/ledger/YYYY-MM.json`）
+### 小程序端不存台账（2026-11-18 起）
 
-除 8 个票面字段外，还保留解析期的结构：`items[]`（明细行）、`meta`（签名算法、销方详情等原始解析结果）、`category`、`source`、`confidence`、`anomaly[]`、`files[]`、`raw_qr`。
-这些只给详情页展示与排障用，**不参与导出，也不发给电脑端**。
+小程序只保留**内存草稿**和**电脑台账的内存镜像**，退出即丢：
+
+```text
+电脑 desktop/data/invoices.csv   ← 唯一权威数据
+        ↑ POST /api/invoices      扫码/导入发送
+        ↓ GET  /api/invoices      台账页同步（筛选/排序/重复都由电脑端算）
+小程序内存 ledger 缓存            ← 只读镜像，供列表渲染与扫码当场判重
+小程序内存 draft（草稿）           ← 收票到发送之间，成功即丢
+```
+
+- 代价是**离线不可用**；换来的是不需要两端对账，不存在「手机上改了电脑不知道」。
+- 原来本地的分片台账（`invoices/ledger/*.json`）、索引、分类、待复核、清理、原件归档全部下线。
 
 ### 判重口径（两端一致，2026-11-18 统一）
 
@@ -131,13 +143,12 @@ identityKey = 发票代码 + "|" + 发票号码
 ### 排序与归月
 
 ```js
-sort  = created | issued | number | reimburser   // 默认 created（录入时间倒序）
-basis = created | issued                        // 仅小程序「归月口径」，默认 created
+sort = created | issued | number | reimburser   // 默认 created（录入时间倒序）
 ```
 
-- 电脑端 `sort` 通过 `/api/invoices?sort=` 传；小程序偏好存本地 Storage（`ledger_sort`）。
+- 排序口径两端只有一份：由电脑端 `GET /api/invoices?sort=` 算，小程序只传参数、不本地排序。
 - 报销人排序时空值排最后，方便先看已填写的。
-- 小程序物理分片固定按**开票日期**；`basis=created` 只是展示口径变化，会全量读入再按 `created_at` 过滤。
+- 「归月口径」随本地台账一起下线，小程序不再按月分组。
 
 ### 二维码能力边界（真机实测，不可违背）
 
@@ -151,37 +162,36 @@ basis = created | issued                        // 仅小程序「归月口径�
 
 ## 6. 小程序端模块地图
 
-### 页面（`pages/`，首页为收票页）
+### 页面（`pages/`，首页为收票页，共 7 个）
 
 | 页面 | 职责 |
 |---|---|
-| `collect` | **首页**。扫码/批量连续扫码/文件导入/手动入口，完成后询问是否发送电脑台账 |
-| `list` | 台账列表，长按删除、跳转详情/编辑 |
-| `settings` | 排序与归月口径、桌面端连接（自动搜索/扫码/手填）、数据备份、关于 |
-| `detail` / `edit` | 发票详情 / 手动录入编辑 |
-| `export` | 台账 CSV / 原件清单 / 原件转发；默认范围=本次扫码，支持自定义 |
-| `manage` | 台账清理：勾选删除、按导入时间区间删除 |
-| `review` | 待复核清单 |
-| `transfer` | **传输中心**：上传原件（会话文件 / 台账已存），分「我的上传」「电脑已收」两段查看记录，支持勾选删除、全部删除、清理超 30 天 |
+| `collect` | **首页**。扫码/批量连续扫码/文件导入 → 内存草稿 → 查重 → 发送电脑台账；未连接时只提示去设置 |
+| `list` | **只读台账**：对齐电脑端（统计条、关键词、仅看重复、仅看待补录、四种排序），数据来自 `GET /api/invoices`，支持下拉刷新 |
+| `detail` | **只读详情**：8 个票面字段 + 同组重复记录；可复制号码，没有编辑/删除 |
+| `export` | 导出 CSV：选范围（全部/仅重复/仅待补录）→ 电脑端生成 → 下载 → 微信转发 |
+| `transfer` | **传输中心**：上传原件（会话文件），分「我的上传」「电脑已收」两段查看记录，支持勾选删除、全部删除、清理超 30 天 |
+| `settings` | 桌面端连接（自动搜索/扫码/手填）、数据在哪、导出入口、关于 |
 | `index` | M0 技术验证页（保留） |
 
-> 统计页已下线（2026-11-18），tabBar 由「统计」换成「传输」；`utils/stats.js` 一并删除。
+> 2026-11-18 下线：统计页、`edit`（手动录入/编辑）、`manage`（台账清理）、`review`（待复核）。
+> 这些活现在都在电脑端：新增发票走网页「新增发票」，补录点报销人单元格，删除/清理在台账页，待复核用「仅看待补录」筛选。
 
 ### 工具（`utils/`，按职责拆分）
 
 - `einvoice.js`：XML 树 + 完整路径取值、标签 dump、二维码解析（最长，历史债）。
-- `store.js`：本地台账持久化，按月分片 `ledger/YYYY-MM.json` + `index.json`，原件在 `files/`（历史债）。
-  索引带 `INDEX_VERSION`，结构变更时递增即自动重建，旧数据不用手工迁移。
-- `collect.js` / `scanbatch.js`：扫码与文件导入 / 批量连续扫码（扫到取消、每 10 张确认、重复当场弹窗）。
-- `batch.js` / `batchmark.js`：批量落库与来源升级合并 / 记住最后一次批次。
-- `archive.js` / `fsx.js` / `zip.js`：原件复制与摘要 / 私有目录读写与 30 天 TTL 清理 / ZIP-OFD 结构探测。
-- `csv.js` / `export.js` / `exportsel.js` / `exportflow.js`：CSV 拼装、导出范围与内容选择、逐个转发。
-- `category.js` / `labels.js` / `review.js` / `purge.js`：分类预填、文案枚举、待复核原因、清理筛选。
-- `lanservice.js`：桌面端地址/心跳/查重/发送/上传。
-- `filesend.js`：原件上传（微信会话 / 台账已存），本地留 100 条发送历史，单文件 20MB、单次 20 个；
+- `draft.js`：纯函数。二维码/XML/版式文件 → 草稿，金额分↔元、判重键、号码位数校验、转电脑端 payload。
+- `ledger.js`：电脑台账的内存镜像。拼查询串、`sync()` 拉取、卡片映射、判重索引（同键保留最早一条）、重复组。
+- `collect.js` / `scanbatch.js`：扫码与文件导入 / 批量连续扫码（扫到取消、每 10 张确认、重复靠镜像当场弹窗）。
+- `zip.js` / `fsx.js`：ZIP-OFD 结构探测 / 私有目录读写（只剩 M0 验证页在用）。
+- `lanservice.js`：桌面端地址、心跳、查重、发送、上传、台账只读拉取、导出地址。
+- `filesend.js`：原件上传（只支持微信会话文件），本地留 100 条发送历史，单文件 20MB、单次 20 个；
   发送记录与电脑端副本都只保留 **30 天**，`purgeOldHistory()` 在页面打开时顺手清超期记录。
-- `invoicesend.js`：扫码草稿转电脑台账字段、重复确认、**200 张上限提示**。
+- `invoicesend.js`：草稿 → 电脑端、重复确认、**200 张上限提示**。
+- `exportflow.js`：把已落盘的临时文件逐个用 `wx.shareFileMessage` 转发（微信一次只能发一个）。
 - `discover.js`：三级连接——mDNS 自动发现（安卓）→ 解析电脑网页二维码 → 手填地址兜底。
+
+> 已删除（随本地台账下线）：`store.js`、`category.js`、`batch.js`、`batchmark.js`、`review.js`、`purge.js`、`csv.js`、`archive.js`、`export.js`、`exportsel.js`、`labels.js`。
 
 ---
 
@@ -217,7 +227,7 @@ registry.json   设备与事件记录
 
 ---
 
-## 8. 通信协议（v0.7，详见 shared/protocol.md）
+## 8. 通信协议（v0.8，详见 shared/protocol.md）
 
 - 基础：`http://电脑IPv4:8765`，局域网直连，不要求 HTTPS/合法域名，无 token（仅可信局域网自用）。
 - 心跳：小程序每 20 秒 `POST /api/devices/heartbeat`，电脑 45 秒窗口判在线。
@@ -238,11 +248,12 @@ registry.json   设备与事件记录
 | GET | `/api/files` | 文件列表 |
 | POST | `/api/invoices/check` | 发送前查重（提交 `{number, code}`） |
 | POST | `/api/invoices` | 小程序扫码结果写入台账（单批 ≤ 200 张） |
+| POST | `/api/invoices/manual` | 网页手动录入单条（批次固定「手动录入」） |
 | PUT | `/api/invoices/{id}` | 补录单张发票字段 |
 | POST | `/api/invoices/purge` | 按录入时间清理（先预览再确认） |
-| GET | `/api/invoices` | 台账列表（支持多条件筛选与 `sort`） |
+| GET | `/api/invoices` | 台账列表（支持多条件筛选与 `sort`；同时是小程序台账页的唯一数据源） |
 | POST | `/api/invoices/import` | CSV 导入（默认预览，`?confirm=1` 写入） |
-| GET | `/api/invoices/export` | CSV 导出（支持 `ids=1,2,3`） |
+| GET | `/api/invoices/export` | CSV 导出（支持 `ids=1,2,3` 与全部查询参数） |
 | DELETE | `/api/invoices` | 按 id 批量删除 |
 | DELETE | `/api/incoming` | 批量删接收文件（`{ids:[...]}` 指定，`{all:true}` 清空） |
 | POST | `/api/incoming/purge` | 按保留天数清理接收文件（`{days, confirm}`，先预览再确认） |
@@ -251,30 +262,33 @@ registry.json   设备与事件记录
 - **单次发送上限 200 张**：小程序超限时先弹提示，用户选「只发前 200 张」或取消，不静默截断。
 - **台账只传解析字段，不传原件**；原件走独立的传输页（`/api/files/upload`），两条链路互不影响。
 - **接收文件保留 30 天**：电脑端启动时清一次、之后每 6 小时清一次（`-keep-days` 可改，≤0 关闭自动清理）；小程序端发送历史同样按 30 天裁剪。两端都可手动清理。
+- **`duplicates` / `duplicate_groups` 按全量计算**，不受 `keyword` 等筛选影响；`items` / `total` / `need_fill` 才是筛选后的结果。
+- **导出前必须先标记重复**：`Export` 若只 `markNeedFill` 不 `markDuplicates`，`only_duplicates` 会导出一张只剩表头的空表（2026-11-18 修复，有回归测试守着）。
 
 ---
 
 ## 9. 测试体系
 
-- **小程序 15 套 / 439 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
-  `einvoice 60`、`store 82`、`collect 35`、`lanservice 35`、`filesend 33`、`export 28`、`scanbatch 27`、`p0 22`、`transfer 21`、`discover 21`、`exportsel 19`、`invoicesend 17`、`purge 14`、`zip 14`、`fsx 11`。
+- **小程序 13 套 / 371 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
+  `einvoice 60`、`lanservice 42`、`draft 36`、`list 32`、`collect 31`、`filesend 31`、`ledger 27`、`scanbatch 27`、`discover 21`、`transfer 21`、`invoicesend 18`、`zip 14`、`fsx 11`。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。
-- 起服务冒烟：启动 `go run .` 后 `curl /api/health`、`/api/connect-qr.png` 应返回 200；台账接收/补录/清理接口应返回 200。
+- 起服务冒烟：启动 `go run .` 后 `curl /api/health`、`/api/connect-qr.png` 应返回 200；台账接收/补录/手动录入/清理/导出接口应返回 200。
 
 ---
 
 ## 10. 当前状态与已知限制
 
-**已完成里程碑**：M0 技术验证（真机全通过）→ M1 本地数据层 → M2 扫码 → M3 文件导入 → M5 导出 → P0（tabBar/分类/待复核）→ 批量扫码与导出优化 → 台账清理 → 仓库分层 → 电脑端最小文件服务 → 控制台 v0.2 → 电脑台账 v1 → 扫码结果发送台账 → 补录/按录入时间清理 → 地址自动发现 → 界面重排与行内补录 → 字段精简加报销人 → 原件传输页 → 判重口径统一 + 扫码连接 → 传输中心（统计页下线，30 天保留 + 手动/全部/自定义清理）。
+**已完成里程碑**：M0 技术验证（真机全通过）→ M1 本地数据层 → M2 扫码 → M3 文件导入 → M5 导出 → P0（tabBar/分类/待复核）→ 批量扫码与导出优化 → 台账清理 → 仓库分层 → 电脑端最小文件服务 → 控制台 v0.2 → 电脑台账 v1 → 扫码结果发送台账 → 补录/按录入时间清理 → 地址自动发现 → 界面重排与行内补录 → 字段精简加报销人 → 原件传输页 → 判重口径统一 + 扫码连接 → 传输中心 → **电脑端成为唯一数据源（小程序去本地台账、去分类、去手动录入，导出改从电脑端下载）**。
 
 **已知限制 / 待真机验收**：
 
 - 扫码连接需真机验证（安卓、iOS 都应可用）；二维码编码的是电脑端**首选**网卡地址，若手机不在同一网段，改用网页上列出的其它地址手填。
 - mDNS 自动发现仍需在安卓真机 + 同一 WiFi 验收；Windows 首次可能要在防火墙放行 UDP 5353。沙箱环境无法完成端到端 mDNS 验证。
 - 电脑端无 token，仅可信局域网自用。
-- 小程序扫码草稿只有号码/日期/金额，写入台账后需人工补报销人；电脑端可在台账页点报销人单元格直接改。
-- 小程序导出 CSV 是 8 列 + 「来源」共 9 列；电脑台账 8 列（设计差异，非 bug）。
-- 「清理台账」入口目前在台账页，未加到收票页（用户尚未确认是否要加）。
+- **小程序完全依赖电脑端**：电脑不开机/不在同一网段时，台账页、导出、甚至扫码发送都不可用（扫码能解析，但发不出去）。这是「不做本地存储」的直接代价。
+- **未发送的草稿会丢**：扫码中途退出小程序、或发送失败，这批草稿需要重扫。发送失败时的提示已明确说明这一点。
+- 小程序导出依赖 `wx.downloadFile` 访问局域网 HTTP 地址，和 request 一样属于「不校验合法域名」的自用场景；真机需确认非 HTTPS 下 downloadFile 不被拦。
+- 小程序详情页数据来自台账页同步的内存镜像，直接从别处跳进来时会先补拉一次；电脑端无单条查询接口。
 - 30 天保留是**时间**口径，不是容量口径：一次传几千张仍会占满磁盘，暂无限额。
 - 传输页两栏删除范围不同：删「我的上传」只清小程序本地历史（电脑端已收文件不动）；删「电脑已收」才真正删电脑磁盘文件。页脚有说明，但仍需真机确认用户不会误读。
 

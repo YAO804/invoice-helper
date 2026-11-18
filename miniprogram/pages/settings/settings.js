@@ -1,12 +1,8 @@
-const store = require('../../utils/store')
 const lanservice = require('../../utils/lanservice')
 const discover = require('../../utils/discover')
 
 Page({
   data: {
-    sortBy: 'created',
-    basis: 'created',
-    reviewCount: 0,
     desktopUrl: '',
     desktopStatus: '未配置',
     canDiscover: false,
@@ -18,29 +14,10 @@ Page({
   onShow() {
     const url = lanservice.getBase()
     this.setData({
-      sortBy: store.getSort(),
-      basis: store.getBasis(),
-      reviewCount: store.reviewList().length,
       desktopUrl: url,
       desktopStatus: url ? '已配置' : '未配置',
       canDiscover: discover.supported()
     })
-  },
-
-  onSortChange(e) {
-    const sortBy = e.currentTarget.dataset.sort
-    if (sortBy === this.data.sortBy) return
-    store.setSort(sortBy)
-    this.setData({ sortBy: sortBy })
-    wx.showToast({ title: '已切换排序方式', icon: 'none' })
-  },
-
-  onBasisChange(e) {
-    const basis = e.currentTarget.dataset.basis
-    if (basis === this.data.basis) return
-    store.setBasis(basis)
-    this.setData({ basis: basis })
-    wx.showToast({ title: '已切换归月口径', icon: 'none' })
   },
 
   onDesktopUrlInput(e) {
@@ -117,10 +94,6 @@ Page({
       this.setData({ desktopStatus: '连接失败' })
       wx.showToast({ title: e.message || '连接失败', icon: 'none' })
     }
-  },
-
-  onReview() {
-    wx.navigateTo({ url: '/pages/review/review' })
   },
 
   onExport() {

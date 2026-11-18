@@ -1,5 +1,5 @@
 /**
- * filesend.js 回归测试：原件传输、本地历史、失败隔离、台账去重。
+ * filesend.js 回归测试：原件传输、本地历史、失败隔离、保留期。
  *
  *   node test/miniprogram/filesend.test.js
  */
@@ -50,30 +50,12 @@ const fakeLan = {
   }
 }
 
-const fakeStore = {
-  listInvoices() {
-    return [
-      { invoice_no: 'N1', files: [
-        { path: '/i/1_a.xml', name: 'a.xml', size: 100, digest: 'd1' },
-        { path: '/i/2_b.pdf', name: 'b.pdf', size: 200, digest: 'd2' }
-      ] },
-      { invoice_no: 'N2', files: [
-        { path: '/i/3_a.xml', name: 'a.xml', size: 100, digest: 'd1' }
-      ] }
-    ]
-  }
-}
-
 const filesend = require('../../miniprogram/utils/filesend')
-filesend.setEnv({ wx: global.wx, lanservice: fakeLan, store: fakeStore })
+filesend.setEnv({ wx: global.wx, lanservice: fakeLan })
 
 check('human B', filesend.human(512), '512 B')
 check('human KB', filesend.human(2048), '2.0 KB')
 check('human MB', filesend.human(3 * 1024 * 1024), '3.00 MB')
-
-const ledger = filesend.ledgerFiles()
-check('台账原件按 digest 去重后 2 个', ledger.length, 2)
-check('台账原件带发票号码', ledger[0].invoiceNo, 'N1')
 
 filesend.sendList([
   { path: '/tmp/a', name: 'a.xml', size: 100 },
@@ -127,7 +109,7 @@ filesend.sendList([
   check('超期记录不再展示', filesend.displayHistory().map(function (e) { return e.id }), ['mid'])
   check('清理超期返回条数', filesend.purgeOldHistory(), 1)
   check('清理后只剩保留期内记录', filesend.history().map(function (e) { return e.id }), ['mid'])
-  check('来源文案可读', filesend.displayHistory()[0].sourceLabel, '台账原件')
+  check('来源文案可读', filesend.displayHistory()[0].sourceLabel, '会话文件')
   check('按 id 删除返回条数', filesend.removeHistory(['mid']), 1)
   check('删除后为空', filesend.history().length, 0)
   check('删除不存在的 id 返回 0', filesend.removeHistory(['nope']), 0)

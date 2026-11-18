@@ -48,6 +48,7 @@ func NewHandler(addr string, store *files.Store, invoiceLedger *ledger.Store, de
 	mux.HandleFunc("GET /api/files", d.listFiles)
 	mux.HandleFunc("GET /api/invoices", d.listInvoices)
 	mux.HandleFunc("POST /api/invoices", d.receiveInvoices)
+	mux.HandleFunc("POST /api/invoices/manual", d.createInvoice)
 	mux.HandleFunc("POST /api/invoices/check", d.checkInvoices)
 	mux.HandleFunc("POST /api/invoices/purge", d.purgeInvoices)
 	mux.HandleFunc("PUT /api/invoices/{id}", d.updateInvoice)

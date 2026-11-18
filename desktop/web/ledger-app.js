@@ -233,9 +233,12 @@ async function removeInvoices(ids) {
   }
 }
 
-function openEdit(item) {
-  EDIT_FIELDS.forEach(([field, id]) => { $(id).value = item[field] || '' })
-  editingId = item.id
+/** 补录与新增复用同一个弹窗：editingId 为 0 表示新增 */
+function openForm(item) {
+  EDIT_FIELDS.forEach(([field, id]) => { $(id).value = (item && item[field]) || '' })
+  editingId = item ? item.id : 0
+  $('editModalTitle').textContent = item ? '补录发票信息' : '新增发票'
+  $('saveEditBtn').textContent = item ? '保存补录' : '保存新增'
   $('invoiceEditModal').hidden = false
 }
 
@@ -245,18 +248,20 @@ function closeEdit() {
 }
 
 async function saveEdit() {
-  if (!editingId) return
   const payload = {}
   EDIT_FIELDS.forEach(([field, id]) => { payload[field] = ($(id).value || '').trim() })
   if (!payload.number) return alert('发票号码不能为空')
 
+  const creating = !editingId
   try {
-    await updateInvoice(editingId, payload)
+    if (creating) await createInvoice(payload)
+    else await updateInvoice(editingId, payload)
     closeEdit()
     await refreshLedger()
     if (window.refresh) window.refresh()
+    if (creating) showToast('已新增发票 ' + payload.number)
   } catch (error) {
-    alert('补录失败：' + error.message)
+    alert((creating ? '新增' : '补录') + '失败：' + error.message)
   }
 }
 
@@ -335,9 +340,10 @@ function bindLedgerEvents() {
     const editButton = event.target.closest('[data-action="edit-invoice"]')
     if (editButton) {
       const item = (invoiceData.items || []).find((row) => row.id === Number(editButton.dataset.id))
-      if (item) openEdit(item)
+      if (item) openForm(item)
       return
     }
+    if (event.target.closest('#invoiceCreateBtn')) return openForm(null)
     if (event.target.closest('#saveEditBtn')) return saveEdit()
     if (event.target.closest('#closeEditBtn') || event.target.closest('#cancelEditBtn')) return closeEdit()
     if (event.target.closest('#invoicePurgePreviewBtn')) return purgeRange(false)

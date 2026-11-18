@@ -26,6 +26,9 @@ global.wx = {
     if (options.url.indexOf('/api/invoices/check') >= 0) {
       return options.success({ statusCode: 200, data: { matches: stubMatches } })
     }
+    if (options.url.indexOf('/api/invoices') >= 0 && options.method === 'GET') {
+      return options.success({ statusCode: 200, data: { items: [{ id: 1, number: 'N1' }], total: 1 } })
+    }
     if (options.url.indexOf('/api/invoices') >= 0) {
       return options.success({ statusCode: 200, data: stubSend })
     }
@@ -116,6 +119,21 @@ lanservice.heartbeat().then(function (data) {
   return lanservice.purgeIncoming(30, true)
 }).then(function (data) {
   check('确认清理后 confirmed', data.confirmed, true)
+
+  return lanservice.fetchInvoices('only_duplicates=1&sort=created')
+}).then(function (data) {
+  check('台账只读地址', lastRequest.url, 'http://192.168.1.20:8765/api/invoices?only_duplicates=1&sort=created')
+  check('台账用 GET', lastRequest.method, 'GET')
+  check('台账返回条数', data.total, 1)
+
+  return lanservice.fetchInvoices('')
+}).then(function () {
+  check('空查询不带问号', lastRequest.url, 'http://192.168.1.20:8765/api/invoices')
+  check('导出地址', lanservice.exportURL('sort=created'), 'http://192.168.1.20:8765/api/invoices/export?sort=created')
+  check('导出地址无查询串', lanservice.exportURL(''), 'http://192.168.1.20:8765/api/invoices/export')
+
+  lanservice.setBase('')
+  check('未连接时导出地址为空', lanservice.exportURL('sort=created'), '')
 
   console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
   process.exit(failCount === 0 ? 0 : 1)

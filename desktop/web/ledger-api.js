@@ -38,6 +38,14 @@ function updateInvoice(id, data) {
   })
 }
 
+function createInvoice(data) {
+  return requestJSON('/api/invoices/manual', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+}
+
 function purgeInvoices(from, to, confirm) {
   return requestJSON('/api/invoices/purge', {
     method: 'POST',

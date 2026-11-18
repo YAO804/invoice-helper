@@ -21,7 +21,6 @@ Page({
   data: {
     connected: false,
     baseText: '未配置电脑地址',
-    ledgerFileCount: 0,
     tab: 'sent',
     noun: '条记录',
     history: [],
@@ -45,8 +44,7 @@ Page({
     const base = lanservice.getBase()
     this.setData({
       connected: !!base,
-      baseText: base ? ('电脑地址：' + base) : '未配置电脑地址',
-      ledgerFileCount: filesend.ledgerFiles().length
+      baseText: base ? ('电脑地址：' + base) : '未配置电脑地址'
     })
   },
 
@@ -225,25 +223,6 @@ Page({
         content: '成功 ' + r.ok + ' 个' +
           (r.duplicate ? '\n电脑端已有 ' + r.duplicate + ' 个' : '') +
           (r.fail ? '\n失败 ' + r.fail + ' 个' : ''),
-        showCancel: false,
-        success: function () { that.loadRemote() }
-      })
-    })
-  },
-
-  onFromLedger() {
-    const that = this
-    if (!lanservice.getBase()) return toast('请先连接电脑')
-    if (!filesend.ledgerFiles().length) return toast('台账里没有已存原件')
-
-    wx.showLoading({ title: '上传中', mask: true })
-    filesend.sendLedgerFiles().then(function (r) {
-      wx.hideLoading()
-      that.refreshHistory()
-      wx.showModal({
-        title: '上传完成',
-        content: '共 ' + r.total + ' 个原件：成功 ' + r.ok +
-          (r.duplicate ? '、已存在 ' + r.duplicate : '') + '、失败 ' + r.fail,
         showCancel: false,
         success: function () { that.loadRemote() }
       })

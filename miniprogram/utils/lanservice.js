@@ -125,6 +125,22 @@ function listFiles() {
 }
 
 /**
+ * 拉取电脑端台账（只读）。
+ * 小程序不做本地台账，台账页每次进来都问电脑端要最新数据，
+ * 筛选和排序也交给电脑端算，两端口径才不会漂移。
+ */
+function fetchInvoices(query) {
+  return getJSON('/api/invoices' + (query ? '?' + query : ''))
+}
+
+/** 电脑端 CSV 导出地址，给 wx.downloadFile 用；未连接时返回空串 */
+function exportURL(query) {
+  const base = getBase()
+  if (!base) return ''
+  return base + '/api/invoices/export' + (query ? '?' + query : '')
+}
+
+/**
  * 删除电脑端已收文件。不传 ids 表示清空全部。
  * 只删电脑端副本，手机里的台账记录和原件不受影响。
  */
@@ -223,6 +239,8 @@ module.exports = {
   checkInvoiceNumbers: checkInvoiceNumbers,
   sendInvoices: sendInvoices,
   listFiles: listFiles,
+  fetchInvoices: fetchInvoices,
+  exportURL: exportURL,
   deleteIncoming: deleteIncoming,
   purgeIncoming: purgeIncoming,
   uploadFile: uploadFile,

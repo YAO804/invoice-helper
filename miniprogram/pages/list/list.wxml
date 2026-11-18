@@ -1,77 +1,83 @@
 <view class="page">
 
-  <view class="card summary">
+  <view wx:if="{{!connected}}" class="card">
     <view class="row">
-      <text class="small muted">{{currentMonthText}}</text>
-      <text class="tiny muted">共 {{totalCount}} 张</text>
+      <text class="card-t">台账在电脑上</text>
+      <text class="badge badge-grey">未连接</text>
     </view>
-    <view class="sum-amount">¥ {{totalText}}</view>
-    <view class="row tiny muted">
-      <text>数据仅存本机</text>
-    </view>
+    <view class="tiny muted" style="margin-top:10rpx">小程序不保存发票数据，台账由电脑端维护。连上电脑后这里会自动同步。</view>
+    <view class="btn btn-block" style="margin-top:20rpx" bindtap="onConnect" hover-class="btn-hover">去连接电脑</view>
   </view>
 
-  <view class="card quick">
-    <view class="quick-item" bindtap="onReview" hover-class="btn-hover">
-      <text class="quick-n">{{reviewCount}}</text>
-      <text>待复核</text>
-      <text wx:if="{{reviewCount}}" class="badge badge-warn">需处理</text>
-    </view>
-    <view class="quick-item" bindtap="onAdd" hover-class="btn-hover">
-      <text class="quick-n">＋</text>
-      <text>手动录入</text>
-    </view>
-    <view class="quick-item" bindtap="onManage" hover-class="btn-hover">
-      <text class="quick-n">≡</text>
-      <text>清理台账</text>
-    </view>
-  </view>
-
-  <view class="card">
-    <view class="row sort-bar">
-      <view class="sort-btn {{sortBy === 'created' ? 'on' : ''}}" data-sort="created" bindtap="onSortChange" hover-class="btn-hover">录入时间</view>
-      <view class="sort-btn {{sortBy === 'number' ? 'on' : ''}}" data-sort="number" bindtap="onSortChange" hover-class="btn-hover">发票号码</view>
-      <view class="sort-btn {{sortBy === 'issued' ? 'on' : ''}}" data-sort="issued" bindtap="onSortChange" hover-class="btn-hover">开票日期</view>
-      <view class="sort-btn {{sortBy === 'reimburser' ? 'on' : ''}}" data-sort="reimburser" bindtap="onSortChange" hover-class="btn-hover">报销人</view>
-    </view>
-    <picker mode="selector" range="{{monthOptions}}" value="{{monthIndex}}" bindchange="onMonthChange">
-      <view class="picker-box row">
-        <text>月份：{{currentMonthText}}</text>
-        <text class="muted tiny">切换 ›</text>
+  <block wx:else>
+    <view class="card">
+      <view class="row">
+        <text class="small muted">{{baseText}}</text>
+        <text class="tiny muted">{{syncedText}}</text>
       </view>
-    </picker>
-    <view class="chips">
-      <view wx:for="{{categoryChips}}" wx:key="name" class="chip {{item.on ? 'on' : ''}}" data-value="{{item.value}}" bindtap="onCategoryChange" hover-class="btn-hover">{{item.name}}</view>
-    </view>
-    <input class="input search" placeholder="搜索报销人 / 发票号码 / 金额" value="{{keyword}}" bindinput="onKeywordInput" />
-  </view>
-
-  <view wx:for="{{invoices}}" wx:key="id" class="card invoice" data-id="{{item.id}}" bindtap="onOpenDetail" bindlongpress="onLongPress" hover-class="btn-hover">
-    <view class="row">
-      <view class="grow">
-        <view class="card-t ellipsis">{{item.title}}</view>
-        <view class="tiny muted mono" style="margin-top:8rpx">{{item.no}}</view>
+      <view class="stats">
+        <view class="stat-cell">
+          <view class="stat-n">{{total}}</view>
+          <view class="tiny muted">张</view>
+        </view>
+        <view class="stat-cell">
+          <view class="stat-n amount">{{amountText}}</view>
+          <view class="tiny muted">合计元</view>
+        </view>
+        <view class="stat-cell">
+          <view class="stat-n {{duplicateGroups ? 'warn' : ''}}">{{duplicateGroups}}</view>
+          <view class="tiny muted">重复组</view>
+        </view>
+        <view class="stat-cell">
+          <view class="stat-n {{needFill ? 'warn' : ''}}">{{needFill}}</view>
+          <view class="tiny muted">待补录</view>
+        </view>
       </view>
-      <view class="amount-lg">¥{{item.amountText}}</view>
     </view>
-    <view class="row" style="margin-top:18rpx">
-      <view>
-        <text class="tiny muted">{{item.importText}} · 开票 {{item.date}}</text>
-        <text class="badge {{item.categoryClass}}">{{item.categoryText}}</text>
-        <text class="badge {{item.sourceClass}}">{{item.sourceText}}</text>
-        <text wx:if="{{item.anomaly > 0}}" class="badge badge-warn">{{item.anomaly}} 项待核对</text>
+
+    <view class="card">
+      <input class="input" placeholder="搜索号码 / 代码 / 报销人 / 批次 / 金额" value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" />
+      <view class="filter-row">
+        <view class="chip {{onlyDuplicates ? 'on' : ''}}" bindtap="onToggleDuplicates" hover-class="btn-hover">仅看重复</view>
+        <view class="chip {{onlyNeedFill ? 'on' : ''}}" bindtap="onToggleNeedFill" hover-class="btn-hover">仅看待补录</view>
+        <text wx:if="{{hasFilter}}" class="link" bindtap="onReset">重置</text>
       </view>
-      <text class="tiny {{item.statusText === '已核验' ? '' : 'muted'}}">{{item.statusText}} ›</text>
+      <view class="sort-bar">
+        <view wx:for="{{sorts}}" wx:key="value" class="sort-btn {{item.on ? 'on' : ''}}" data-sort="{{item.value}}" bindtap="onSortChange" hover-class="btn-hover">{{item.label}}</view>
+      </view>
     </view>
-  </view>
 
-  <view wx:if="{{!invoices.length}}" class="empty">
-    <view>这里还没有发票。</view>
-    <view>点上面「手动录入」，或到「收票」页扫码、导入文件。</view>
-  </view>
+    <view wx:if="{{error}}" class="card">
+      <view class="small danger">{{error}}</view>
+      <view class="tiny muted" style="margin-top:8rpx">检查电脑端是否在运行，或到「设置」重新连接。</view>
+    </view>
 
-  <view wx:if="{{invoices.length}}" class="tiny muted" style="text-align:center;padding:0 0 16rpx">长按发票可编辑或删除</view>
+    <view wx:for="{{items}}" wx:key="id" class="card inv" data-id="{{item.id}}" bindtap="onOpenDetail" hover-class="btn-hover">
+      <view class="row">
+        <view class="grow">
+          <view class="row">
+            <text class="small mono ellipsis grow">{{item.number || '无号码'}}</text>
+            <text wx:if="{{item.duplicate}}" class="badge badge-warn">重复</text>
+            <text wx:if="{{item.needFill}}" class="badge badge-grey">待补录</text>
+          </view>
+          <view class="tiny muted" style="margin-top:6rpx">{{item.code || '无代码'}} · {{item.kind || '票种待补'}}</view>
+        </view>
+        <text class="amount-lg">{{item.amount ? '¥' + item.amount : '金额待补'}}</text>
+      </view>
+      <view class="row tiny muted" style="margin-top:12rpx">
+        <text class="ellipsis">开票 {{item.issueDate || '待补'}} · {{item.reimburser || '报销人待补'}}</text>
+        <text style="margin-left:12rpx">{{item.createdAt}}</text>
+      </view>
+    </view>
 
-  <view class="foot tiny muted">本工具仅做信息采集与本地归档辅助，不查验发票真伪。真伪以国家税务总局查验平台结果为准。</view>
+    <view wx:if="{{loading && !items.length}}" class="empty">正在读取电脑台账…</view>
+
+    <view wx:if="{{!loading && !items.length && !error}}" class="empty">
+      <block wx:if="{{hasFilter}}">没有匹配的发票，换个条件试试。</block>
+      <block wx:else>电脑台账还是空的。到「收票」页扫码或导入文件。</block>
+    </view>
+  </block>
+
+  <view class="foot tiny muted">台账只存在电脑端，小程序仅用于查看与扫码判重；补录、删除、手动录入请到电脑端网页操作。</view>
 
 </view>

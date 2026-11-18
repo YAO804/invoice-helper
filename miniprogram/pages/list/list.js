@@ -1,150 +1,180 @@
-const store = require('../../utils/store')
-const category = require('../../utils/category')
-const labels = require('../../utils/labels')
+/**
+ * 台账页：电脑端台账的只读视图。
+ *
+ * 小程序不存台账，进页面就去问电脑端要；筛选和排序也由电脑端算，
+ * 两端只有一套口径。这里能做的只有「看」和「跳详情」，
+ * 增删改都在电脑端网页。
+ */
 
-function categoryChips(active) {
-  return ['全部'].concat(category.CATEGORIES).map(function (name) {
-    const value = name === '全部' ? '' : name
-    return { name: name, value: value, on: value === active }
-  })
+const ledger = require('../../utils/ledger')
+const lanservice = require('../../utils/lanservice')
+
+const SEARCH_DELAY = 300
+const SORT_LABELS = [
+  { value: 'created', label: '录入时间' },
+  { value: 'number', label: '发票号码' },
+  { value: 'issued', label: '开票日期' },
+  { value: 'reimburser', label: '报销人' }
+]
+
+let searchTimer = null
+
+function clockText(ts) {
+  const d = new Date(Number(ts) || 0)
+  if (!Number(ts)) return ''
+  const p = function (n) { return n < 10 ? '0' + n : '' + n }
+  return '更新于 ' + p(d.getHours()) + ':' + p(d.getMinutes())
 }
 
 Page({
   data: {
-    sortBy: 'created',
-    basis: 'created',
-    categoryChips: categoryChips(''),
-    categoryFilter: '',
-    months: [],
-    monthOptions: ['全部月份'],
-    monthIndex: 0,
-    month: '',
+    connected: false,
+    baseText: '',
     keyword: '',
-    invoices: [],
-    totalCount: 0,
-    totalText: '0.00',
-    reviewCount: 0,
-    currentMonthText: '全部月份'
+    onlyDuplicates: false,
+    onlyNeedFill: false,
+    sort: 'created',
+    sorts: SORT_LABELS.map(function (item) {
+      return Object.assign({ on: item.value === 'created' }, item)
+    }),
+    hasFilter: false,
+    items: [],
+    total: 0,
+    amountText: '0.00',
+    duplicateGroups: 0,
+    needFill: 0,
+    loading: false,
+    error: '',
+    syncedText: ''
   },
 
-  onLoad() {
-    this.setData({ sortBy: store.getSort(), basis: store.getBasis() })
-    this.loadMonths()
-  },
-  onShow() { this.loadMonths(); this.refresh() },
-
-  loadMonths() {
-    const months = store.months(this.data.basis)
-    this.setData({ months: months, monthOptions: ['全部月份'].concat(months) })
-  },
-
-  onSortChange(e) {
-    const sortBy = e.currentTarget.dataset.sort
-    if (sortBy === this.data.sortBy) return
-    store.setSort(sortBy)
-    this.setData({ sortBy: sortBy })
+  onShow() {
     this.refresh()
   },
 
-  onCategoryChange(e) {
-    const value = e.currentTarget.dataset.value
-    this.setData({ categoryFilter: value === '全部' ? '' : value })
-    this.refresh()
+  onPullDownRefresh() {
+    this.refresh().then(function () { wx.stopPullDownRefresh() })
   },
 
-  onMonthChange(e) {
-    const i = Number(e.detail.value)
-    const name = i === 0 ? '' : this.data.months[i - 1]
-    this.setData({ monthIndex: i, month: name, currentMonthText: name || '全部月份' })
-    this.refresh()
+  onUnload() {
+    clearTimeout(searchTimer)
+  },
+
+  /** 未连接就直接给空状态，不打无用的请求 */
+  refresh() {
+    const base = lanservice.getBase()
+    if (!base) {
+      ledger.clear()
+      this.setData({
+        connected: false,
+        baseText: '',
+        items: [],
+        total: 0,
+        amountText: '0.00',
+        duplicateGroups: 0,
+        needFill: 0,
+        loading: false,
+        error: ''
+      })
+      return Promise.resolve()
+    }
+
+    this.setData({ connected: true, baseText: base, loading: true, error: '' })
+    return this.load()
+  },
+
+  load() {
+    const that = this
+    return ledger.sync(this.filters()).then(function (snap) {
+      that.setData({
+        items: snap.items,
+        total: snap.total,
+        amountText: snap.amountText,
+        duplicateGroups: snap.duplicateGroups,
+        needFill: snap.needFill,
+        syncedText: clockText(snap.syncedAt),
+        loading: false
+      })
+    }).catch(function (error) {
+      ledger.clear()
+      that.setData({
+        items: [],
+        total: 0,
+        amountText: '0.00',
+        duplicateGroups: 0,
+        needFill: 0,
+        loading: false,
+        error: error.message || '读取电脑台账失败'
+      })
+    })
+  },
+
+  filters() {
+    return {
+      keyword: this.data.keyword,
+      onlyDuplicates: this.data.onlyDuplicates,
+      onlyNeedFill: this.data.onlyNeedFill,
+      sort: this.data.sort
+    }
+  },
+
+  syncFilterState(patch) {
+    const next = Object.assign({}, this.data, patch)
+    this.setData(Object.assign({
+      hasFilter: !!(String(next.keyword || '').trim() || next.onlyDuplicates || next.onlyNeedFill)
+    }, patch))
   },
 
   onKeywordInput(e) {
-    this.setData({ keyword: e.detail.value })
-    this.refresh()
+    const that = this
+    this.syncFilterState({ keyword: e.detail.value })
+    // 打字时每次都请求会把电脑端打满，停顿一下再查
+    clearTimeout(searchTimer)
+    searchTimer = setTimeout(function () { that.load() }, SEARCH_DELAY)
   },
 
-  refresh() {
-    const filter = {
-      month: this.data.month,
-      monthBasis: this.data.basis,
-      sortBy: this.data.sortBy,
-      category: this.data.categoryFilter
-    }
-    const list = store.listInvoices(Object.assign({}, filter, { keyword: this.data.keyword }))
-    const statList = store.listInvoices(filter)
+  onToggleDuplicates() {
+    this.syncFilterState({ onlyDuplicates: !this.data.onlyDuplicates })
+    this.load()
+  },
+
+  onToggleNeedFill() {
+    this.syncFilterState({ onlyNeedFill: !this.data.onlyNeedFill })
+    this.load()
+  },
+
+  onSortChange(e) {
+    const sort = e.currentTarget.dataset.sort
+    if (sort === this.data.sort) return
     this.setData({
-      invoices: list.map(toCard),
-      categoryChips: categoryChips(this.data.categoryFilter),
-      totalCount: statList.length,
-      totalText: store.yuan(statList.reduce(function (s, inv) { return s + (Number(inv.total_cent) || 0) }, 0)),
-      reviewCount: store.reviewList().length
+      sort: sort,
+      sorts: SORT_LABELS.map(function (item) {
+        return Object.assign({ on: item.value === sort }, item)
+      })
     })
+    this.load()
+  },
+
+  onReset() {
+    this.setData({
+      keyword: '',
+      onlyDuplicates: false,
+      onlyNeedFill: false,
+      hasFilter: false
+    })
+    this.load()
   },
 
   onOpenDetail(e) {
     wx.navigateTo({ url: '/pages/detail/detail?id=' + e.currentTarget.dataset.id })
   },
 
-  onLongPress(e) {
-    const that = this
-    const id = Number(e.currentTarget.dataset.id)
-    wx.showActionSheet({
-      itemList: ['查看详情', '编辑', '删除这张'],
-      success(res) {
-        if (res.tapIndex === 0) that.openDetail(id)
-        else if (res.tapIndex === 1) wx.navigateTo({ url: '/pages/edit/edit?id=' + id })
-        else if (res.tapIndex === 2) that.confirmDelete(id)
-      }
-    })
+  onConnect() {
+    // 设置页是 tabBar 页面，只能 switchTab
+    wx.switchTab({ url: '/pages/settings/settings' })
   },
 
-  openDetail(id) {
-    wx.navigateTo({ url: '/pages/detail/detail?id=' + id })
-  },
-
-  confirmDelete(id) {
-    const that = this
-    wx.showModal({
-      title: '删除这张记录？',
-      content: '只删台账记录，不删原件文件。删除后无法恢复。',
-      confirmColor: '#b42318',
-      success(res) {
-        if (!res.confirm) return
-        store.deleteInvoice(id)
-        wx.showToast({ title: '已删除', icon: 'none' })
-        that.refresh()
-      }
-    })
-  },
-
-  onManage() {
-    wx.navigateTo({ url: '/pages/manage/manage' })
-  },
-
-  onReview() {
-    wx.navigateTo({ url: '/pages/review/review' })
-  },
-
-  onAdd() {
-    wx.navigateTo({ url: '/pages/edit/edit' })
+  onCollect() {
+    wx.switchTab({ url: '/pages/collect/collect' })
   }
 })
-
-function toCard(inv) {
-  const cat = inv.category || '未分类'
-  return {
-    id: inv.id,
-    title: inv.reimburser || inv.invoice_no || '未填报销人',
-    no: inv.invoice_no || '无号码',
-    date: inv.issue_date || '日期待补',
-    importText: labels.importText(inv.created_at),
-    amountText: store.yuan(inv.total_cent),
-    sourceText: labels.sourceName(inv.source),
-    sourceClass: inv.source === 'xml' || inv.source === 'ofd' ? '' : 'badge-grey',
-    categoryText: cat,
-    categoryClass: cat === '未分类' ? 'badge-grey' : '',
-    anomaly: (inv.anomaly || []).length,
-    statusText: inv.status === 'manually_verified' ? '已核验' : '待核验'
-  }
-}

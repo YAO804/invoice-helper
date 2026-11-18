@@ -1,9 +1,0 @@
-.hint-card {
-  background: #e1f5ee;
-  color: #0f6e56;
-}
-
-.foot {
-  padding: 10rpx 8rpx;
-  line-height: 1.7;
-}

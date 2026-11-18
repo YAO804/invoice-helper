@@ -1,22 +1,29 @@
 <view class="page">
 
   <view class="card">
-    <view class="card-t">把发票收进来</view>
-    <view class="tiny muted" style="margin-top:8rpx">台账 {{count}} 张 · 待复核 {{reviewCount}} 张</view>
+    <view class="row">
+      <text class="card-t">把发票收进来</text>
+      <text class="badge {{connected ? '' : 'badge-grey'}}">{{connected ? '已连接' : '未连接'}}</text>
+    </view>
+    <view class="tiny muted" style="margin-top:10rpx">
+      <block wx:if="{{connected}}">电脑台账现有 {{ledgerCount}} 张{{syncing ? '（同步中…）' : ''}}。扫到的票会先查重再发送。</block>
+      <block wx:else>还没连电脑。小程序不存台账，必须先连上电脑才能收票。</block>
+    </view>
+    <view wx:if="{{!connected}}" class="btn btn-block" style="margin-top:18rpx" bindtap="onSettings" hover-class="btn-hover">去连接电脑</view>
   </view>
 
   <view class="card">
     <view class="card-t" style="margin-bottom:14rpx">扫码</view>
     <view class="btn btn-block" bindtap="onScan" hover-class="btn-hover">扫数电票二维码</view>
-    <view class="tiny muted" style="margin-top:14rpx">每扫一张会问是否继续。二维码只有号码、金额、日期，报销人请到台账补录。</view>
+    <view class="tiny muted" style="margin-top:14rpx">每扫一张会问是否继续。二维码只有号码、金额、日期，报销人发送后到电脑端补录。</view>
     <view class="btn btn-ghost btn-block" style="margin-top:16rpx" bindtap="onBatchScan" hover-class="btn-hover">批量连续扫码</view>
-    <view class="tiny muted" style="margin-top:14rpx">一次扫很多张时用这个：不用逐张确认，点左上角 × 或手机返回键结束，每 10 张也会问一次。扫完可直接导出 CSV 发到电脑。</view>
+    <view class="tiny muted" style="margin-top:14rpx">一次扫很多张时用这个：点左上角 × 或手机返回键结束，每 10 张也会问一次。扫完一次性发送。</view>
   </view>
 
   <view class="card">
     <view class="card-t" style="margin-bottom:14rpx">文件导入</view>
     <view class="btn btn-ghost btn-block" bindtap="onImport" hover-class="btn-hover">批量导入文件（最多 20 个）</view>
-    <view class="tiny muted" style="margin-top:14rpx">支持 .xml / .ofd / .pdf。文件需先以「文件」消息发到文件传输助手，发成图片会被改名。XML 可自动填全字段，OFD/PDF 只存原件、字段需补录。</view>
+    <view class="tiny muted" style="margin-top:14rpx">支持 .xml / .ofd / .pdf。文件需先以「文件」消息发到文件传输助手，发成图片会被改名。XML 能自动填全字段，OFD/PDF 只取到文件名、字段需在电脑端补。</view>
     <view class="divider"></view>
     <view class="btn btn-block" bindtap="onTransfer" hover-class="btn-hover">传到电脑 / 查看发送记录 ›</view>
     <view class="tiny muted" style="margin-top:14rpx">把原件文件发给电脑端归档，可查看已发送哪些文件。</view>
@@ -24,16 +31,14 @@
 
   <view class="card">
     <view class="card-t" style="margin-bottom:14rpx">其他</view>
-    <view class="btn btn-grey btn-block" bindtap="onAdd" hover-class="btn-hover">＋ 手动录入</view>
-    <view class="btn btn-grey btn-block" style="margin-top:16rpx" bindtap="onReview" hover-class="btn-hover">查看待复核（{{reviewCount}}）</view>
-    <view class="btn btn-grey btn-block" style="margin-top:16rpx" bindtap="onExport" hover-class="btn-hover">导出与备份</view>
-    <view class="tiny muted" style="margin-top:14rpx">导入后到台账核对字段。数据只存本机，记得定期导出留底。</view>
+    <view class="btn btn-grey btn-block" bindtap="onLedger" hover-class="btn-hover">查看台账</view>
+    <view class="tiny muted" style="margin-top:14rpx">台账、补录、删除、手动录入都在电脑端。手机端只做扫码和查看。</view>
   </view>
 
   <view class="card tech">
     <view class="small muted" bindtap="onM0" hover-class="btn-hover">M0 技术验证 ›</view>
   </view>
 
-  <view class="foot tiny muted">本工具仅做信息采集与本地归档辅助，不查验发票真伪。真伪以国家税务总局查验平台结果为准。</view>
+  <view class="foot tiny muted">本工具仅做信息采集与归档辅助，不查验发票真伪。真伪以国家税务总局查验平台结果为准。</view>
 
 </view>

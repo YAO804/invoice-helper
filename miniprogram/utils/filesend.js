@@ -1,16 +1,13 @@
 /**
- * 文件传输：把小程序里的原件上传到电脑端，并维护本地发送历史。
+ * 文件传输：把原件上传到电脑端，并维护本地发送历史。
  *
- * 两个来源：
- *   1) 微信会话文件 —— chooseMessageFile 选完直接上传（原件）
- *   2) 台账已存原件 —— 从台账记录的 files[] 里取本地路径上传，不用重新选
+ * 原件来源只有「微信会话文件」一条：台账不再存本机，也就没有「台账已存原件」可发。
  *
  * 发送历史存在本地 Storage，记录文件名/大小/时间/是否重复/是否失败，
- * 供"文件传输"页展示；电脑端权威列表通过 lanservice.listFiles() 拉取对账。
+ * 供「传输中心」页展示；电脑端权威列表通过 lanservice.listFiles() 拉取对账。
  */
 
 const lanservice = require('./lanservice')
-const store = require('./store')
 
 const HISTORY_KEY = 'file_send_history'
 const MAX_HISTORY = 100
@@ -18,7 +15,7 @@ const MAX_FILES = 20
 const MAX_BYTES = 20 * 1024 * 1024
 
 // 发送记录与电脑端副本都只保留 30 天：传输记录是过程数据，久了没有查看价值，
-// 发票原件该留在台账和电脑的备份里，不该靠这里长期保存。
+// 发票原件该留在电脑的台账备份里，不该靠这里长期保存。
 const RETENTION_DAYS = 30
 const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000
 
@@ -26,13 +23,11 @@ let seq = 0
 
 let WX = null
 let LAN = null
-let STORE = null
 
 /** 测试注入用 */
 function setEnv(opts) {
   if (opts.wx) WX = opts.wx
   if (opts.lanservice) LAN = opts.lanservice
-  if (opts.store) STORE = opts.store
 }
 
 function wxApi() {
@@ -43,11 +38,6 @@ function wxApi() {
 function lan() {
   if (!LAN) LAN = lanservice
   return LAN
-}
-
-function st() {
-  if (!STORE) STORE = store
-  return STORE
 }
 
 function human(bytes) {
@@ -129,7 +119,7 @@ function displayHistory() {
       humanSize: human(entry.size),
       timeText: timeText(entry.at),
       statusLabel: statusLabels[entry.status] || entry.status,
-      sourceLabel: entry.source === 'ledger' ? '台账原件' : '会话文件'
+      sourceLabel: '会话文件'
     })
   })
 }
@@ -211,35 +201,6 @@ function sendFromChat() {
   })
 }
 
-/** 台账里所有已存原件，按 digest+size 去重 */
-function ledgerFiles() {
-  const list = st().listInvoices()
-  const seen = {}
-  const out = []
-  list.forEach(function (inv) {
-    (inv.files || []).forEach(function (f) {
-      if (!f.path) return
-      const key = (f.digest || '') + ':' + (f.size || 0)
-      if (seen[key]) return
-      seen[key] = true
-      out.push({
-        path: f.path,
-        name: f.name || 'invoice',
-        size: f.size || 0,
-        invoiceNo: inv.invoice_no || ''
-      })
-    })
-  })
-  return out
-}
-
-/** 来源二：把台账已存原件传到电脑端，不用重新选文件 */
-function sendLedgerFiles() {
-  const files = ledgerFiles()
-  if (!files.length) return Promise.resolve({ total: 0, ok: 0, duplicate: 0, fail: 0 })
-  return sendList(files, 'ledger')
-}
-
 /** 电脑端权威文件列表，用于页面对账展示 */
 function remoteFiles() {
   return lan().listFiles().then(function (data) {
@@ -277,8 +238,6 @@ module.exports = {
   sendOne: sendOne,
   sendList: sendList,
   sendFromChat: sendFromChat,
-  ledgerFiles: ledgerFiles,
-  sendLedgerFiles: sendLedgerFiles,
   remoteFiles: remoteFiles,
   remoteList: remoteList
 }

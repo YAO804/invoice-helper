@@ -1,3 +1,5 @@
+/* 详情页：只读字段列表 + 重复组 */
+
 .amount-xl {
   font-size: 44rpx;
   font-weight: 500;
@@ -9,25 +11,24 @@
   word-break: break-all;
 }
 
-.item {
-  padding: 16rpx 0;
+.kv {
+  display: flex;
+  align-items: baseline;
+  padding: 12rpx 0;
   border-bottom: 1rpx solid #ecece8;
 }
 
-.item:last-child {
+.kv:last-child {
   border-bottom: none;
 }
 
-.meta-row {
-  padding: 6rpx 0;
-  align-items: flex-start;
+.kv .tiny.muted {
+  flex: 0 0 140rpx;
 }
 
-.meta-row .muted {
-  flex: 0 0 160rpx;
-}
-
-.foot {
-  padding: 10rpx 8rpx;
-  line-height: 1.7;
+.dup-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10rpx 0;
+  border-top: 1rpx solid #ecece8;
 }

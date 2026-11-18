@@ -1,31 +1,51 @@
-const store = require('../../utils/store')
+/**
+ * 收票页：扫码 / 选文件 → 内存草稿 → 查重 → 发送到电脑台账。
+ *
+ * 小程序不落本地台账，所以每一步都是「当场发送」：
+ * 发送失败或用户取消，这批草稿就丢了，需要重新扫。
+ * 这是刻意取舍——只保留一份权威数据，避免两端对账。
+ */
+
 const collect = require('../../utils/collect')
-const batch = require('../../utils/batch')
 const scanbatch = require('../../utils/scanbatch')
-const batchmark = require('../../utils/batchmark')
 const invoicesend = require('../../utils/invoicesend')
+const ledger = require('../../utils/ledger')
+const lanservice = require('../../utils/lanservice')
 
 Page({
   data: {
-    count: 0,
-    amountText: '0.00',
-    reviewCount: 0
+    connected: false,
+    baseText: '',
+    syncing: false,
+    ledgerCount: 0,
+    sending: false
   },
 
-  onShow() { this.refresh() },
+  onShow() {
+    this.refresh()
+  },
 
   refresh() {
-    const list = store.listInvoices({ sortBy: store.getSort() })
-    this.setData({
-      count: list.length,
-      amountText: store.yuan(list.reduce(function (s, inv) { return s + (Number(inv.total_cent) || 0) }, 0)),
-      reviewCount: store.reviewList().length
+    const base = lanservice.getBase()
+    this.setData({ connected: !!base, baseText: base })
+    if (!base) return Promise.resolve()
+    // 顺手把台账同步到内存，扫码时才能当场判断是否重复
+    return this.syncLedger()
+  },
+
+  syncLedger() {
+    const that = this
+    this.setData({ syncing: true })
+    return ledger.sync({}).then(function (snap) {
+      that.setData({ ledgerCount: snap.total, syncing: false })
+    }).catch(function () {
+      that.setData({ ledgerCount: 0, syncing: false })
     })
   },
 
   onScan() {
     const that = this
-    collect.scanDrafts().then(function (r) { that.commit(r.drafts) })
+    collect.scanDrafts().then(function (r) { that.send(r.drafts) })
   },
 
   onBatchScan() {
@@ -37,27 +57,16 @@ Page({
   },
 
   finishBatch(r) {
-    const that = this
     if (!r.drafts.length) {
       const tip = r.duplicates ? '扫到的 ' + r.duplicates + ' 张都与已有票重复，已跳过' : '没有扫到发票'
       return wx.showToast({ title: tip, icon: 'none', duration: 2500 })
     }
-
-    const batchId = 'b' + Date.now()
-    const marked = r.drafts.map(function (d) { return Object.assign({}, d, { batch_id: batchId }) })
-    const report = batch.saveAll(marked)
-    batchmark.set(batchId)
-
-    const repeatTip = r.duplicates ? '\n扫码时跳过重复 ' + r.duplicates + ' 张。' : ''
+    const repeatTip = r.duplicates ? '\n跳过重复 ' + r.duplicates + ' 张。' : ''
     wx.showModal({
       title: '批量扫码完成',
-      content: batch.describe(report) + repeatTip + '\n\n本次收下 ' + r.drafts.length + ' 张。是否发送到电脑台账？',
-      confirmText: '发送',
-      cancelText: '稍后',
-      success(res) {
-        that.refresh()
-        if (res.confirm) sendToDesktop(r.drafts, function () { that.refresh() })
-      }
+      content: '本次收下 ' + r.drafts.length + ' 张。' + repeatTip,
+      showCancel: false,
+      success: () => this.send(r.drafts)
     })
   },
 
@@ -65,73 +74,80 @@ Page({
     const that = this
     collect.fileDrafts().then(function (r) {
       if (!r.ok) return wx.showToast({ title: r.message, icon: 'none', duration: 2500 })
-      that.commit(r.results.filter(okDraft).map(toDraft))
+      const drafts = r.results.filter(okDraft).map(toDraft)
+      if (!drafts.length) {
+        const failed = r.results.length
+        return wx.showToast({
+          title: failed ? failed + ' 个文件都没解析出号码' : '没有可发送的内容',
+          icon: 'none',
+          duration: 2500
+        })
+      }
+      const skipped = r.results.length - drafts.length
+      wx.showModal({
+        title: '导入完成',
+        content: '解析出 ' + drafts.length + ' 张' + (skipped ? '，跳过 ' + skipped + ' 个无号码文件' : '') + '。',
+        showCancel: false,
+        success: function () { that.send(drafts) }
+      })
     })
   },
 
-  onAdd() {
-    wx.navigateTo({ url: '/pages/edit/edit' })
+  /** 统一出口：没连电脑就先提示，连上后走查重 → 发送 → 重新同步 */
+  send(drafts) {
+    if (!drafts || !drafts.length) {
+      return wx.showToast({ title: '没有可发送的内容', icon: 'none' })
+    }
+    if (!lanservice.getBase()) {
+      return wx.showToast({ title: '请先到「设置」连接电脑', icon: 'none', duration: 2500 })
+    }
+    if (this.data.sending) return
+    this.setData({ sending: true })
+
+    const that = this
+    invoicesend.send(drafts).then(function (summary) {
+      that.setData({ sending: false })
+      if (summary.error) {
+        return wx.showModal({
+          title: '发送失败',
+          content: summary.error + '\n\n这批发票未保存，需要重新扫。',
+          showCancel: false
+        })
+      }
+      if (summary.cancelled) return
+
+      const tip = '成功发送 ' + summary.sent + ' 张' +
+        (summary.skipped ? '\n跳过重复 ' + summary.skipped + ' 张' : '') +
+        (summary.left ? '\n未发送 ' + summary.left + ' 张（单次上限 200 张）' : '') +
+        (summary.batch ? '\n批次：' + summary.batch : '') +
+        '\n电脑台账会把报销人为空的标成待补录。'
+
+      wx.showModal({
+        title: '已发送到电脑台账',
+        content: tip,
+        showCancel: false,
+        success: function () { that.syncLedger() }
+      })
+    })
   },
 
-  onExport() {
-    wx.navigateTo({ url: '/pages/export/export' })
+  onLedger() {
+    wx.switchTab({ url: '/pages/list/list' })
   },
 
   onTransfer() {
-    // 传输页现在是 tabBar 页面，只能用 switchTab
     wx.switchTab({ url: '/pages/transfer/transfer' })
   },
 
-  onReview() {
-    wx.navigateTo({ url: '/pages/review/review' })
+  onSettings() {
+    wx.switchTab({ url: '/pages/settings/settings' })
   },
 
   onM0() {
     wx.navigateTo({ url: '/pages/index/index' })
-  },
-
-  commit(drafts) {
-    const that = this
-    if (!drafts || !drafts.length) {
-      return wx.showToast({ title: '没有可保存的内容', icon: 'none' })
-    }
-
-    const report = batch.saveAll(drafts)
-    wx.showModal({
-      title: '导入完成',
-      content: batch.describe(report) + '\n\n是否发送到电脑台账？',
-      confirmText: '发送',
-      cancelText: '稍后',
-      success(res) {
-        that.refresh()
-        if (res.confirm) sendToDesktop(drafts, function () { that.refresh() })
-      }
-    })
   }
 })
 
 function okDraft(r) { return r.ok }
 
 function toDraft(r) { return r.draft }
-
-function sendToDesktop(drafts, done) {
-  invoicesend.send(drafts).then(function (summary) {
-    if (summary.error) {
-      return wx.showToast({ title: '发送失败：' + summary.error, icon: 'none', duration: 2500 })
-    }
-    if (summary.cancelled) return
-
-    const tip = '成功发送 ' + summary.sent + ' 张' +
-      (summary.skipped ? '\n跳过重复 ' + summary.skipped + ' 张' : '') +
-      (summary.left ? '\n未发送 ' + summary.left + ' 张（单次上限 200 张）' : '') +
-      (summary.batch ? '\n批次：' + summary.batch : '') +
-      '\n电脑台账会自动标记待补录。'
-
-    wx.showModal({
-      title: '已发送到电脑台账',
-      content: tip,
-      showCancel: false,
-      success() { if (done) done() }
-    })
-  })
-}

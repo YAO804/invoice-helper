@@ -1,4 +1,4 @@
-# 小程序与桌面端通信协议 v0.7
+# 小程序与桌面端通信协议 v0.8
 
 ## 基础约定
 
@@ -10,6 +10,17 @@
 - 当前版本不要求 HTTPS，也不校验小程序 request 合法域名。
 - 当前版本没有 token，只允许在可信局域网内自用。
 - 小程序打开时每 20 秒上报一次心跳；桌面端按 45 秒窗口判断在线。
+
+## 职责划分（v0.8 起）
+
+**台账只有一份，在电脑上。** 小程序不保存任何发票数据：
+
+- 列表、筛选、排序、重复判定全部由电脑端算完再返回（`GET /api/invoices`）；
+- 扫码/导入得到的草稿只存在内存里，发送成功即丢，退出小程序也会丢；
+- 增删改（手动录入、补录、删除、导入 CSV）只在电脑端网页做；
+- 小程序连不上电脑时，台账页只能显示「未连接」，没有离线数据可看。
+
+这样做的代价是离线不可用，换来的是不需要两端对账——不存在「手机上改了电脑不知道」的状态。
 
 ## 电脑地址连接（三级，按优先级）
 
@@ -287,6 +298,41 @@ identityKey = 发票代码 + "|" + 发票号码
 { "added": 1, "batch": "B-20261117-153012" }
 ```
 
+### POST /api/invoices/manual
+
+电脑端网页「新增发票」用的单条录入。小程序不调用。
+
+请求：
+
+```json
+{
+  "number": "26932000001877489821",
+  "code": "",
+  "kind": "数电票",
+  "issue_date": "2026-11-18",
+  "total": "66.00",
+  "reimburser": "王五"
+}
+```
+
+- `number` 必填，首尾空格会被去掉；为空返回 400。
+- 批次固定写 `手动录入`，与扫码/导入的自动批次区分开。
+- 录入时间由电脑端生成。
+- 响应里的 `duplicate` 是写入时算好的：同「代码+号码」已存在就是 `true`，但仍然会写入，由用户在网页上删。
+
+响应（201）：
+
+```json
+{
+  "invoice": {
+    "id": 12, "number": "...", "code": "", "kind": "数电票",
+    "issue_date": "2026-11-18", "total": "66.00", "reimburser": "王五",
+    "batch": "手动录入", "created_at": "2026-11-18 09:10:18",
+    "need_fill": false, "duplicate": false
+  }
+}
+```
+
 ### GET /api/invoices
 
 查询发票列表。支持参数：
@@ -315,6 +361,19 @@ sort=created|issued|number|reimburser
 ```
 
 `duplicates` 是按 `identityKey` 聚合的重复组，每组带 `number`、`code`、`items`。
+
+**注意**：`duplicates` 与 `duplicate_groups` 始终按**全量台账**计算，不受 `keyword` 等筛选条件影响；
+`items` / `total` / `need_fill` 才是筛选后的结果。小程序据此实现「仅看重复」：
+它把筛选交给电脑端，同时用 `duplicates` 判断某条记录属于哪一组。
+
+小程序台账页的同步流程：
+
+```text
+进入页面 / 下拉刷新
+  → GET /api/invoices?keyword=...&only_duplicates=1&sort=...
+  → 覆盖内存镜像（items / duplicates / 统计）
+  → 渲染；扫码时用镜像按「代码+号码」当场判重
+```
 
 ### PUT /api/invoices/{id}
 
@@ -397,7 +456,19 @@ POST /api/invoices/import?confirm=1
 
 ### GET /api/invoices/export
 
-导出 CSV（8 列）。可使用查询参数筛选，也可用 `ids=1,2,3` 导出选中记录。
+导出 CSV（8 列，带 UTF-8 BOM，Excel 可直接打开）。可使用查询参数筛选，也可用 `ids=1,2,3` 导出选中记录。
+
+查询参数与 `GET /api/invoices` 完全一致（含 `only_duplicates` / `only_need_fill` / `sort`）。
+筛选前会先按全量算出重复标记，否则 `only_duplicates` 会导出一张只有表头的空表。
+
+小程序导出页不自己拼 CSV，而是：
+
+```text
+wx.downloadFile(电脑地址 + /api/invoices/export?<同样的查询串>)
+  → 临时文件 → wx.shareFileMessage 转发到聊天
+```
+
+因此导出内容与小程序上看到的筛选结果一致；电脑端网页也支持导出当前筛选与勾选记录。
 
 ### DELETE /api/invoices
 

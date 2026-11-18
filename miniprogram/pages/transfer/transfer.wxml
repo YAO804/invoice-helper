@@ -10,7 +10,6 @@
     <view class="divider"></view>
     <view class="btn btn-block" bindtap="onFromChat" hover-class="btn-hover">从微信会话选文件发送</view>
     <view class="tiny muted" style="margin-top:12rpx">先把 .xml / .ofd / .pdf 以「文件」发到文件传输助手，再在这里选。最多 20 个、单个不超过 20MB。</view>
-    <view class="btn btn-ghost btn-block" style="margin-top:16rpx" bindtap="onFromLedger" hover-class="btn-hover">发送台账已存原件（{{ledgerFileCount}}）</view>
   </view>
 
   <view class="card">

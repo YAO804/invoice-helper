@@ -139,7 +139,7 @@
         <div class="stat">
           <div class="stat-label">重复组</div>
           <div id="invDuplicates" class="stat-value warn">—</div>
-          <div class="stat-sub">按发票号码判定</div>
+          <div class="stat-sub">按代码+号码判定</div>
         </div>
         <div class="stat">
           <div class="stat-label">待补录</div>
@@ -158,6 +158,7 @@
       <section class="card table-card">
         <div class="toolbar">
           <div class="toolbar-left">
+            <button id="invoiceCreateBtn" type="button" class="btn">新增发票</button>
             <button id="invoiceImportBtn" type="button" class="btn">导入 CSV</button>
             <input id="invoiceImportFile" type="file" accept=".csv,text/csv" hidden>
             <button id="invoiceExportAllBtn" type="button" class="btn btn-ghost">导出全部</button>
@@ -257,7 +258,7 @@
   <div id="invoiceEditModal" class="modal" hidden>
     <div class="modal-panel">
       <div class="drawer-head">
-        <h2>补录发票信息</h2>
+        <h2 id="editModalTitle">补录发票信息</h2>
         <button id="closeEditBtn" type="button" class="btn btn-ghost">关闭</button>
       </div>
       <div class="modal-body">
