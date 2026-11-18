@@ -20,6 +20,10 @@ Page({
     })
   },
 
+  onHide() { discover.cancel() },
+
+  onUnload() { discover.cancel() },
+
   onDesktopUrlInput(e) {
     this.setData({ desktopUrl: e.detail.value })
   },
@@ -54,6 +58,11 @@ Page({
         discovering: false
       })
     }
+  },
+
+  onCancelDiscover() {
+    discover.cancel()
+    this.setData({ discovering: false, discoverTip: '已停止搜索' })
   },
 
   /** 扫码兜底：扫电脑端网页上的二维码，比手输地址可靠，iOS 也能用 */

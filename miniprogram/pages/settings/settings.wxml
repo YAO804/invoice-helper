@@ -4,6 +4,7 @@
     <view class="card-t">桌面端连接</view>
     <view class="tiny muted" style="margin:8rpx 0 14rpx">优先自动搜索（仅安卓）；搜不到就扫电脑网页上的二维码；都不行再手动填地址。台账、补录、删除都在电脑端，小程序连不上就没有数据可看。</view>
     <view wx:if="{{canDiscover}}" class="btn btn-block" bindtap="onDiscover" hover-class="btn-hover">{{discovering ? '正在搜索…' : '自动搜索电脑'}}</view>
+    <view wx:if="{{discovering}}" class="btn btn-block btn-ghost" style="margin-top:12rpx" bindtap="onCancelDiscover" hover-class="btn-hover">停止搜索</view>
     <view class="btn btn-block btn-ghost" style="margin-top:12rpx" bindtap="onScanConnect" hover-class="btn-hover">{{scanning ? '正在扫码…' : '扫码连接电脑'}}</view>
     <view wx:if="{{discoverTip}}" class="tiny muted" style="margin:10rpx 0">{{discoverTip}}</view>
     <view class="divider"></view>

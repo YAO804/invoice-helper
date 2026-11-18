@@ -2,6 +2,13 @@ package discovery
 
 import "testing"
 
+// 小程序按 _http._tcp. 搜索，服务名少写 _tcp 会导致两端永远匹配不上。
+func TestServiceTypeMatchesMiniProgram(t *testing.T) {
+	if Service != "_http._tcp" {
+		t.Fatalf("服务类型必须是 _http._tcp，实际为 %q", Service)
+	}
+}
+
 func TestParsePort(t *testing.T) {
 	port, err := parsePort(":9000")
 	if err != nil || port != 9000 {

@@ -21,6 +21,7 @@ let startCount = 0
 let failFirstStart = false
 let scanRaw = ''
 let scanFails = false
+let emitStopOnStop = true
 
 function emitFound(res) {
   if (foundHandler) foundHandler(res)
@@ -36,7 +37,7 @@ global.wx = {
   offLocalServiceFound(fn) { if (foundHandler === fn) foundHandler = null },
   onLocalServiceDiscoveryStop(fn) { stopHandler = fn },
   offLocalServiceDiscoveryStop(fn) { if (stopHandler === fn) stopHandler = null },
-  stopLocalServiceDiscovery() { stopCount++; emitStop() },
+  stopLocalServiceDiscovery() { stopCount++; if (emitStopOnStop) emitStop() },
   startLocalServiceDiscovery(options) {
     startOptions = options
     startCount++
@@ -91,6 +92,31 @@ discover.scan({ settleMs: 10, timeoutMs: 200 }).then(function (url) {
     check('already exist 自愈后仍发现电脑', url, 'http://192.168.1.20:8765')
     check('自愈时先 stop 再重试', stopCount, 2)
     check('重试后 start 两次', startCount, 2)
+  })
+}).then(function () {
+  console.log('\n--- stop 回调兜底与取消 ---')
+  // 关键回归：微信 stop 后不发 onStop 回调时，必须靠兜底定时器自行结算
+  emitStopOnStop = false
+  return discover.scan({ settleMs: 10, timeoutMs: 300 }).then(function (url) {
+    check('onStop 不来也能靠兜底结算', url, 'http://192.168.1.20:8765')
+    check('兜底结算后监听器已清理', foundHandler, null)
+    emitStopOnStop = true
+  })
+}).then(function () {
+  // 取消：正在搜索时 cancel，Promise 应以「取消」错误结算且不再卡住
+  emitStopOnStop = false
+  const pending = discover.scan({ settleMs: 5000, timeoutMs: 10000 })
+  setTimeout(function () { discover.cancel() }, 10)
+  return pending.then(function () {
+    check('取消搜索应拒绝', false, true)
+  }, function (error) {
+    check('取消搜索有提示', error.message.indexOf('取消') >= 0, true)
+    check('取消后监听器已清理', foundHandler, null)
+    emitStopOnStop = true
+    // 取消后能立刻重新发起一次扫描，证明 activeRun 没有被卡死
+    return discover.scan({ settleMs: 10, timeoutMs: 300 }).then(function (url) {
+      check('取消后可重新搜索', url, 'http://192.168.1.20:8765')
+    })
   })
 }).then(function () {
   console.log('\n--- 扫码连接 ---')

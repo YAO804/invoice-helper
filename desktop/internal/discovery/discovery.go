@@ -10,7 +10,9 @@ import (
 
 const (
 	Instance = "invoice-helper-desktop"
-	Service  = "_http"
+	// 必须是标准 HTTP 服务类型 _http._tcp，否则小程序 wx.startLocalServiceDiscovery
+	// 按 _http._tcp. 搜索时匹配不上，永远发现不了这台电脑。
+	Service  = "_http._tcp"
 	Domain   = "local."
 	Version  = "1.0.0"
 )
