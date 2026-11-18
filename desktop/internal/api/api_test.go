@@ -18,8 +18,21 @@ import (
 
 func newTestHandler(t *testing.T) (http.Handler, *files.Store) {
 	t.Helper()
+	return buildHandler(t, t.TempDir())
+}
+
+// newTestHandlerRoot 额外把数据目录给出来，方便测试直接往 registry.json 里塞历史设备。
+func newTestHandlerRoot(t *testing.T) (http.Handler, string) {
+	t.Helper()
 
 	root := t.TempDir()
+	handler, _ := buildHandler(t, root)
+	return handler, root
+}
+
+func buildHandler(t *testing.T, root string) (http.Handler, *files.Store) {
+	t.Helper()
+
 	store, err := files.New(root)
 	if err != nil {
 		t.Fatal(err)

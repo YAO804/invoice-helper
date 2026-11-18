@@ -127,7 +127,10 @@ invoice-helper://connect?base=<urlencode 后的电脑地址>
 `network.primary_url` 是首选地址，`network.addresses` 给出检测到的全部局域网地址，
 `network.connect_code` 是扫码用的连接串。
 
-`mini_program.online` 表示最近 45 秒内是否收到小程序心跳。
+`mini_program.online` 表示**是否有任意一台**设备在最近 45 秒内发过心跳；
+`mini_program.last_seen` / `seconds_ago` 取**最近那台**设备的心跳时间
+（没有任何可解析的心跳时为 `""` / `-1`）；`mini_program.devices` 按最近心跳倒序。
+多台设备时会话窗口各自独立——一台早就不用的测试机不该把整张卡片拖成「离线」。
 `events` 是最近 80 条事件。
 
 ## 文件传输接口

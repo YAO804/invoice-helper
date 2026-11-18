@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"sort"
 	"time"
 
 	"invoice-helper/desktop/internal/files"
@@ -83,27 +84,55 @@ func newNetworkStatus(addresses []NetworkAddress) networkStatus {
 	return networkStatus{PrimaryURL: primary, ConnectCode: ConnectCode(primary), Addresses: addresses}
 }
 
+// newMiniProgramStatus 把设备列表汇总成卡片上那三个数。
+//
+// 汇总口径必须是「最新那台」和「是否有任意一台在线」，不能取列表第一个：
+// 注册表里的顺序是设备**首次出现**的顺序，一台早就不用的测试机排在最前面，
+// 就会让卡片显示「离线 46 分钟前」，而下面列表里另一台 13 秒前刚发过心跳。
 func newMiniProgramStatus(devices []registry.Device) miniProgramStatus {
 	result := miniProgramStatus{
-		LastSeen: "",
-		Devices:  []deviceStatus{},
+		LastSeen:   "",
+		SecondsAgo: -1, // -1 表示没有任何可解析的心跳，前端会显示「未知」
+		Devices:    []deviceStatus{},
 	}
 
 	for _, device := range devices {
 		seconds := secondsSince(device.LastSeen)
 		online := seconds >= 0 && seconds <= onlineWindowSeconds
+
 		result.Devices = append(result.Devices, deviceStatus{
 			Device:     device,
 			Online:     online,
 			SecondsAgo: seconds,
 		})
-		if result.LastSeen == "" {
-			result.LastSeen = device.LastSeen
+
+		// 多设备时用户只关心「现在连得上吗」，所以任意一台在线就算在线
+		if online {
+			result.Online = true
+		}
+
+		if seconds >= 0 && (result.SecondsAgo < 0 || seconds < result.SecondsAgo) {
 			result.SecondsAgo = seconds
-			result.Online = online
+			result.LastSeen = device.LastSeen
 		}
 	}
+
+	sortByRecency(result.Devices)
 	return result
+}
+
+// sortByRecency 按最近心跳倒序，让列表第一条就是卡片汇总的那台。
+// 解析失败的时间没有可比性，统一沉到最后。
+func sortByRecency(devices []deviceStatus) {
+	sort.SliceStable(devices, func(i, j int) bool {
+		if devices[i].SecondsAgo < 0 {
+			return false
+		}
+		if devices[j].SecondsAgo < 0 {
+			return true
+		}
+		return devices[i].SecondsAgo < devices[j].SecondsAgo
+	})
 }
 
 func secondsSince(value string) int64 {
