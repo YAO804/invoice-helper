@@ -43,8 +43,8 @@ invoice-helper/
 │   └── README.md
 ├── shared/protocol.md          # 两端通信协议（当前 v0.9）
 ├── test/
-│   ├── miniprogram/            # 小程序 Node 回归测试（15 套 / 451 项检查）
-│   ├── desktop/                # 电脑端网页 Node 回归测试（3 套 / 62 项检查；Go 单测在 desktop/internal 各包内）
+│   ├── miniprogram/            # 小程序 Node 回归测试（17 套 / 491 项检查）
+│   ├── desktop/                # 电脑端网页 Node 回归测试（7 套 / 132 项检查；Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
 ├── scripts/                    # 图标生成、CRC 校准等开发脚本
@@ -76,10 +76,10 @@ cd desktop && go run .
 **回归测试**（改动后必跑）：
 
 ```bash
-# 小程序 15 套，共 451 项检查
+# 小程序 17 套，共 491 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
-# 电脑端网页 6 套，共 128 项检查
+# 电脑端网页 7 套，共 132 项检查
 for f in test/desktop/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端
@@ -102,6 +102,7 @@ go vet ./...
 8. **小程序不存台账**：不要重新引入本地持久化，否则又会出现两端对账问题。草稿只放内存。
 9. **改 `desktop/web/` 下任何文件都必须重新编译**：那是 `embed` 进二进制的，改完不 `go build` / 不重启进程，浏览器拿到的还是旧代码。已把静态资源统一设成 `Cache-Control: no-store`，并在控制台显示服务版本，用来区分「代码没生效」和「功能有 bug」。
 10. **台账表是固定布局**（`table-layout: fixed` + `<colgroup>` 百分比列宽）：不要给它加 `min-width`、也不要把内含长文本的单元格改成 `white-space: normal`——前者会重新引入横向滚动条，后者会让 20 位号码或批次号折行、被看成两个号。超长内容走 `ellipsis` + `title`。
+11. **`desktop/web/*.js` 是经典脚本，顶层全局名只能有一处定义**：统一用 `render.js` 的 `$`，别在别的脚本里再声明 `function $` / `const $`——两个脚本在浏览器里会互相冲突，后加载的整份脚本直接 SyntaxError，界面只剩「renderStatus is not defined」。`script-order.test.js` 守着这条。
 
 > 项目约定另记录在 `.workbuddy/memory/MEMORY.md`（不进 Git），每日工作日志在 `.workbuddy/memory/YYYY-MM-DD.md`。
 
@@ -241,7 +242,8 @@ registry.json   设备与事件记录
 
 ## 8. 通信协议（v0.9，详见 shared/protocol.md）
 
-- 基础：`http://电脑IPv4:8765`，局域网直连，不要求 HTTPS/合法域名，无 token（仅可信局域网自用）。
+- 基础：`http://电脑IPv4:8765`，局域网直连，不要求 HTTPS/合法域名。
+- **鉴权**：`/api/*` 默认要 PIN/会话，白名单仅 health、connect-qr.png、auth/challenge、auth/qr.png、auth/confirm、auth/session、auth/logout。小程序请求带 `X-PIN`（`utils/auth.js`），网页用 HttpOnly cookie `ih_session`（30 天，token 由 PIN 派生 HMAC 签名）。默认 PIN `123456`，首次写入 `data/pin.json`（0600）后以文件为准，改 PIN 后旧会话全失效。扫码登录串 `invoice-helper://login?base=...&c=...`：一次性、5 分钟有效，小程序扫一次同时连地址并授权网页。
 - 心跳：小程序每 20 秒 `POST /api/devices/heartbeat`，电脑 45 秒窗口判在线。
   `startAutoHeartbeat()` 每次调用都会**立刻补报一拍**（启动、扫码换地址、从后台回到前台），
   不等下一个周期；电脑网页在未连接时按 2 秒轮询 `/api/status`，连上后降到 5 秒。
@@ -291,10 +293,10 @@ registry.json   设备与事件记录
 
 ## 9. 测试体系
 
-- **小程序 15 套 / 451 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
-  `einvoice 60`、`lanservice 63`、`transfer 41`、`draft 36`、`list 32`、`collect 31`、`filesend 31`、`filetake 29`、`ledger 27`、`scanbatch 27`、`discover 18`、`invoicesend 18`、`zip 14`、`selection 13`、`fsx 11`。
-- **电脑端网页 6 套 / 128 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
-  `invoice-row 26`（台账行渲染：10 列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`stat-filter 18`（统计卡片与筛选面板双向同步、最新批次取全表）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）。
+- **小程序 17 套 / 491 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
+  `lanservice 63`、`einvoice 60`、`transfer 41`、`draft 36`、`list 32`、`collect 31`、`filesend 31`、`filetake 29`、`ledger 27`、`scanbatch 27`、`auth 24`、`discover 23`、`invoicesend 18`、`zip 14`、`selection 13`、`fsx 11`、`settings 11`（自动搜索失败/取消/成功的提示）。
+- **电脑端网页 7 套 / 132 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
+  `invoice-row 26`（台账行渲染：10 列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`stat-filter 18`（统计卡片与筛选面板双向同步、最新批次取全表）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。
 - 起服务冒烟：启动 `go run .` 后 `curl /api/health`、`/api/connect-qr.png` 应返回 200；台账接收/补录/手动录入/清理/导出接口应返回 200。
 

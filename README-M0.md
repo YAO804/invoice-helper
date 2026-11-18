@@ -251,21 +251,23 @@ node test/miniprogram/invoicesend.test.js
 node test/miniprogram/discover.test.js
 node test/miniprogram/selection.test.js
 node test/miniprogram/auth.test.js
+node test/miniprogram/settings.test.js
 
-# 电脑端网页：金额计算与选中汇总、上传进度下标、文件预览弹层、事件类型中文标签、统计卡片筛选、台账行渲染
+# 电脑端网页：金额计算与选中汇总、上传进度下标、文件预览弹层、事件类型中文标签、统计卡片筛选、台账行渲染、脚本加载顺序
 node test/desktop/ledger-render.test.js
 node test/desktop/upload-progress.test.js
 node test/desktop/preview.test.js
 node test/desktop/events.test.js
 node test/desktop/stat-filter.test.js
 node test/desktop/invoice-row.test.js
+node test/desktop/script-order.test.js
 
 cd desktop
 go test ./...
 ```
 
-小程序十六套；其中 `auth.test.js` 覆盖 PIN 存储、登录码解析、扫码登录、改 PIN。
-电脑端网页六套：选中发票张数与合计金额（分成单位累加，避免浮点误差）、批量上传进度回调的下标语义（一个文件只能占一行）、预览弹层的打开/关闭与不可预览格式的提示、最近事件的中文标签（并扫描后端 `MarkEvent` 调用，漏配就报错）、统计卡片与筛选面板的双向同步（最新批次取全表，不随筛选漂移）、台账行渲染（10 列齐全、录入时间拆两行、转义与空列表）。
+小程序十七套共 491 项检查；`auth.test.js` 覆盖 PIN 存储、登录码解析、扫码登录、改 PIN，`settings.test.js` 覆盖自动搜索失败/取消/成功的 toast 提示。
+电脑端网页七套共 132 项检查：选中发票张数与合计金额（分成单位累加，避免浮点误差）、批量上传进度回调的下标语义（一个文件只能占一行）、预览弹层的打开/关闭与不可预览格式的提示、最近事件的中文标签（并扫描后端 `MarkEvent` 调用，漏配就报错）、统计卡片与筛选面板的双向同步（最新批次取全表，不随筛选漂移）、台账行渲染（10 列齐全、录入时间拆两行、转义与空列表）、脚本按 index.html 顺序加载无全局声明冲突。
 电脑端 Go 测试单独运行，覆盖文件保存、去重、删除、统计、设备心跳、状态总览、上传接口、下载接口、待取文件入库与同名改名、接收文件预览（类型白名单与 inline 响应头）、待取/接收文件批量删除与按保留期清理、发票台账 CSV、判重（代码+号码）、搜索排序、导入导出、扫码结果查重接收、补录编辑、按录入时间清理、mDNS 端口解析、连接二维码和本地网页（含静态资源 no-store 与预览脚本的加载顺序）。
 
 ---

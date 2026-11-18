@@ -29,6 +29,12 @@ Page({
     this.setData({ pinSet: set, pinMask: set ? '已设置（******）' : '未设置' })
   },
 
+  /** 连接失败必须弹 toast：底部那行 tiny 提示太容易被忽略 */
+  showConnectFailure(tip, toast) {
+    this.setData({ discoverTip: tip, discovering: false, scanning: false })
+    wx.showToast({ title: toast, icon: 'none' })
+  },
+
   onHide() { discover.cancel() },
 
   onUnload() { discover.cancel() },
@@ -62,10 +68,14 @@ Page({
       })
       wx.showToast({ title: '已自动连接', icon: 'none' })
     } catch (e) {
-      this.setData({
-        discoverTip: e.message || '没有找到电脑，请手动填写地址',
-        discovering: false
-      })
+      if (e && e.message === '搜索已取消') {
+        this.setData({ discoverTip: '已停止搜索', discovering: false })
+        return
+      }
+      this.showConnectFailure(
+        (e && e.message) || '没有找到电脑，请扫码连接或手动填写地址',
+        '自动搜索未找到电脑'
+      )
     }
   },
 
@@ -90,10 +100,10 @@ Page({
       })
       wx.showToast({ title: '已连接电脑', icon: 'none' })
     } catch (e) {
-      this.setData({
-        discoverTip: e.message || '扫码连接失败，请手动填写地址',
-        scanning: false
-      })
+      this.showConnectFailure(
+        (e && e.message) || '扫码连接失败，请手动填写地址',
+        '扫码连接失败'
+      )
     }
   },
 
@@ -117,7 +127,7 @@ Page({
       })
       wx.showToast({ title: '登录成功', icon: 'none' })
     } catch (e) {
-      this.setData({ discoverTip: e.message || '扫码登录失败', scanning: false })
+      this.showConnectFailure((e && e.message) || '扫码登录失败', '扫码登录失败')
     }
   },
 

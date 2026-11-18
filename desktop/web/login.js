@@ -8,7 +8,8 @@
 
 const LOGIN_POLL_MS = 1500
 
-function $(id) { return document.getElementById(id) }
+// $ 由 render.js 统一定义。这里也曾定义过一份，两个经典脚本的顶层
+// function/const 冲突会让 render.js 整份加载失败（界面只剩「renderStatus is not defined」）。
 
 async function isLoggedIn() {
   try {
@@ -31,16 +32,16 @@ function qrURL(code) {
 }
 
 function showLogin(code) {
-  $('loginQr').src = qrURL(code)
-  $('loginMask').hidden = false
+  document.getElementById('loginQr').src = qrURL(code)
+  document.getElementById('loginMask').hidden = false
 }
 
 function hideLogin() {
-  $('loginMask').hidden = true
+  document.getElementById('loginMask').hidden = true
 }
 
 function setLoginTip(text) {
-  $('loginTip').textContent = text
+  document.getElementById('loginTip').textContent = text
 }
 
 function startApp() {
@@ -88,7 +89,7 @@ async function bootLogin() {
 }
 
 function bindLoginEvents() {
-  const button = $('loginRefreshBtn')
+  const button = document.getElementById('loginRefreshBtn')
   if (button) button.addEventListener('click', refreshLoginCode)
 }
 
