@@ -67,11 +67,12 @@ load('ledger-stats.js')
 function reset() {
   el('invOnlyDuplicates').checked = false
   el('invOnlyNeedFill').checked = false
-  el('invBatchFilter').value = ''
-  el('invBatch').textContent = 'B20261118-093729-174'
+  el('invCreatedFrom').value = ''
+  el('invCreatedTo').value = ''
+  el('invLatestDate').textContent = '2026-11-18'
   el('statDuplicates').attributes = {}
   el('statNeedFill').attributes = {}
-  el('statBatch').attributes = {}
+  el('statLatest').attributes = {}
 }
 
 const toggle = (action) => vm.runInThisContext('toggleStatFilter("' + action + '")')
@@ -90,23 +91,34 @@ toggle('needfill')
 check('待补录：勾选被打开', el('invOnlyNeedFill').checked, true)
 check('待补录：不影响重复组', el('invOnlyDuplicates').checked, false)
 
-/* 3. 最新批次卡片：等于这个批次就取消，不等于就换成它 */
+/* 3. 最近录入卡片：点一下把录入时间起止都设成那天，再点清空 */
 reset()
-toggle('batch')
-check('批次：填成最新批次', el('invBatchFilter').value, 'B20261118-093729-174')
-toggle('batch')
-check('批次：再点清空', el('invBatchFilter').value, '')
+toggle('latest')
+check('最近录入：起止都填成那天', [el('invCreatedFrom').value, el('invCreatedTo').value],
+  ['2026-11-18', '2026-11-18'])
+toggle('latest')
+check('最近录入：再点清空起止', [el('invCreatedFrom').value, el('invCreatedTo').value], ['', ''])
 
 reset()
-el('invBatchFilter').value = 'B20260101-000000-000'
-toggle('batch')
-check('批次：已筛别的批次时替换成最新', el('invBatchFilter').value, 'B20261118-093729-174')
+el('invCreatedFrom').value = '2026-11-01'
+el('invCreatedTo').value = '2026-11-01'
+toggle('latest')
+check('最近录入：已筛别的日期时替换成最近那天',
+  [el('invCreatedFrom').value, el('invCreatedTo').value], ['2026-11-18', '2026-11-18'])
 
-/* 4. 没有台账时点批次卡片什么都不做 */
+/* 3.1 只填了一头（区间筛选）时，点卡片也要收成那一天 */
 reset()
-el('invBatch').textContent = '—'
-check('批次：无数据不刷新', toggle('batch'), false)
-check('批次：无数据不改条件', el('invBatchFilter').value, '')
+el('invCreatedFrom').value = '2026-11-01'
+toggle('latest')
+check('最近录入：只有下限时补齐上限',
+  [el('invCreatedFrom').value, el('invCreatedTo').value], ['2026-11-18', '2026-11-18'])
+
+/* 4. 没有台账时点最近录入卡片什么都不做 */
+reset()
+el('invLatestDate').textContent = '—'
+check('最近录入：无数据不刷新', toggle('latest'), false)
+check('最近录入：无数据不改条件',
+  [el('invCreatedFrom').value, el('invCreatedTo').value], ['', ''])
 
 /* 5. 未知动作直接忽略，别把别的条件弄乱 */
 reset()
@@ -119,38 +131,50 @@ sync()
 check('初始状态三张卡片都没按下', [
   el('statDuplicates').getAttribute('aria-pressed'),
   el('statNeedFill').getAttribute('aria-pressed'),
-  el('statBatch').getAttribute('aria-pressed')
+  el('statLatest').getAttribute('aria-pressed')
 ], ['false', 'false', 'false'])
 
 el('invOnlyDuplicates').checked = true
 el('invOnlyNeedFill').checked = true
-el('invBatchFilter').value = 'B20261118-093729-174'
+el('invCreatedFrom').value = '2026-11-18'
+el('invCreatedTo').value = '2026-11-18'
 sync()
 check('勾选后面板对应的卡片都亮起', [
   el('statDuplicates').getAttribute('aria-pressed'),
   el('statNeedFill').getAttribute('aria-pressed'),
-  el('statBatch').getAttribute('aria-pressed')
+  el('statLatest').getAttribute('aria-pressed')
 ], ['true', 'true', 'true'])
 
-/* 7. 批次筛选值和最新批次不一致时，批次卡片不该亮 */
+/* 7. 录入时间不是那一天时，最近录入卡片不该亮 */
 reset()
-el('invBatchFilter').value = 'B20260101-000000-000'
+el('invCreatedFrom').value = '2026-11-01'
+el('invCreatedTo').value = '2026-11-01'
 sync()
-check('筛了别的批次时批次卡片不亮', el('statBatch').getAttribute('aria-pressed'), 'false')
+check('筛了别的日期时最近录入卡片不亮', el('statLatest').getAttribute('aria-pressed'), 'false')
 
-/* 8. 最新批次取后端字段，不取列表第一行 */
+reset()
+el('invCreatedFrom').value = '2026-11-01'
+el('invCreatedTo').value = '2026-11-18'
+sync()
+check('区间覆盖但不等于某一天时也不亮', el('statLatest').getAttribute('aria-pressed'), 'false')
+
+/* 8. 最近录入日期取后端字段，不取列表第一行，且只显示日期 */
 reset()
 vm.runInThisContext(`renderInvoiceStats({
   total: 2,
   duplicate_groups: 0,
   need_fill: 1,
-  latest_batch: 'B20261118-093729-174',
-  items: [{ batch: 'B20260101-000000-000' }, { batch: 'B20261118-093729-174' }]
+  latest_created_at: '2026-11-18 09:37:29',
+  items: [{ created_at: '2026-11-01 08:00:00' }, { created_at: '2026-11-18 09:37:29' }]
 })`)
-check('最新批次用 latest_batch', el('invBatch').textContent, 'B20261118-093729-174')
+check('最近录入只显示日期', el('invLatestDate').textContent, '2026-11-18')
 
 vm.runInThisContext('renderInvoiceStats({ total: 0, items: [] })')
-check('空台账显示占位符', el('invBatch').textContent, '—')
+check('空台账显示占位符', el('invLatestDate').textContent, '—')
+
+/* 8.1 只在日期里没有时间时也不该把整串塞进卡片 */
+vm.runInThisContext(`renderInvoiceStats({ total: 1, latest_created_at: '2026-11-18' })`)
+check('纯日期原样显示', el('invLatestDate').textContent, '2026-11-18')
 
 console.log('\n合计 ' + (pass + fail) + ' 项：PASS ' + pass + ' · FAIL ' + fail)
 if (fail) process.exitCode = 1

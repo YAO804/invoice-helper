@@ -134,9 +134,9 @@ function startReimburserEdit(cell) {
 }
 
 function activeFilterCount() {
-  const fields = ['invNumber', 'invReimburser', 'invBatchFilter', 'invDateFrom', 'invDateTo', 'invAmountMin', 'invAmountMax']
+  const fields = ['invNumber', 'invReimburser', 'invDateFrom', 'invDateTo',
+    'invCreatedFrom', 'invCreatedTo', 'invAmountMin', 'invAmountMax']
   let count = fields.filter((id) => ($(id).value || '').trim()).length
-  if (($('invKeyword').value || '').trim()) count++
   if ($('invOnlyDuplicates').checked) count++
   if ($('invOnlyNeedFill').checked) count++
   return count
@@ -150,8 +150,9 @@ function syncFilterCount() {
 }
 
 function resetFilters() {
-  ;['invKeyword', 'invNumber', 'invReimburser', 'invBatchFilter', 'invDateFrom', 'invDateTo',
-    'invAmountMin', 'invAmountMax'].forEach((id) => { $(id).value = '' })
+  ;['invNumber', 'invReimburser', 'invDateFrom', 'invDateTo',
+    'invCreatedFrom', 'invCreatedTo', 'invAmountMin', 'invAmountMax']
+    .forEach((id) => { $(id).value = '' })
   $('invOnlyDuplicates').checked = false
   $('invOnlyNeedFill').checked = false
   syncFilterCount()
@@ -176,8 +177,9 @@ function currentItems() {
 function buildInvoiceParams() {
   const params = new URLSearchParams()
   const fields = {
-    keyword: 'invKeyword', number: 'invNumber', reimburser: 'invReimburser',
-    batch: 'invBatchFilter', date_from: 'invDateFrom', date_to: 'invDateTo',
+    number: 'invNumber', reimburser: 'invReimburser',
+    date_from: 'invDateFrom', date_to: 'invDateTo',
+    created_from: 'invCreatedFrom', created_to: 'invCreatedTo',
     amount_min: 'invAmountMin', amount_max: 'invAmountMax'
   }
   Object.keys(fields).forEach((key) => {
@@ -435,8 +437,8 @@ function closeDrawer() {
 }
 
 function bindLedgerEvents() {
-  ;['invKeyword', 'invNumber', 'invReimburser', 'invBatchFilter', 'invDateFrom',
-    'invDateTo', 'invAmountMin', 'invAmountMax'].forEach((id) => {
+  ;['invNumber', 'invReimburser', 'invDateFrom', 'invDateTo',
+    'invCreatedFrom', 'invCreatedTo', 'invAmountMin', 'invAmountMax'].forEach((id) => {
     $(id).addEventListener('input', scheduleLedgerRefresh)
   })
   $('invOnlyDuplicates').addEventListener('change', () => { syncStatFilterState(); refreshLedger() })

@@ -1,10 +1,17 @@
+/** 录入时间是 "2026-11-18 09:10:18"，卡片上只显示日期——它同时是「只看这一天」的筛选值 */
+function latestDateText(value) {
+  const text = String(value || '').trim()
+  const cut = text.indexOf(' ')
+  return cut > 0 ? text.slice(0, cut) : text
+}
+
 function renderInvoiceStats(data) {
   $('invTotal').textContent = data.total || 0
   $('invDuplicates').textContent = data.duplicate_groups || 0
   $('invNeedFill').textContent = data.need_fill || 0
-  // 用后端给的全表最新批次，不看当前列表第一行：
+  // 用后端给的全表最新录入时间，不看当前列表第一行：
   // 这张卡片同时是筛选入口，值必须稳定，不能跟着筛选结果漂
-  $('invBatch').textContent = data.latest_batch || '—'
+  $('invLatestDate').textContent = latestDateText(data.latest_created_at) || '—'
   $('lastInvoiceRefresh').textContent = '更新于 ' + new Date().toLocaleTimeString()
 }
 
@@ -109,7 +116,7 @@ function reimburserCell(item) {
 function renderInvoiceTable(items, selected) {
   const body = $('invoiceBody')
   if (!items || !items.length) {
-    body.innerHTML = emptyRow('没有匹配的发票', 10)
+    body.innerHTML = emptyRow('没有匹配的发票', 9)
     return
   }
 
@@ -126,7 +133,6 @@ function renderInvoiceTable(items, selected) {
       <td class="col-issued">${esc(item.issue_date)}</td>
       <td class="col-total num" title="${esc(item.total)}">${esc(item.total)}</td>
       ${reimburserCell(item)}
-      <td class="col-batch" title="${esc(item.batch)}">${esc(item.batch)}</td>
       ${createdCell(item.created_at)}
       <td class="col-actions">
         <button type="button" class="link" data-action="edit-invoice" data-id="${item.id}">补录</button>
@@ -149,7 +155,7 @@ function renderDuplicatePanel(groups) {
       <div class="table-wrap">
         <table class="diff-table">
           <thead>
-            <tr><th>记录</th><th>票种</th><th>开票日期</th><th>报销人</th><th>价税合计</th><th>批次</th><th>录入时间</th><th>操作</th></tr>
+            <tr><th>记录</th><th>票种</th><th>开票日期</th><th>报销人</th><th>价税合计</th><th>录入时间</th><th>操作</th></tr>
           </thead>
           <tbody>
             ${group.items.map((item) => `
@@ -159,7 +165,6 @@ function renderDuplicatePanel(groups) {
                 <td>${esc(item.issue_date)}</td>
                 <td class="${item.reimburser ? '' : 'changed'}">${esc(item.reimburser || '（待补录）')}</td>
                 <td>${esc(item.total)}</td>
-                <td>${esc(item.batch)}</td>
                 <td>${esc(item.created_at)}</td>
                 <td><button type="button" class="link danger" data-action="delete-invoice" data-id="${item.id}">删除这张</button></td>
               </tr>

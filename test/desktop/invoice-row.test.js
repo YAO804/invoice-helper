@@ -1,7 +1,8 @@
 /**
  * 台账表格行渲染测试。
  *
- * 这一版为了「一行装下 10 列」重排了单元格：录入时间拆两行、重复标移到号码下面。
+ * 这一版为了「一行装下」重排了单元格：录入时间拆两行、重复标移到号码下面。
+ * 也是这一版去掉了「录入批次」列——用户看不懂批次号，筛选改用录入时间。
  * 联调时最容易出的问题是拆行时丢了信息或被截断后无法回看，
  * 所以这里逐列断：信息还在、title 还在、列数没变。
  */
@@ -67,8 +68,8 @@ function render(items, selected) {
 
 const html = render([row], [7])
 
-/* 1. 列数没变：仍然是 10 个单元格，否则表头和行会对不齐 */
-check('一行 10 个单元格', (html.match(/<td/g) || []).length, 10)
+/* 1. 列数没变：仍然是 9 个单元格，否则表头和行会对不齐 */
+check('一行 9 个单元格', (html.match(/<td/g) || []).length, 9)
 
 /* 2. 录入时间拆成日期 + 时间两行，完整值留在 title */
 check('录入时间拆行', html.includes('2026-08-02'), true)
@@ -79,9 +80,9 @@ check('录入时间有 title', html.includes('title="2026-11-18 09:10:18"'), tru
 check('标在 cell-badges 里', html.includes('<div class="cell-badges"><span class="badge dup">重复</span></div>'), true)
 check('号码列带 col-number', html.includes('class="col-number"'), true)
 
-/* 4. 批次号完整显示（允许折行），并带 title */
-check('批次带 col-batch', html.includes('class="col-batch"'), true)
-check('批次完整保留', html.includes('B20261118-093729-174'), true)
+/* 4. 批次列已删掉：批次号不再出现在任何单元格里 */
+check('不再有 col-batch', html.includes('col-batch'), false)
+check('批次号不再渲染', html.includes('B20261118-093729-174'), false)
 
 /* 5. 号码/代码可复制，文字包在 copy-text 里才能做省略号 */
 check('号码包了 copy-text', html.includes('<span class="copy-text">26932000001295659876</span>'), true)
@@ -92,7 +93,7 @@ check('代码也包了 copy-text', html.includes('<span class="copy-text">044031
 check('金额列带 num', html.includes('class="col-total num"'), true)
 
 /* 7. 每列都带上了列宽用的 class，CSS 才对得上 */
-for (const name of ['col-check', 'col-number', 'col-code', 'col-kind', 'col-issued', 'col-total', 'col-batch', 'col-created', 'col-actions']) {
+for (const name of ['col-check', 'col-number', 'col-code', 'col-kind', 'col-issued', 'col-total', 'col-created', 'col-actions']) {
   check('存在列 ' + name, html.includes('class="' + name), true)
 }
 
@@ -112,8 +113,8 @@ const noTime = Object.assign({}, row, { created_at: '' })
 const noTimeHtml = render([noTime], [])
 check('无录入时间不产生空行', noTimeHtml.includes('<div class="muted tiny">'), false)
 
-/* 11. 空列表占位要跨 10 列 */
-check('空列表 colspan 为 10', render([], []), '<tr><td colspan="10" class="empty">没有匹配的发票</td></tr>')
+/* 11. 空列表占位要跨 9 列 */
+check('空列表 colspan 为 9', render([], []), '<tr><td colspan="9" class="empty">没有匹配的发票</td></tr>')
 
 console.log('\n合计 ' + (pass + fail) + ' 项：PASS ' + pass + ' · FAIL ' + fail)
 if (fail) process.exitCode = 1

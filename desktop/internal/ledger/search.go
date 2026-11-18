@@ -16,6 +16,8 @@ type Query struct {
 	Batch          string
 	DateFrom       string
 	DateTo         string
+	CreatedFrom    string
+	CreatedTo      string
 	AmountMin      string
 	AmountMax      string
 	OnlyDuplicates bool
@@ -33,6 +35,8 @@ func QueryFromValues(values url.Values) Query {
 		Batch:          values.Get("batch"),
 		DateFrom:       values.Get("date_from"),
 		DateTo:         values.Get("date_to"),
+		CreatedFrom:    values.Get("created_from"),
+		CreatedTo:      values.Get("created_to"),
 		AmountMin:      values.Get("amount_min"),
 		AmountMax:      values.Get("amount_max"),
 		OnlyDuplicates: values.Get("only_duplicates") == "1" || values.Get("only_duplicates") == "true",
@@ -73,6 +77,13 @@ func match(invoice Invoice, query Query) bool {
 	if query.DateTo != "" && invoice.IssueDate > query.DateTo {
 		return false
 	}
+	// 录入时间按天比较：created_at 是 "2026-11-18 09:10:18"，只取日期部分
+	if query.CreatedFrom != "" && createdDate(invoice.CreatedAt) < query.CreatedFrom {
+		return false
+	}
+	if query.CreatedTo != "" && createdDate(invoice.CreatedAt) > query.CreatedTo {
+		return false
+	}
 	if !matchAmount(invoice.Total, query) {
 		return false
 	}
@@ -81,6 +92,15 @@ func match(invoice Invoice, query Query) bool {
 
 func contains(value string, part string) bool {
 	return part == "" || strings.Contains(strings.ToLower(value), strings.ToLower(part))
+}
+
+// createdDate 取录入时间的日期部分："2026-11-18 09:10:18" → "2026-11-18"。
+// 录入时间筛选按天粒度，用户输入的是 <input type="date"> 的值。
+func createdDate(created string) string {
+	if cut := strings.IndexByte(created, ' '); cut > 0 {
+		return created[:cut]
+	}
+	return created
 }
 
 func matchAmount(total string, query Query) bool {

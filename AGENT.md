@@ -44,7 +44,7 @@ invoice-helper/
 ├── shared/protocol.md          # 两端通信协议（当前 v0.9）
 ├── test/
 │   ├── miniprogram/            # 小程序 Node 回归测试（19 套 / 553 项检查）
-│   ├── desktop/                # 电脑端网页 Node 回归测试（9 套 / 170 项检查；Go 单测在 desktop/internal 各包内）
+│   ├── desktop/                # 电脑端网页 Node 回归测试（10 套 / 196 项检查；Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
 ├── scripts/                    # 图标生成、CRC 校准等开发脚本
@@ -79,7 +79,7 @@ cd desktop && go run .
 # 小程序 19 套，共 553 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
-# 电脑端网页 9 套，共 170 项检查
+# 电脑端网页 10 套，共 196 项检查
 for f in test/desktop/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端
@@ -101,7 +101,7 @@ go vet ./...
 7. 已知历史债：`utils/einvoice.js`（434 行）偏长，是早期快速验证产物。触碰时顺手拆，不要继续堆逻辑。
 8. **小程序不存台账**：不要重新引入本地持久化，否则又会出现两端对账问题。草稿只放内存。
 9. **改 `desktop/web/` 下任何文件都必须重新编译**：那是 `embed` 进二进制的，改完不 `go build` / 不重启进程，浏览器拿到的还是旧代码。已把静态资源统一设成 `Cache-Control: no-store`，并在控制台显示服务版本，用来区分「代码没生效」和「功能有 bug」。
-10. **台账表是固定布局**（`table-layout: fixed` + `<colgroup>` 百分比列宽）：不要给它加 `min-width`、也不要把内含长文本的单元格改成 `white-space: normal`——前者会重新引入横向滚动条，后者会让 20 位号码或批次号折行、被看成两个号。超长内容走 `ellipsis` + `title`。
+10. **台账表是固定布局**（`table-layout: fixed` + `<colgroup>` 百分比列宽，共 9 列）：不要给它加 `min-width`、也不要把内含长文本的单元格改成 `white-space: normal`——前者会重新引入横向滚动条，后者会让 20 位号码折行、被看成两个号。超长内容走 `ellipsis` + `title`。**列数改动必须同时改 `colgroup`、`thead`、行渲染和 `emptyRow` 的 colspan**，`filter-panel.test.js` 会数这三处的列数。
 11. **`desktop/web/*.js` 是经典脚本，顶层全局名只能有一处定义**：统一用 `render.js` 的 `$`，别在别的脚本里再声明 `function $` / `const $`——两个脚本在浏览器里会互相冲突，后加载的整份脚本直接 SyntaxError，界面只剩「renderStatus is not defined」。`script-order.test.js` 守着这条。
 
 > 项目约定另记录在 `.workbuddy/memory/MEMORY.md`（不进 Git），每日工作日志在 `.workbuddy/memory/YYYY-MM-DD.md`。
@@ -227,7 +227,8 @@ sort = created | issued | number | reimburser   // 默认 created（录入时间
 - `preview.js`：文件预览弹层——PDF 用 iframe 交给浏览器内置阅读器、图片用 img、文本抓下来塞 `pre`（>512KB 拒绝预览）；可预览类型只认后端返回的 `preview` 字段。
 - `ledger-app.js` / `ledger-render.js` / `ledger-api.js` / `ledger-stats.js`：台账（搜索、排序、筛选、导入、补录、行内改报销人、清理、重复抽屉、导出、号码点击复制；勾选后显示张数与合计金额，金额按分求和避免浮点尾数）。
 - 补录体验（2026-11-18）：报销人有值时旁边带复制按钮（复用 `.copy-cell` 委托，点它不会进编辑）；勾选后可用「批量填报销人」一次统一（走页面内模态框 `#batchReimburserModal`，不用 `window.prompt`，输入框挂同一个历史建议列表，Enter 即提交，留空表示清空）——串行 `PUT` 且必须带齐其余字段；`reimburser` / `kind` 输入框挂 `datalist`，建议来自台账历史值（`suggestionPool` 只增不减，避免筛选后丢历史）；补录弹窗粘贴扫码串或 Excel 制表符一行时，`parsePastedInvoice` 自动拆字段，认不出就放行原生粘贴。`reimburser-fill.test.js` 守着。
-- `ledger-stats.js`：顶部统计卡片兼筛选入口——点「重复组 / 待补录 / 最新批次」直接筛列表，再点一次取消，条件写回筛选面板（两处共用一份状态，卡片高亮跟 `aria-pressed` 走）。「最新批次」取后端 `latest_batch`（全表），不是当前列表第一行，否则一筛选它就跟着变。
+- `ledger-stats.js`：顶部统计卡片兼筛选入口——点「重复组 / 待补录 / 最近录入」直接筛列表，再点一次取消，条件写回筛选面板（两处共用一份状态，卡片高亮跟 `aria-pressed` 走）。「最近录入」取后端 `latest_created_at`（全表）只显示日期，点一下把「录入时间起/止」都设成那天，再点清空；**卡片的日期必须来自后端全表口径**，取当前列表第一行的话一筛选它就跟着变。
+- 台账列与筛选（2026-11-18 调整）：**不再有「录入批次」列**，批次号对用户没意义；筛选面板也**去掉了录入批次与全局搜索**，改加「录入时间起/止」（后端 `created_from` / `created_to`，按 `created_at` 的日期部分比较）。`filter-panel.test.js` 守着「旧条件不许回来」和「colgroup/表头/行三处列数一致」。
 
 ### 数据目录（`desktop/data/`，不提交）
 
@@ -292,7 +293,8 @@ registry.json   设备与事件记录
 - **电脑端预览是白名单**：`files/preview.go` 的 `PreviewKind` 决定 `/api/incoming/{id}/view` 能不能 inline。
   文本一律 `text/plain` + `nosniff`，`.html` / `.svg` 故意不在白名单里——预览响应与网页同源，按 HTML 渲染等于开 XSS 口子。
 - **小程序取文件的落地方式只有两种**：`wx.shareFileMessage` 转发到聊天（任何格式）和 `wx.openDocument` 预览（pdf/doc/docx/xls/xlsx/ppt/pptx）。OFD/XML/ZIP 不给「预览」，别给用户一个点了必然失败的入口。
-- **`duplicates` / `duplicate_groups` 按全量计算**，不受 `keyword` 等筛选影响；`items` / `total` / `need_fill` 才是筛选后的结果。
+- **`duplicates` / `duplicate_groups` 按全量计算**，不受 `keyword` 等筛选影响；`items` / `total` / `need_fill` 才是筛选后的结果；`latest_batch` / `latest_created_at` 同样是全表口径。
+- **列表查询参数**：`number` / `code` / `kind` / `reimburser` / `keyword` / `batch` / `date_from` / `date_to`（开票日期）/ `created_from` / `created_to`（录入时间，按 `created_at` 的日期部分比较）/ `amount_min` / `amount_max` / `only_duplicates` / `only_need_fill` / `sort`。电脑端网页已不用 `keyword` 和 `batch`（改由 `created_from` / `created_to` 筛），但**后端保留这两个参数**——小程序批量发送后仍用 `keyword=批次号` 回看。
 - **导出前必须先标记重复**：`Export` 若只 `markNeedFill` 不 `markDuplicates`，`only_duplicates` 会导出一张只剩表头的空表（2026-11-18 修复，有回归测试守着）。
 
 ---
@@ -301,8 +303,8 @@ registry.json   设备与事件记录
 
 - **小程序 19 套 / 553 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
   `lanservice 63`、`einvoice 60`、`transfer 41`、`draft 36`、`discover 33`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示）、`collect 31`、`filesend 31`、`filetake 29`、`settings 29`（自动搜索提示 + 两种二维码合并入口）、`ledger 29`（含 `latest_batch` 透传与清空）、`scanbatch 27`、`list 40`（最新批次一键回看、收票页带批次跳来）、`auth 24`、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`collect-send 12`（发送弹窗查看这批票：确认跳转、稍后不跳、无批次单按钮）、`fsx 11`。
-- **电脑端网页 9 套 / 170 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
-  `invoice-row 26`（台账行渲染：10 列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`reimburser-fill 28`（粘贴解析、建议池去重、复制按钮有无、批量填报销人走页面内模态框：打开/取消/提交/留空清空）、`stat-filter 18`（统计卡片与筛选面板双向同步、最新批次取全表）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`logout 10`（退出按钮绑定、POST logout、重载回登录态、失败提示）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）。
+- **电脑端网页 10 套 / 196 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
+  `invoice-row 25`（台账行渲染：9 列、不再有批次列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`reimburser-fill 28`（粘贴解析、建议池去重、复制按钮有无、批量填报销人走页面内模态框：打开/取消/提交/留空清空）、`stat-filter 21`（统计卡片与筛选面板双向同步、最近录入按日期筛并取全表口径）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`logout 10`（退出按钮绑定、POST logout、重载回登录态、失败提示）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）、`filter-panel 24`（查询参数拼装、不再发送 keyword/batch、重置与计数、colgroup/表头/行三处列数一致）。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。
 - 起服务冒烟：启动 `go run .` 后 `curl /api/health`、`/api/connect-qr.png` 应返回 200；台账接收/补录/手动录入/清理/导出接口应返回 200。
 

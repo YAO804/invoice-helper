@@ -160,11 +160,11 @@
           <span id="invNeedFill" class="stat-value warn">—</span>
           <span class="stat-sub">报销人为空 · 点击筛选</span>
         </button>
-        <button id="statBatch" type="button" class="stat stat-action"
-          data-stat-filter="batch" aria-pressed="false" title="只看这个批次">
-          <span class="stat-label">最新批次</span>
-          <span id="invBatch" class="stat-value small">—</span>
-          <span class="stat-sub">每次导入/发送一批 · 点击筛选</span>
+        <button id="statLatest" type="button" class="stat stat-action"
+          data-stat-filter="latest" aria-pressed="false" title="只看最近一次录入那天的发票">
+          <span class="stat-label">最近录入</span>
+          <span id="invLatestDate" class="stat-value small">—</span>
+          <span class="stat-sub">点一下只看这一天</span>
         </button>
       </section>
 
@@ -197,18 +197,18 @@
 
         <div id="filterPanel" class="filter-panel" hidden>
           <div class="filter-grid">
-            <label class="filter-field filter-wide"><span>全局搜索</span>
-              <input id="invKeyword" type="text" placeholder="号码 / 报销人 / 金额 / 批次"></label>
             <label class="filter-field"><span>发票号码</span>
               <input id="invNumber" type="text" placeholder="发票号码"></label>
             <label class="filter-field"><span>报销人</span>
               <input id="invReimburser" type="text" placeholder="报销人"></label>
-            <label class="filter-field"><span>录入批次</span>
-              <input id="invBatchFilter" type="text" placeholder="录入批次"></label>
             <label class="filter-field"><span>开票日期起</span>
               <input id="invDateFrom" type="date"></label>
             <label class="filter-field"><span>开票日期止</span>
               <input id="invDateTo" type="date"></label>
+            <label class="filter-field"><span>录入时间起</span>
+              <input id="invCreatedFrom" type="date"></label>
+            <label class="filter-field"><span>录入时间止</span>
+              <input id="invCreatedTo" type="date"></label>
             <label class="filter-field"><span>金额下限</span>
               <input id="invAmountMin" type="number" placeholder="0.00"></label>
             <label class="filter-field"><span>金额上限</span>
@@ -241,7 +241,6 @@
               <col class="col-issued">
               <col class="col-total">
               <col class="col-reimburser">
-              <col class="col-batch">
               <col class="col-created">
               <col class="col-actions">
             </colgroup>
@@ -250,7 +249,7 @@
                 <th class="col-check"><input id="selectAll" type="checkbox" aria-label="全选当前页"></th>
                 <th>发票号码</th><th>发票代码</th><th>票种</th><th>开票日期</th>
                 <th class="num">价税合计</th><th title="点击单元格可直接填写报销人">报销人</th>
-                <th>录入批次</th><th>录入时间</th><th class="col-actions">操作</th>
+                <th>录入时间</th><th class="col-actions">操作</th>
               </tr>
             </thead>
             <tbody id="invoiceBody"></tbody>

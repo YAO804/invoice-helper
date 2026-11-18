@@ -64,24 +64,30 @@ func TestListWithMetaLatestBatchIgnoresFilter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	items, _, latest, err := store.ListWithMeta(Query{})
+	items, _, meta, err := store.ListWithMeta(Query{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(items) != 2 || latest != "B002" {
-		t.Fatalf("全量查询错误: items=%d latest=%q", len(items), latest)
+	if len(items) != 2 || meta.LatestBatch != "B002" {
+		t.Fatalf("全量查询错误: items=%d latest=%q", len(items), meta.LatestBatch)
+	}
+	if meta.LatestCreatedAt != "2026-11-17 11:00:00" {
+		t.Fatalf("最新录入时间错误: %q", meta.LatestCreatedAt)
 	}
 
 	// 只看老批次：结果里只剩 B001，但最新批次仍应是全表的 B002
-	items, _, latest, err = store.ListWithMeta(Query{Batch: "B001"})
+	items, _, meta, err = store.ListWithMeta(Query{Batch: "B001"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(items) != 1 {
 		t.Fatalf("筛选后应剩 1 条，实际 %d", len(items))
 	}
-	if latest != "B002" {
-		t.Fatalf("最新批次应仍是 B002，实际 %q", latest)
+	if meta.LatestBatch != "B002" {
+		t.Fatalf("最新批次应仍是 B002，实际 %q", meta.LatestBatch)
+	}
+	if meta.LatestCreatedAt != "2026-11-17 11:00:00" {
+		t.Fatalf("最新录入时间不该跟着筛选变，实际 %q", meta.LatestCreatedAt)
 	}
 }
 

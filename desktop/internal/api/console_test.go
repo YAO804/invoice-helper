@@ -133,7 +133,7 @@ func TestIndexWiresPreviewScript(t *testing.T) {
 	// 弹层的标记和脚本缺任何一个，文件名按钮都会变成「点了没反应」
 	for _, want := range []string{
 		`id="previewModal"`, `id="closePreviewBtn"`, "/preview.js", "/events.js",
-		`data-stat-filter="duplicates"`, `data-stat-filter="needfill"`, `data-stat-filter="batch"`,
+		`data-stat-filter="duplicates"`, `data-stat-filter="needfill"`, `data-stat-filter="latest"`,
 		"/ledger-stats.js",
 	} {
 		if !strings.Contains(body, want) {

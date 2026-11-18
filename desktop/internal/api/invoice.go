@@ -13,11 +13,12 @@ type invoiceListResponse struct {
 	DuplicateGroups int                     `json:"duplicate_groups"`
 	NeedFill        int                     `json:"need_fill"`
 	LatestBatch     string                  `json:"latest_batch"`
+	LatestCreatedAt string                  `json:"latest_created_at"`
 }
 
 func (d *deps) listInvoices(w http.ResponseWriter, r *http.Request) {
 	query := ledger.QueryFromValues(r.URL.Query())
-	items, groups, latest, err := d.ledger.ListWithMeta(query)
+	items, groups, meta, err := d.ledger.ListWithMeta(query)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "读取发票台账失败: "+err.Error())
 		return
@@ -29,6 +30,7 @@ func (d *deps) listInvoices(w http.ResponseWriter, r *http.Request) {
 		Total:           len(items),
 		DuplicateGroups: len(groups),
 		NeedFill:        ledger.CountNeedFill(items),
-		LatestBatch:     latest,
+		LatestBatch:     meta.LatestBatch,
+		LatestCreatedAt: meta.LatestCreatedAt,
 	})
 }
