@@ -11,10 +11,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	"invoice-helper/desktop/internal/auth"
 	"invoice-helper/desktop/internal/files"
 	"invoice-helper/desktop/internal/ledger"
 	"invoice-helper/desktop/internal/registry"
 )
+
+// testPIN 是所有测试共用的 PIN。request() 自动带上，老测试无需关心鉴权。
+const testPIN = "123456"
 
 func newTestHandler(t *testing.T) (http.Handler, *files.Store) {
 	t.Helper()
@@ -45,13 +49,18 @@ func buildHandler(t *testing.T, root string) (http.Handler, *files.Store) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return NewHandler(":8765", store, invoiceLedger, deviceRegistry), store
+	pinStore, err := auth.New(root, testPIN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return NewHandler(":8765", store, invoiceLedger, deviceRegistry, pinStore), store
 }
 
 func request(t *testing.T, handler http.Handler, method string, path string, body io.Reader, contentType string) *httptest.ResponseRecorder {
 	t.Helper()
 
 	req := httptest.NewRequest(method, path, body)
+	req.Header.Set("X-PIN", testPIN)
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}

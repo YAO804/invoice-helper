@@ -1,4 +1,5 @@
 const discover = require('./discover')
+const auth = require('./auth')
 
 const BASE_KEY = 'desktop_base_url'
 const DEVICE_KEY = 'desktop_device_id'
@@ -53,7 +54,7 @@ function heartbeat() {
     wx.request({
       url: base + '/api/devices/heartbeat',
       method: 'POST',
-      header: { 'content-type': 'application/json' },
+      header: auth.authHeader(),
       data: {
         device_id: deviceId(),
         name: '攒票小匣小程序',
@@ -78,7 +79,7 @@ function requestJSON(method, path, data) {
     wx.request({
       url: base + path,
       method: method,
-      header: { 'content-type': 'application/json' },
+      header: auth.authHeader(),
       data: data,
       success: function (res) {
         if (res.statusCode >= 200 && res.statusCode < 300) return resolve(res.data)
@@ -190,6 +191,7 @@ function uploadFile(filePath, name, source) {
       filePath: filePath,
       name: 'file',
       fileName: name,
+      header: { 'X-PIN': auth.getPIN() },
       formData: {
         device_id: deviceId(),
         source: source || 'miniprogram'
@@ -258,6 +260,10 @@ function stopAutoHeartbeat() {
 }
 
 module.exports = {
+  authHeader: auth.authHeader,
+  getPIN: auth.getPIN,
+  setPIN: auth.setPIN,
+  hasPIN: auth.hasPIN,
   normalizeBase: normalizeBase,
   getBase: getBase,
   setBase: setBase,

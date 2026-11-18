@@ -69,6 +69,7 @@ function download(name) {
   return new Promise(function (resolve, reject) {
     wxApi().downloadFile({
       url: url,
+      header: LAN.authHeader ? LAN.authHeader() : {},
       success: function (res) {
         if (res.statusCode >= 200 && res.statusCode < 300) return resolve(res.tempFilePath)
         reject(new Error('电脑端返回 HTTP ' + res.statusCode))

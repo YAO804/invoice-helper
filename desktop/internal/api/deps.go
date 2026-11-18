@@ -3,6 +3,7 @@ package api
 import (
 	"time"
 
+	"invoice-helper/desktop/internal/auth"
 	"invoice-helper/desktop/internal/files"
 	"invoice-helper/desktop/internal/ledger"
 	"invoice-helper/desktop/internal/registry"
@@ -16,9 +17,11 @@ const (
 )
 
 type deps struct {
-	store     *files.Store
-	ledger    *ledger.Store
-	registry  *registry.Registry
-	addr      string
-	startedAt time.Time
+	store      *files.Store
+	ledger     *ledger.Store
+	registry   *registry.Registry
+	addr       string
+	startedAt  time.Time
+	auth       *auth.Store
+	challenges *auth.Challenges
 }

@@ -1,5 +1,6 @@
 const lanservice = require('../../utils/lanservice')
 const discover = require('../../utils/discover')
+const auth = require('../../utils/auth')
 
 Page({
   data: {
@@ -8,16 +9,24 @@ Page({
     canDiscover: false,
     discovering: false,
     scanning: false,
-    discoverTip: ''
+    discoverTip: '',
+    pinSet: false,
+    pinMask: ''
   },
 
   onShow() {
     const url = lanservice.getBase()
+    this.refreshPINStatus()
     this.setData({
       desktopUrl: url,
       desktopStatus: url ? '已配置' : '未配置',
       canDiscover: discover.supported()
     })
+  },
+
+  refreshPINStatus() {
+    const set = auth.hasPIN()
+    this.setData({ pinSet: set, pinMask: set ? '已设置（******）' : '未设置' })
   },
 
   onHide() { discover.cancel() },
@@ -86,6 +95,88 @@ Page({
         scanning: false
       })
     }
+  },
+
+  /** 扫电脑网页的登录二维码：一次扫码同时连地址 + 授权网页登录 */
+  async onScanLogin() {
+    if (this.data.scanning) return
+    if (!auth.hasPIN()) {
+      wx.showToast({ title: '请先设置 PIN', icon: 'none' })
+      return
+    }
+    this.setData({ scanning: true, discoverTip: '正在扫码登录电脑…' })
+    try {
+      const base = await auth.scanLoginCode()
+      lanservice.setBase(base)
+      lanservice.startAutoHeartbeat()
+      this.setData({
+        desktopUrl: base,
+        desktopStatus: '已扫码登录',
+        discoverTip: '已登录电脑网页，可切到浏览器查看',
+        scanning: false
+      })
+      wx.showToast({ title: '登录成功', icon: 'none' })
+    } catch (e) {
+      this.setData({ discoverTip: e.message || '扫码登录失败', scanning: false })
+    }
+  },
+
+  /** 首次设置 PIN：存在本机，之后所有请求自动带，无感登录 */
+  onSetupPIN() {
+    wx.showModal({
+      title: '设置 PIN',
+      content: '请输入 4 位以上数字，用于连接电脑端',
+      editable: true,
+      placeholderText: '例如 123456',
+      success: (res) => {
+        if (!res.confirm) return
+        const pin = String(res.content || '').trim()
+        if (pin.length < 4) {
+          wx.showToast({ title: 'PIN 至少 4 位', icon: 'none' })
+          return
+        }
+        auth.setPIN(pin)
+        this.refreshPINStatus()
+        wx.showToast({ title: 'PIN 已保存', icon: 'none' })
+      }
+    })
+  },
+
+  /** 修改 PIN：需带当前 PIN，改完服务端旧会话全部失效 */
+  onChangePIN() {
+    const base = lanservice.getBase()
+    if (!base || !auth.hasPIN()) {
+      wx.showToast({ title: '请先连接电脑并设置 PIN', icon: 'none' })
+      return
+    }
+    wx.showModal({
+      title: '当前 PIN',
+      content: '请输入当前 PIN',
+      editable: true,
+      success: (oldRes) => {
+        if (!oldRes.confirm || !String(oldRes.content || '').trim()) return
+        const oldPIN = String(oldRes.content).trim()
+        wx.showModal({
+          title: '新 PIN',
+          content: '请输入新 PIN（至少 4 位）',
+          editable: true,
+          success: (newRes) => {
+            if (!newRes.confirm) return
+            const newPIN = String(newRes.content || '').trim()
+            if (newPIN.length < 4) {
+              wx.showToast({ title: '新 PIN 至少 4 位', icon: 'none' })
+              return
+            }
+            auth.changePIN(oldPIN, newPIN, base).then(() => {
+              this.refreshPINStatus()
+              wx.showToast({ title: '已修改，电脑网页需重新扫码', icon: 'none' })
+            }).catch((e) => {
+              wx.showToast({ title: e.message || '修改失败', icon: 'none' })
+            })
+          }
+        })
+      }
+    })
   },
 
   async onTestDesktop() {

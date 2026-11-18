@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"invoice-helper/desktop/internal/auth"
 	"invoice-helper/desktop/internal/config"
 	"invoice-helper/desktop/internal/files"
 	"invoice-helper/desktop/internal/ledger"
@@ -27,19 +28,34 @@ func NewServer(cfg config.Config) (http.Handler, *files.Store, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return NewHandler(cfg.Addr, store, invoiceLedger, deviceRegistry), store, nil
+
+	pinStore, err := auth.New(cfg.DataDir, cfg.PIN)
+	if err != nil {
+		return nil, nil, err
+	}
+	return NewHandler(cfg.Addr, store, invoiceLedger, deviceRegistry, pinStore), store, nil
 }
 
-func NewHandler(addr string, store *files.Store, invoiceLedger *ledger.Store, deviceRegistry *registry.Registry) http.Handler {
+func NewHandler(addr string, store *files.Store, invoiceLedger *ledger.Store, deviceRegistry *registry.Registry, pinStore *auth.Store) http.Handler {
 	d := &deps{
-		store:     store,
-		ledger:    invoiceLedger,
-		registry:  deviceRegistry,
-		addr:      addr,
-		startedAt: time.Now(),
+		store:      store,
+		ledger:     invoiceLedger,
+		registry:   deviceRegistry,
+		addr:       addr,
+		startedAt:  time.Now(),
+		auth:       pinStore,
+		challenges: auth.NewChallenges(),
 	}
 
 	mux := http.NewServeMux()
+	// 登录相关接口：必须在鉴权之外，否则未登录的网页拿不到挑战码和二维码。
+	mux.HandleFunc("GET /api/auth/challenge", d.authChallenge)
+	mux.HandleFunc("GET /api/auth/qr.png", d.authQR)
+	mux.HandleFunc("POST /api/auth/confirm", d.authConfirm)
+	mux.HandleFunc("GET /api/auth/session", d.authSession)
+	mux.HandleFunc("POST /api/auth/logout", d.authLogout)
+	mux.HandleFunc("POST /api/auth/pin", d.authChangePIN)
+
 	mux.HandleFunc("GET /api/health", d.health)
 	mux.HandleFunc("GET /api/status", d.status)
 	mux.HandleFunc("GET /api/connect-qr.png", d.connectQR)
@@ -67,5 +83,5 @@ func NewHandler(addr string, store *files.Store, invoiceLedger *ledger.Store, de
 	mux.HandleFunc("GET /api/outgoing/{name}/download", d.downloadOutgoing)
 	mux.Handle("/", staticFiles())
 
-	return mux
+	return withAuth(d, mux)
 }

@@ -404,6 +404,16 @@ function bindLedgerEvents() {
   }, 10000)
 }
 
-bindLedgerEvents()
-refreshLedger()
+/**
+ * 登录成功后由 login.js 调用，才开始拉台账数据。
+ * window.refreshLedger 提前挂好，控制台页切换标签时要用。
+ */
+function startLedgerApp() {
+  if (window.__ledgerStarted) return
+  window.__ledgerStarted = true
+  bindLedgerEvents()
+  refreshLedger()
+}
+
 window.refreshLedger = refreshLedger
+window.startLedgerApp = startLedgerApp

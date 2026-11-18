@@ -27,6 +27,7 @@ func main() {
 		log.Printf("手机访问: %s", url)
 	}
 	log.Printf("数据目录: %s", cfg.DataDir)
+	log.Printf("登录已启用：网页首次打开需用小程序扫码授权；PIN 存于 %s", cfg.DataDir+"/pin.json")
 
 	startRetention(fileStore, cfg.KeepDays)
 

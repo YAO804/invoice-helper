@@ -7,6 +7,17 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+  <div id="loginMask" class="login-mask">
+    <div class="login-card">
+      <div class="login-brand"><span class="brand-mark" aria-hidden="true">票</span><strong>攒票小匣</strong></div>
+      <h2>扫码登录桌面端</h2>
+      <p class="hint">用手机小程序「设置 → 扫码登录电脑」扫下面的码，一次即可；授权后本机浏览器 30 天内免扫。</p>
+      <img id="loginQr" class="login-qr" alt="扫码登录二维码" width="200" height="200">
+      <p id="loginTip" class="hint login-tip">正在获取登录码…</p>
+      <button id="loginRefreshBtn" type="button" class="btn btn-ghost">刷新二维码</button>
+    </div>
+  </div>
+
   <header class="app-header">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">票</span>
@@ -309,6 +320,7 @@
   </div>
 
   <script src="/api.js"></script>
+  <script src="/login.js"></script>
   <script src="/render.js"></script>
   <script src="/events.js"></script>
   <script src="/preview.js"></script>

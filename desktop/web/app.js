@@ -140,9 +140,6 @@ function bindEvents() {
   })
 }
 
-bindEvents()
-refresh()
-
 // 轮询间隔跟着状态走：还没连上时用户正盯着「小程序连接」这张卡，2 秒一次；
 // 连上之后没必要这么勤，回到 5 秒。
 const POLL_FAST_MS = 2000
@@ -162,10 +159,22 @@ function scheduleRefresh() {
   }, nextPollDelay())
 }
 
-scheduleRefresh()
+/**
+ * 登录成功后由 login.js 调用，才开始拉业务数据。
+ * 未登录时接口会返回 401，提前拉只会得到一堆错误和空白界面。
+ */
+function startDesktopApp() {
+  if (window.__desktopStarted) return
+  window.__desktopStarted = true
+  bindEvents()
+  refresh()
+  scheduleRefresh()
+}
+
+window.startDesktopApp = startDesktopApp
 
 // 切回这个标签页时立刻刷新一次，别让用户等下一个轮询
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) return
+  if (document.hidden || !window.__desktopStarted) return
   refresh().then(scheduleRefresh)
 })

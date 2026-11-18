@@ -91,6 +91,7 @@ Page({
 
     wx.downloadFile({
       url: url,
+      header: lanservice.authHeader(),
       success: function (res) {
         wx.hideLoading()
         that.setData({ exporting: false })
