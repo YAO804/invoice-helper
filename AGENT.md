@@ -79,7 +79,7 @@ cd desktop && go run .
 # 小程序 15 套，共 451 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
-# 电脑端网页 4 套，共 84 项检查
+# 电脑端网页 5 套，共 102 项检查
 for f in test/desktop/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端
@@ -222,7 +222,8 @@ sort = created | issued | number | reimburser   // 默认 created（录入时间
 - `app.js` / `render.js` / `api.js`：控制台（状态、连接二维码与地址、设备、发送到小程序、两边文件列表）。
 - `events.js`：最近事件渲染。协议里的事件类型是英文（`upload` / `put` / `delete` / `import`），界面统一映射成中文（接收 / 发送 / 删除 / 台账），原始类型只留在 `class` 和 `title` 里。**新增事件类型必须同时补中文标签**，`events.test.js` 会扫后端 `MarkEvent("...")` 校验。
 - `preview.js`：文件预览弹层——PDF 用 iframe 交给浏览器内置阅读器、图片用 img、文本抓下来塞 `pre`（>512KB 拒绝预览）；可预览类型只认后端返回的 `preview` 字段。
-- `ledger-app.js` / `ledger-render.js` / `ledger-api.js`：台账（搜索、排序、筛选、导入、补录、行内改报销人、清理、重复抽屉、导出、号码点击复制；勾选后显示张数与合计金额，金额按分求和避免浮点尾数）。
+- `ledger-app.js` / `ledger-render.js` / `ledger-api.js` / `ledger-stats.js`：台账（搜索、排序、筛选、导入、补录、行内改报销人、清理、重复抽屉、导出、号码点击复制；勾选后显示张数与合计金额，金额按分求和避免浮点尾数）。
+- `ledger-stats.js`：顶部统计卡片兼筛选入口——点「重复组 / 待补录 / 最新批次」直接筛列表，再点一次取消，条件写回筛选面板（两处共用一份状态，卡片高亮跟 `aria-pressed` 走）。「最新批次」取后端 `latest_batch`（全表），不是当前列表第一行，否则一筛选它就跟着变。
 
 ### 数据目录（`desktop/data/`，不提交）
 
@@ -291,8 +292,8 @@ registry.json   设备与事件记录
 
 - **小程序 15 套 / 451 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
   `einvoice 60`、`lanservice 63`、`transfer 41`、`draft 36`、`list 32`、`collect 31`、`filesend 31`、`filetake 29`、`ledger 27`、`scanbatch 27`、`discover 18`、`invoicesend 18`、`zip 14`、`selection 13`、`fsx 11`。
-- **电脑端网页 4 套 / 84 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
-  `preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）。
+- **电脑端网页 5 套 / 102 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
+  `preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`stat-filter 18`（统计卡片与筛选面板双向同步、最新批次取全表）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。
 - 起服务冒烟：启动 `go run .` 后 `curl /api/health`、`/api/connect-qr.png` 应返回 200；台账接收/补录/手动录入/清理/导出接口应返回 200。
 

@@ -136,21 +136,24 @@
           <div id="invTotal" class="stat-value">—</div>
           <div class="stat-sub">张发票</div>
         </div>
-        <div class="stat">
-          <div class="stat-label">重复组</div>
-          <div id="invDuplicates" class="stat-value warn">—</div>
-          <div class="stat-sub">按代码+号码判定</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">待补录</div>
-          <div id="invNeedFill" class="stat-value warn">—</div>
-          <div class="stat-sub">报销人为空</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">最新批次</div>
-          <div id="invBatch" class="stat-value small">—</div>
-          <div class="stat-sub">每次导入/发送一批</div>
-        </div>
+        <button id="statDuplicates" type="button" class="stat stat-action"
+          data-stat-filter="duplicates" aria-pressed="false" title="只看重复发票">
+          <span class="stat-label">重复组</span>
+          <span id="invDuplicates" class="stat-value warn">—</span>
+          <span class="stat-sub">按代码+号码判定 · 点击筛选</span>
+        </button>
+        <button id="statNeedFill" type="button" class="stat stat-action"
+          data-stat-filter="needfill" aria-pressed="false" title="只看待补录（报销人为空）">
+          <span class="stat-label">待补录</span>
+          <span id="invNeedFill" class="stat-value warn">—</span>
+          <span class="stat-sub">报销人为空 · 点击筛选</span>
+        </button>
+        <button id="statBatch" type="button" class="stat stat-action"
+          data-stat-filter="batch" aria-pressed="false" title="只看这个批次">
+          <span class="stat-label">最新批次</span>
+          <span id="invBatch" class="stat-value small">—</span>
+          <span class="stat-sub">每次导入/发送一批 · 点击筛选</span>
+        </button>
       </section>
 
       <div id="duplicateAlert" class="duplicate-alert"></div>
@@ -300,6 +303,7 @@
   <script src="/app.js"></script>
   <script src="/ledger-api.js"></script>
   <script src="/ledger-render.js"></script>
+  <script src="/ledger-stats.js"></script>
   <script src="/ledger-app.js"></script>
 </body>
 </html>

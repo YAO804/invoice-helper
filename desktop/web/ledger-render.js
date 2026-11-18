@@ -2,8 +2,9 @@ function renderInvoiceStats(data) {
   $('invTotal').textContent = data.total || 0
   $('invDuplicates').textContent = data.duplicate_groups || 0
   $('invNeedFill').textContent = data.need_fill || 0
-  const items = data.items || []
-  $('invBatch').textContent = items.length && items[0].batch ? items[0].batch : '—'
+  // 用后端给的全表最新批次，不看当前列表第一行：
+  // 这张卡片同时是筛选入口，值必须稳定，不能跟着筛选结果漂
+  $('invBatch').textContent = data.latest_batch || '—'
   $('lastInvoiceRefresh').textContent = '更新于 ' + new Date().toLocaleTimeString()
 }
 

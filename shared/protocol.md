@@ -83,7 +83,7 @@ invoice-helper://connect?base=<urlencode 后的电脑地址>
 {
   "ok": true,
   "name": "invoice-helper-desktop",
-  "version": "0.3.0"
+  "version": "0.4.0"
 }
 ```
 
@@ -412,15 +412,18 @@ sort=created|issued|number|reimburser
   "duplicates": [],
   "total": 0,
   "duplicate_groups": 0,
-  "need_fill": 0
+  "need_fill": 0,
+  "latest_batch": "B20261118-093729-174"
 }
 ```
 
 `duplicates` 是按 `identityKey` 聚合的重复组，每组带 `number`、`code`、`items`。
 
-**注意**：`duplicates` 与 `duplicate_groups` 始终按**全量台账**计算，不受 `keyword` 等筛选条件影响；
+**注意**：`duplicates` / `duplicate_groups` / `latest_batch` 始终按**全量台账**计算，不受 `keyword` 等筛选条件影响；
 `items` / `total` / `need_fill` 才是筛选后的结果。小程序据此实现「仅看重复」：
 它把筛选交给电脑端，同时用 `duplicates` 判断某条记录属于哪一组。
+`latest_batch` 取批次号字典序最大的那条（批次号形如 `B20261118-093729-174`，时间定长，字典序即时间序），
+台账为空时是空串——电脑端网页的「最新批次」卡片同时是筛选入口，所以它的值必须与当前筛选无关。
 
 小程序台账页的同步流程：
 

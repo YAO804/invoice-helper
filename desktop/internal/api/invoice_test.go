@@ -29,6 +29,44 @@ func invoiceRow(number string, reimburser string, total string) []string {
 	}
 }
 
+// invoiceRowInBatch 指定批次号，用来验证「最新批次」取的是全表而不是筛选结果
+func invoiceRowInBatch(number string, batch string) []string {
+	return []string{
+		number, "", "普通发票", "2026-08-01", "100.00", "甲公司",
+		batch, "2026-11-17 10:00:00",
+	}
+}
+
+// 卡片上的最新批次要能当筛选入口：筛了别的批次，它也不能跟着变。
+func TestInvoiceLatestBatchIgnoresFilter(t *testing.T) {
+	handler, _ := newTestHandler(t)
+	content := invoiceCSV(
+		invoiceRowInBatch("N101", "B20261117-100000-000"),
+		invoiceRowInBatch("N102", "B20261118-093729-174"),
+	)
+	body, contentType := uploadBody(t, "invoices.csv", string(content))
+	if rec := request(t, handler, http.MethodPost, "/api/invoices/import?confirm=1", body, contentType); rec.Code != http.StatusOK {
+		t.Fatalf("导入状态码错误: %d, body=%s", rec.Code, rec.Body.String())
+	}
+
+	rec := request(t, handler, http.MethodGet, "/api/invoices", nil, "")
+	var all invoiceListResponse
+	decodeJSON(t, rec, &all)
+	if all.LatestBatch != "B20261118-093729-174" {
+		t.Fatalf("最新批次错误: %q", all.LatestBatch)
+	}
+
+	filteredRec := request(t, handler, http.MethodGet, "/api/invoices?batch=B20261117-100000-000", nil, "")
+	var filtered invoiceListResponse
+	decodeJSON(t, filteredRec, &filtered)
+	if filtered.Total != 1 {
+		t.Fatalf("按批次筛选后应剩 1 条，实际 %d", filtered.Total)
+	}
+	if filtered.LatestBatch != all.LatestBatch {
+		t.Fatalf("筛选后最新批次被改动了: %q", filtered.LatestBatch)
+	}
+}
+
 func TestInvoiceListAndDuplicates(t *testing.T) {
 	handler, _ := newTestHandler(t)
 	content := invoiceCSV(invoiceRow("N001", "甲公司", "113.00"), invoiceRow("N001", "乙公司", "113.00"))

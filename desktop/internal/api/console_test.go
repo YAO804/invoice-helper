@@ -131,17 +131,26 @@ func TestIndexWiresPreviewScript(t *testing.T) {
 	body := rec.Body.String()
 
 	// 弹层的标记和脚本缺任何一个，文件名按钮都会变成「点了没反应」
-	for _, want := range []string{`id="previewModal"`, `id="closePreviewBtn"`, "/preview.js", "/events.js"} {
+	for _, want := range []string{
+		`id="previewModal"`, `id="closePreviewBtn"`, "/preview.js", "/events.js",
+		`data-stat-filter="duplicates"`, `data-stat-filter="needfill"`, `data-stat-filter="batch"`,
+		"/ledger-stats.js",
+	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("首页缺少 %s", want)
 		}
 	}
 
-	// 这两个脚本都在加载时注册点击委托 / 供 app.js 调用，必须早于 app.js
+	// preview.js / events.js 在加载时注册点击委托或供控制台页调用，必须早于 app.js
 	for _, name := range []string{"/preview.js", "/events.js"} {
 		if strings.Index(body, name) > strings.Index(body, "/app.js") {
 			t.Fatalf("%s 必须早于 app.js", name)
 		}
+	}
+
+	// ledger-stats.js 被 ledger-app.js 调用，必须早于它
+	if strings.Index(body, "/ledger-stats.js") > strings.Index(body, "/ledger-app.js") {
+		t.Fatal("ledger-stats.js 必须早于 ledger-app.js")
 	}
 }
 

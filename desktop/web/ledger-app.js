@@ -174,6 +174,7 @@ function renderInvoiceAll() {
   renderInvoiceTable(items, selectedInvoices)
   renderDuplicatePanel(invoiceData.duplicates || [])
   renderSelectionSummary(items, selectedInvoices)
+  syncStatFilterState()
   const allChecked = items.length > 0 && items.every((item) => selectedInvoices.has(item.id))
   $('selectAll').checked = allChecked
 }
@@ -189,6 +190,7 @@ async function refreshLedger() {
 
 function scheduleLedgerRefresh() {
   syncFilterCount()
+  syncStatFilterState()
   clearTimeout(invoiceSearchTimer)
   invoiceSearchTimer = setTimeout(refreshLedger, 250)
 }
@@ -297,8 +299,8 @@ function bindLedgerEvents() {
     'invDateTo', 'invAmountMin', 'invAmountMax'].forEach((id) => {
     $(id).addEventListener('input', scheduleLedgerRefresh)
   })
-  $('invOnlyDuplicates').addEventListener('change', refreshLedger)
-  $('invOnlyNeedFill').addEventListener('change', refreshLedger)
+  $('invOnlyDuplicates').addEventListener('change', () => { syncStatFilterState(); refreshLedger() })
+  $('invOnlyNeedFill').addEventListener('change', () => { syncStatFilterState(); refreshLedger() })
   $('invSort').addEventListener('change', refreshLedger)
 
   $('ledgerRefreshBtn').addEventListener('click', refreshLedger)
@@ -332,6 +334,15 @@ function bindLedgerEvents() {
   })
 
   document.addEventListener('click', (event) => {
+    // 统计卡片：点一下筛一类，再点一次取消。条件写回筛选面板，两处共用一份状态
+    const statCard = event.target.closest('[data-stat-filter]')
+    if (statCard) {
+      if (toggleStatFilter(statCard.dataset.statFilter)) {
+        syncFilterCount()
+        refreshLedger()
+      }
+      return
+    }
     const copyButton = event.target.closest('.copy-cell')
     if (copyButton) {
       copyInvoiceValue(copyButton)
