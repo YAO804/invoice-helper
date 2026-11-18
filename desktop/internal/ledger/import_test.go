@@ -38,3 +38,24 @@ func TestPreviewAndCommitImport(t *testing.T) {
 		t.Fatalf("导入结果错误: %+v", list)
 	}
 }
+
+// 老票同号码不同代码是两张不同的票，导入预览不能算重复。
+func TestImportTreatsDifferentCodeAsNew(t *testing.T) {
+	store := newTestLedger(t)
+	if err := store.save([]Invoice{{Number: "12345678", Code: "033001900111"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	content, err := writeCSV([]Invoice{{Number: "12345678", Code: "033001900222"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	preview, err := store.PreviewImport(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.NewCount != 1 || preview.DuplicateCount != 0 {
+		t.Fatalf("同号码不同代码应视为新票: %+v", preview)
+	}
+}

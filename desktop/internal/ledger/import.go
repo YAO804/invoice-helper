@@ -25,7 +25,7 @@ func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
 		return ImportPreview{}, err
 	}
 
-	numbers := numberSet(existing)
+	seen := identitySet(existing)
 	batch := newBatch()
 	preview := ImportPreview{Total: len(incoming), Items: []ImportItem{}}
 
@@ -39,14 +39,14 @@ func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
 			item.Status = "invalid"
 			item.Message = "缺少发票号码"
 			preview.InvalidCount++
-		case numbers[invoice.Number]:
+		case seen[identityKey(invoice)]:
 			item.Status = "duplicate"
-			item.Message = "发票号码已存在"
+			item.Message = duplicateMessage(invoice)
 			preview.DuplicateCount++
 		default:
 			item.Status = "new"
 			preview.NewCount++
-			numbers[invoice.Number] = true
+			seen[identityKey(invoice)] = true
 		}
 		preview.Items = append(preview.Items, item)
 	}
@@ -67,7 +67,7 @@ func (s *Store) CommitImport(content []byte) (int, error) {
 		return 0, err
 	}
 
-	numbers := numberSet(existing)
+	seen := identitySet(existing)
 	batch := newBatch()
 	added := 0
 
@@ -77,7 +77,7 @@ func (s *Store) CommitImport(content []byte) (int, error) {
 		if invoice.Number == "" {
 			continue
 		}
-		numbers[invoice.Number] = true
+		seen[identityKey(invoice)] = true
 		existing = append(existing, invoice)
 		added++
 	}
@@ -87,12 +87,21 @@ func (s *Store) CommitImport(content []byte) (int, error) {
 	return added, s.save(existing)
 }
 
-func numberSet(list []Invoice) map[string]bool {
+// identitySet 用「代码+号码」标记已存在的发票，与 duplicateGroups 保持同一口径。
+func identitySet(list []Invoice) map[string]bool {
 	result := map[string]bool{}
 	for _, invoice := range list {
 		if invoice.Number != "" {
-			result[invoice.Number] = true
+			result[identityKey(invoice)] = true
 		}
 	}
 	return result
+}
+
+// duplicateMessage 说清楚是「号码撞了」还是「代码+号码都撞了」，方便用户判断。
+func duplicateMessage(invoice Invoice) string {
+	if invoice.Code == "" {
+		return "发票号码已存在"
+	}
+	return "发票代码与号码都已存在"
 }

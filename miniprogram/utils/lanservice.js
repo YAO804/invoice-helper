@@ -110,6 +110,19 @@ function getJSON(path) {
   })
 }
 
+/**
+ * 发送前查重：把「代码+号码」一起提交。
+ * 老票只给号码会跨代码误判，代码为空时服务端退化为按号码匹配（数电票本来没有代码）。
+ */
+function checkInvoices(invoices) {
+  return postJSON('/api/invoices/check', {
+    invoices: (invoices || []).map(function (invoice) {
+      return { number: invoice.number || '', code: invoice.code || '' }
+    })
+  })
+}
+
+/** 只要号码时的简写，等价于代码留空。 */
 function checkInvoiceNumbers(numbers) {
   return postJSON('/api/invoices/check', { numbers: numbers })
 }
@@ -207,6 +220,7 @@ module.exports = {
   setBase: setBase,
   deviceId: deviceId,
   heartbeat: heartbeat,
+  checkInvoices: checkInvoices,
   checkInvoiceNumbers: checkInvoiceNumbers,
   sendInvoices: sendInvoices,
   listFiles: listFiles,

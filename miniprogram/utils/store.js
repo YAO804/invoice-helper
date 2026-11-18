@@ -19,6 +19,9 @@ const category = require('./category')
 const LEDGER_DIR = 'ledger'
 const FILES_DIR = 'files'
 const INDEX_NAME = 'index.json'
+// 索引结构变更时递增，init() 会重建索引，旧数据不用手工迁移。
+// v2：去重键从「号码|日期|金额」改成「代码|号码」。
+const INDEX_VERSION = 2
 
 let FS = null
 let ROOT = null
@@ -73,7 +76,7 @@ function indexPath() { return join(rootDir(), INDEX_NAME) }
 function ledgerPath(month) { return join(rootDir(), LEDGER_DIR, month + '.json') }
 
 function freshIndex() {
-  return { version: 1, nextId: 1, byKey: {}, idMonth: {}, updatedAt: Date.now() }
+  return { version: INDEX_VERSION, nextId: 1, byKey: {}, idMonth: {}, updatedAt: Date.now() }
 }
 
 function init() {
@@ -82,7 +85,7 @@ function init() {
   ensureDir(join(rootDir(), FILES_DIR))
 
   let idx = readJson(indexPath(), null)
-  if (!idx || idx.version !== 1 || !idx.byKey || !idx.idMonth) {
+  if (!idx || idx.version !== INDEX_VERSION || !idx.byKey || !idx.idMonth) {
     idx = freshIndex()
     writeJson(indexPath(), idx)
     rebuildIndex()
@@ -136,8 +139,15 @@ function groupMonth(inv, basis) {
   return basis === 'created' ? createdMonth(inv) : monthOf(inv)
 }
 
+/**
+ * 本地判重键：发票代码 + 发票号码，与电脑端同一口径。
+ *
+ * 数电票没有代码（20 位号码全国唯一），老票必须靠「代码+号码」才能唯一定位。
+ * 金额与开票日期不参与：补录、格式抖动都会让同一张票算出不同的键，
+ * 漏判一张就是重复报销。
+ */
 function dedupeKey(inv) {
-  return [inv.invoice_no || '', inv.issue_date || '', inv.total_cent || 0].join('|')
+  return (inv.invoice_code || '') + '|' + (inv.invoice_no || '')
 }
 
 function shardFiles() {

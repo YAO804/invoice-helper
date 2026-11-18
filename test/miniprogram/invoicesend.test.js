@@ -17,6 +17,7 @@ let stubMatches = {}
 let modalConfirm = false
 let limitConfirm = false
 let lastSendPayload = null
+let lastCheckPayload = null
 let lastModal = null
 let many = []
 
@@ -25,6 +26,7 @@ global.wx = {
   setStorageSync(k, v) { storage[k] = v },
   request(options) {
     if (options.url.indexOf('/api/invoices/check') >= 0) {
+      lastCheckPayload = options.data
       return options.success({ statusCode: 200, data: { matches: stubMatches } })
     }
     lastSendPayload = options.data
@@ -62,6 +64,7 @@ invoicesend.send([draft('N1'), draft('N2')]).then(function (summary) {
   check('跳过重复后发送数', summary.sent, 1)
   check('跳过重复计数', summary.skipped, 1)
   check('只发送未重复发票', lastSendPayload.invoices.map(function (item) { return item.number }), ['N2'])
+  check('查重带上代码字段', lastCheckPayload.invoices[0], { number: 'N1', code: '' })
 
   stubMatches = {}
   return invoicesend.send([draft('N3'), draft('N4')])

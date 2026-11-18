@@ -10,18 +10,19 @@ func duplicateGroups(list []Invoice) []DuplicateGroup {
 		if invoice.Number == "" {
 			continue
 		}
-		group, ok := groups[invoice.Number]
+		key := identityKey(invoice)
+		group, ok := groups[key]
 		if !ok {
-			group = &DuplicateGroup{Number: invoice.Number}
-			groups[invoice.Number] = group
-			order = append(order, invoice.Number)
+			group = &DuplicateGroup{Number: invoice.Number, Code: invoice.Code}
+			groups[key] = group
+			order = append(order, key)
 		}
 		group.Items = append(group.Items, invoice)
 	}
 
 	result := []DuplicateGroup{}
-	for _, number := range order {
-		group := groups[number]
+	for _, key := range order {
+		group := groups[key]
 		if len(group.Items) > 1 {
 			result = append(result, *group)
 		}
@@ -30,12 +31,12 @@ func duplicateGroups(list []Invoice) []DuplicateGroup {
 }
 
 func markDuplicates(list []Invoice, groups []DuplicateGroup) []Invoice {
-	numbers := map[string]bool{}
+	keys := map[string]bool{}
 	for _, group := range groups {
-		numbers[group.Number] = true
+		keys[identityKey(Invoice{Code: group.Code, Number: group.Number})] = true
 	}
 	for i := range list {
-		list[i].Duplicate = numbers[list[i].Number]
+		list[i].Duplicate = keys[identityKey(list[i])]
 	}
 	return list
 }

@@ -80,12 +80,30 @@ check('取详情', store.getInvoice(1).reimburser, '张三')
 check('月份列表', store.months(), ['2026-11', '2026-08'])
 
 console.log('\n--- 去重 ---')
-check('同号码+日期+金额命中', store.findDuplicate({
+check('同号码命中', store.findDuplicate({
   invoice_no: '26932000001295659876', issue_date: '2026-08-02', total_cent: 14700
 }).id, 1)
-check('金额不同不算重复', store.findDuplicate({
+check('金额改了仍是同一张票', store.findDuplicate({
   invoice_no: '26932000001295659876', issue_date: '2026-08-02', total_cent: 14800
+}).id, 1)
+check('开票日期改了仍是同一张票', store.findDuplicate({
+  invoice_no: '26932000001295659876', issue_date: '2026-08-03', total_cent: 14700
+}).id, 1)
+check('号码不同不算重复', store.findDuplicate({
+  invoice_no: '26932000001295659877', issue_date: '2026-08-02', total_cent: 14700
 }), null)
+const legacy = store.upsertInvoice({
+  invoice_no: '12345678', invoice_code: '033001900111',
+  issue_date: '2026-08-04', total_cent: 10000, source: 'xml'
+})
+check('老票按代码+号码落键', store.dedupeKey(legacy), '033001900111|12345678')
+check('老票同号码不同代码不算重复', store.findDuplicate({
+  invoice_no: '12345678', invoice_code: '033001900222', issue_date: '2026-08-04', total_cent: 10000
+}), null)
+check('老票同号码同代码命中', store.findDuplicate({
+  invoice_no: '12345678', invoice_code: '033001900111', issue_date: '2026-08-04', total_cent: 10000
+}).id, legacy.id)
+store.deleteInvoice(legacy.id)
 
 console.log('\n--- 编辑与删除 ---')
 const edited = store.upsertInvoice({ id: 1, invoice_no: a.invoice_no, issue_date: a.issue_date,

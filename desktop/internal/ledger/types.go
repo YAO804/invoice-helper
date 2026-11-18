@@ -21,7 +21,16 @@ type Invoice struct {
 	Duplicate  bool   `json:"duplicate"`
 }
 
+// DuplicateGroup 按 identityKey 聚合：同号码不同代码的老票是两张不同的票，
+// 所以组里除了号码还要带代码，页面才能把它们区分开。
 type DuplicateGroup struct {
 	Number string    `json:"number"`
+	Code   string    `json:"code"`
 	Items  []Invoice `json:"items"`
+}
+
+// InvoiceKey 是判重时客户端提交的最小身份信息。
+type InvoiceKey struct {
+	Number string `json:"number"`
+	Code   string `json:"code"`
 }

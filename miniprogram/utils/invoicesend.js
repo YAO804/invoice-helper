@@ -69,9 +69,7 @@ function postList(list, left) {
 }
 
 function sendChecked(invoices, left) {
-  return lanservice.checkInvoiceNumbers(invoices.map(function (invoice) {
-    return invoice.number
-  })).then(function (result) {
+  return lanservice.checkInvoices(invoices).then(function (result) {
     const matches = result.matches || {}
     if (!Object.keys(matches).length) return postList(invoices, left)
 

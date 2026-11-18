@@ -73,7 +73,7 @@ function renderDuplicatePanel(groups) {
 
   $('duplicateBody').innerHTML = groups.map((group) => `
     <div class="duplicate-group">
-      <h3>发票号码 ${esc(group.number)} · 重复 ${group.items.length} 张</h3>
+      <h3>${group.code ? '发票代码 ' + esc(group.code) + ' · ' : ''}发票号码 ${esc(group.number)} · 重复 ${group.items.length} 张</h3>
       <div class="table-wrap">
         <table class="diff-table">
           <thead>
