@@ -35,6 +35,14 @@
       </view>
     </view>
 
+    <view wx:if="{{latestBatch}}" class="card" bindtap="onLatestBatch" hover-class="btn-hover">
+      <view class="row">
+        <text class="small muted">最新批次 · 最近一次发送到电脑</text>
+        <text class="tiny {{keyword === latestBatch ? 'muted' : 'link'}}">{{keyword === latestBatch ? '点此取消筛选' : '查看这批 ›'}}</text>
+      </view>
+      <view class="mono" style="margin-top:8rpx">{{latestBatch}}</view>
+    </view>
+
     <view class="card">
       <input class="input" placeholder="搜索号码 / 代码 / 报销人 / 批次 / 金额" value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" />
       <view class="filter-row">

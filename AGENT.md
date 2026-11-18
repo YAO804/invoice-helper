@@ -43,8 +43,8 @@ invoice-helper/
 │   └── README.md
 ├── shared/protocol.md          # 两端通信协议（当前 v0.9）
 ├── test/
-│   ├── miniprogram/            # 小程序 Node 回归测试（18 套 / 531 项检查）
-│   ├── desktop/                # 电脑端网页 Node 回归测试（7 套 / 132 项检查；Go 单测在 desktop/internal 各包内）
+│   ├── miniprogram/            # 小程序 Node 回归测试（19 套 / 553 项检查）
+│   ├── desktop/                # 电脑端网页 Node 回归测试（8 套 / 142 项检查；Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
 ├── scripts/                    # 图标生成、CRC 校准等开发脚本
@@ -76,10 +76,10 @@ cd desktop && go run .
 **回归测试**（改动后必跑）：
 
 ```bash
-# 小程序 18 套，共 531 项检查
+# 小程序 19 套，共 553 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
-# 电脑端网页 7 套，共 132 项检查
+# 电脑端网页 8 套，共 142 项检查
 for f in test/desktop/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端
@@ -172,8 +172,8 @@ sort = created | issued | number | reimburser   // 默认 created（录入时间
 
 | 页面 | 职责 |
 |---|---|
-| `collect` | **首页**。四张卡：连接状态、扫码（单张/批量）、文件导入（把票的信息记进台账，XML 填全字段、OFD/PDF 只取名）、文件归档（把原件发到电脑，跳传输页）；未连接时只提示去设置 |
-| `list` | **只读台账**：对齐电脑端（统计条、关键词、仅看重复、仅看待补录、四种排序），数据来自 `GET /api/invoices`，支持下拉刷新 |
+| `collect` | **首页**。四张卡：连接状态、扫码（单张/批量）、文件导入（把票的信息记进台账，XML 填全字段、OFD/PDF 只取名）、文件归档（把原件发到电脑，跳传输页）；未连接时只提示去设置。发送成功弹窗可「查看这批票」，批次号经 `globalData.pendingBatch` 带给台账页 |
+| `list` | **只读台账**：对齐电脑端（统计条、关键词、仅看重复、仅看待补录、四种排序），数据来自 `GET /api/invoices`，支持下拉刷新。「最新批次」卡片一键回看最近一次发送的那批票（用后端 `latest_batch`，全表口径），再点取消 |
 | `detail` | **只读详情**：8 个票面字段 + 同组重复记录；可复制号码，没有编辑/删除 |
 | `export` | 导出 CSV：选范围（全部/仅重复/仅待补录）→ 电脑端生成 → 下载 → 微信转发 |
 | `transfer` | **传输中心**：顶层分「发到电脑」「从电脑取」两个方向。发：会话文件上传，看「我的上传」「电脑已收」；取：看「电脑待取」，可单条接收（转发到聊天/预览）或批量接收。两边都支持勾选删除、全部删除、清理超 30 天 |
@@ -244,7 +244,7 @@ registry.json   设备与事件记录
 ## 8. 通信协议（v0.9，详见 shared/protocol.md）
 
 - 基础：`http://电脑IPv4:8765`，局域网直连，不要求 HTTPS/合法域名。
-- **鉴权**：`/api/*` 默认要 PIN/会话，白名单仅 health、connect-qr.png、auth/challenge、auth/qr.png、auth/confirm、auth/session、auth/logout。小程序请求带 `X-PIN`（`utils/auth.js`），网页用 HttpOnly cookie `ih_session`（30 天，token 由 PIN 派生 HMAC 签名）。默认 PIN `123456`，首次写入 `data/pin.json`（0600）后以文件为准，改 PIN 后旧会话全失效。扫码登录串 `invoice-helper://login?base=...&c=...`：一次性、5 分钟有效，小程序扫一次同时连地址并授权网页。
+- **鉴权**：`/api/*` 默认要 PIN/会话，白名单仅 health、connect-qr.png、auth/challenge、auth/qr.png、auth/confirm、auth/session、auth/logout。小程序请求带 `X-PIN`（`utils/auth.js`），网页用 HttpOnly cookie `ih_session`（30 天，token 由 PIN 派生 HMAC 签名）。默认 PIN `123456`，首次写入 `data/pin.json`（0600）后以文件为准，改 PIN 后旧会话全失效。扫码登录串 `invoice-helper://login?base=...&c=...`：一次性、5 分钟有效，小程序扫一次同时连地址并授权网页。网页 header 的「退出登录」调 `POST /api/auth/logout` 清 cookie，成功后整页重载回扫码态（顺带清掉两个页面模块的轮询定时器）；`logout.test.js` 守着这条。
 - 心跳：小程序每 20 秒 `POST /api/devices/heartbeat`，电脑 45 秒窗口判在线。
   `startAutoHeartbeat()` 每次调用都会**立刻补报一拍**（启动、扫码换地址、从后台回到前台），
   不等下一个周期；电脑网页在未连接时按 2 秒轮询 `/api/status`，连上后降到 5 秒。
@@ -298,10 +298,10 @@ registry.json   设备与事件记录
 
 ## 9. 测试体系
 
-- **小程序 18 套 / 531 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
-  `lanservice 63`、`einvoice 60`、`transfer 41`、`draft 36`、`discover 33`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示）、`list 32`、`collect 31`、`filesend 31`、`filetake 29`、`settings 29`（自动搜索提示 + 两种二维码合并入口）、`ledger 27`、`scanbatch 27`、`auth 24`、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`fsx 11`。
-- **电脑端网页 7 套 / 132 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
-  `invoice-row 26`（台账行渲染：10 列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`stat-filter 18`（统计卡片与筛选面板双向同步、最新批次取全表）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）。
+- **小程序 19 套 / 553 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
+  `lanservice 63`、`einvoice 60`、`transfer 41`、`draft 36`、`discover 33`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示）、`collect 31`、`filesend 31`、`filetake 29`、`settings 29`（自动搜索提示 + 两种二维码合并入口）、`ledger 29`（含 `latest_batch` 透传与清空）、`scanbatch 27`、`list 40`（最新批次一键回看、收票页带批次跳来）、`auth 24`、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`collect-send 12`（发送弹窗查看这批票：确认跳转、稍后不跳、无批次单按钮）、`fsx 11`。
+- **电脑端网页 8 套 / 142 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
+  `invoice-row 26`（台账行渲染：10 列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`stat-filter 18`（统计卡片与筛选面板双向同步、最新批次取全表）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`logout 10`（退出按钮绑定、POST logout、重载回登录态、失败提示）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。
 - 起服务冒烟：启动 `go run .` 后 `curl /api/health`、`/api/connect-qr.png` 应返回 200；台账接收/补录/手动录入/清理/导出接口应返回 200。
 

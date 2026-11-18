@@ -35,7 +35,8 @@ const remote = {
   duplicates: [{ number: 'N1', code: 'C1', items: [{ id: 1, number: 'N1', code: 'C1' }, { id: 2, number: 'N1', code: 'C1' }] }],
   total: 3,
   duplicate_groups: 1,
-  need_fill: 1
+  need_fill: 1,
+  latest_batch: 'B20261118-200000-001'
 }
 
 let requestedQuery = ''
@@ -56,6 +57,7 @@ async function main() {
   check('合计元', snap.amountText, '236.50')
   check('重复组数', snap.duplicateGroups, 1)
   check('待补录数', snap.needFill, 1)
+  check('最新批次透传', snap.latestBatch, 'B20261118-200000-001')
   check('卡片字段齐全', snap.items[0].issueDate, '2026-08-01')
   check('金额原样展示', snap.items[0].amount, '113.00')
   check('重复标记', snap.items[0].duplicate, true)
@@ -77,6 +79,7 @@ async function main() {
   console.log('\n--- 清空 ---')
   ledger.clear()
   check('清空后为空', ledger.snapshot().total, 0)
+  check('清空后无最新批次', ledger.snapshot().latestBatch, '')
   check('清空后无索引', ledger.identityIndex(), {})
 
   console.log('\n' + (failCount === 0 ? '全部通过' : failCount + ' 项失败'))

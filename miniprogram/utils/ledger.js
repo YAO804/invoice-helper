@@ -12,7 +12,7 @@ const lanservice = require('./lanservice')
 
 const SORTS = ['created', 'number', 'issued', 'reimburser']
 
-const EMPTY = { items: [], duplicates: [], total: 0, duplicateGroups: 0, needFill: 0, syncedAt: 0 }
+const EMPTY = { items: [], duplicates: [], total: 0, duplicateGroups: 0, needFill: 0, latestBatch: '', syncedAt: 0 }
 
 let cache = Object.assign({}, EMPTY)
 
@@ -52,6 +52,8 @@ function sync(filters) {
       total: Number(data && data.total) || 0,
       duplicateGroups: Number(data && data.duplicate_groups) || 0,
       needFill: Number(data && data.need_fill) || 0,
+      // 后端算的是全表最新批次，不随 keyword/sort 筛选漂移，可直接当「最近一次发送」的回看入口
+      latestBatch: String((data && data.latest_batch) || ''),
       syncedAt: Date.now()
     }
     return snapshot()
@@ -76,6 +78,7 @@ function snapshot() {
     amountText: amount.toFixed(2),
     duplicateGroups: cache.duplicateGroups,
     needFill: cache.needFill,
+    latestBatch: cache.latestBatch,
     syncedAt: cache.syncedAt
   }
 }

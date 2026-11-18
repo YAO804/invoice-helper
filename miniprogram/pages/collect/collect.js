@@ -115,20 +115,37 @@ Page({
         })
       }
       if (summary.cancelled) return
-
-      const tip = '成功发送 ' + summary.sent + ' 张' +
-        (summary.skipped ? '\n跳过重复 ' + summary.skipped + ' 张' : '') +
-        (summary.left ? '\n未发送 ' + summary.left + ' 张（单次上限 200 张）' : '') +
-        (summary.batch ? '\n批次：' + summary.batch : '') +
-        '\n电脑台账会把报销人为空的标成待补录。'
-
-      wx.showModal({
-        title: '已发送到电脑台账',
-        content: tip,
-        showCancel: false,
-        success: function () { that.syncLedger() }
-      })
+      that.showSentResult(summary)
     })
+  },
+
+  /** 发送成功提示：有批次号就给「查看这批票」一键回看，批次号经 globalData 带给台账页 */
+  showSentResult(summary) {
+    const that = this
+    const tip = '成功发送 ' + summary.sent + ' 张' +
+      (summary.skipped ? '\n跳过重复 ' + summary.skipped + ' 张' : '') +
+      (summary.left ? '\n未发送 ' + summary.left + ' 张（单次上限 200 张）' : '') +
+      (summary.batch ? '\n批次：' + summary.batch : '') +
+      '\n电脑台账会把报销人为空的标成待补录。'
+
+    const modal = {
+      title: '已发送到电脑台账',
+      content: tip,
+      success: function (res) {
+        that.syncLedger()
+        if (!res.confirm || !summary.batch) return
+        const app = typeof getApp === 'function' ? getApp() : null
+        if (app && app.globalData) app.globalData.pendingBatch = summary.batch
+        wx.switchTab({ url: '/pages/list/list' })
+      }
+    }
+    if (summary.batch) {
+      modal.confirmText = '查看这批票'
+      modal.cancelText = '稍后'
+    } else {
+      modal.showCancel = false
+    }
+    wx.showModal(modal)
   },
 
   onTransfer() {

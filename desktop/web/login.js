@@ -88,9 +88,28 @@ async function bootLogin() {
   }
 }
 
+/**
+ * 退出网页登录：清会话 cookie 后整页重载回到扫码态。
+ * 重载同时清掉两个页面模块的轮询定时器，不必单独维护停止逻辑。
+ */
+async function logout() {
+  try {
+    const res = await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'same-origin'
+    })
+    if (!res.ok) throw new Error('退出失败')
+    window.location.reload()
+  } catch (e) {
+    showToast('退出失败，请重试')
+  }
+}
+
 function bindLoginEvents() {
-  const button = document.getElementById('loginRefreshBtn')
-  if (button) button.addEventListener('click', refreshLoginCode)
+  const refresh = document.getElementById('loginRefreshBtn')
+  if (refresh) refresh.addEventListener('click', refreshLoginCode)
+  const leave = document.getElementById('logoutBtn')
+  if (leave) leave.addEventListener('click', logout)
 }
 
 document.addEventListener('DOMContentLoaded', function () {

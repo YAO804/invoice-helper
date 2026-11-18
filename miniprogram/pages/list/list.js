@@ -43,12 +43,22 @@ Page({
     amountText: '0.00',
     duplicateGroups: 0,
     needFill: 0,
+    latestBatch: '',
     loading: false,
     error: '',
     syncedText: ''
   },
 
   onShow() {
+    // 收票页「查看这批票」把批次号放在 globalData 带过来，只看这一次，读完就清
+    if (typeof getApp === 'function') {
+      const app = getApp()
+      const pending = app && app.globalData && app.globalData.pendingBatch
+      if (pending) {
+        app.globalData.pendingBatch = ''
+        this.syncFilterState({ keyword: pending })
+      }
+    }
     this.refresh()
   },
 
@@ -73,6 +83,7 @@ Page({
         amountText: '0.00',
         duplicateGroups: 0,
         needFill: 0,
+        latestBatch: '',
         loading: false,
         error: ''
       })
@@ -92,6 +103,7 @@ Page({
         amountText: snap.amountText,
         duplicateGroups: snap.duplicateGroups,
         needFill: snap.needFill,
+        latestBatch: snap.latestBatch,
         syncedText: clockText(snap.syncedAt),
         loading: false
       })
@@ -103,6 +115,7 @@ Page({
         amountText: '0.00',
         duplicateGroups: 0,
         needFill: 0,
+        latestBatch: '',
         loading: false,
         error: error.message || '读取电脑台账失败'
       })
@@ -140,6 +153,14 @@ Page({
 
   onToggleNeedFill() {
     this.syncFilterState({ onlyNeedFill: !this.data.onlyNeedFill })
+    this.load()
+  },
+
+  /** 一键回看最近一次发送的那批票；再点一次取消 */
+  onLatestBatch() {
+    const batch = this.data.latestBatch
+    if (!batch) return
+    this.syncFilterState({ keyword: this.data.keyword === batch ? '' : batch })
     this.load()
   },
 

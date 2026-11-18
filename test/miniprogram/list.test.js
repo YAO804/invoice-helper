@@ -35,7 +35,8 @@ const remote = {
   duplicates: [{ number: 'N7', code: 'C7', items: [{ id: 7 }] }],
   total: 2,
   duplicate_groups: 1,
-  need_fill: 1
+  need_fill: 1,
+  latest_batch: 'B20261118-200000-001'
 }
 
 const ledger = require('../../miniprogram/utils/ledger')
@@ -83,6 +84,7 @@ async function main() {
   check('合计元', page.data.amountText, '123.50')
   check('重复组数', page.data.duplicateGroups, 1)
   check('待补录数', page.data.needFill, 1)
+  check('最新批次已呈现', page.data.latestBatch, 'B20261118-200000-001')
   check('有同步时间文案', page.data.syncedText.indexOf('更新于') === 0, true)
   check('初始无筛选', page.data.hasFilter, false)
 
@@ -101,6 +103,33 @@ async function main() {
   check('重置后无筛选标记', page.data.hasFilter, false)
   await new Promise(function (r) { setTimeout(r, 0) })
   check('重置重新查询', queries[queries.length - 1], 'sort=created')
+
+  console.log('\n--- 最新批次一键回看 ---')
+  page = newPage()
+  await page.refresh()
+  page.onLatestBatch()
+  await new Promise(function (r) { setTimeout(r, 0) })
+  check('点一下按批次筛选', page.data.keyword, 'B20261118-200000-001')
+  check('批次进查询串', queries[queries.length - 1],
+    'keyword=' + encodeURIComponent('B20261118-200000-001') + '&sort=created')
+  check('筛选标记亮起', page.data.hasFilter, true)
+  page.onLatestBatch()
+  await new Promise(function (r) { setTimeout(r, 0) })
+  check('再点一次取消', page.data.keyword, '')
+
+  console.log('\n--- 收票页带批次跳来 ---')
+  const app = { globalData: { pendingBatch: 'B-FROM-COLLECT' } }
+  global.getApp = function () { return app }
+  page = newPage()
+  await page.onShow()
+  check('带入批次作为关键词', page.data.keyword, 'B-FROM-COLLECT')
+  check('一次性意图已清空', app.globalData.pendingBatch, '')
+  check('带批次重新查询', queries[queries.length - 1],
+    'keyword=' + encodeURIComponent('B-FROM-COLLECT') + '&sort=created')
+  delete global.getApp
+  // 这一段的关键词是临时的，后续排序/防抖用例要用干净页面
+  page = newPage()
+  await page.refresh()
 
   console.log('\n--- 排序 ---')
   page.onSortChange({ currentTarget: { dataset: { sort: 'issued' } } })
