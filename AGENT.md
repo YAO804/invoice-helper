@@ -41,10 +41,10 @@ invoice-helper/
 │   ├── web/                    # 纯 HTML/CSS/JS，由 embed 嵌入二进制
 │   ├── data/                   # 运行时数据，不提交 Git（保留 .gitkeep）
 │   └── README.md
-├── shared/protocol.md          # 两端通信协议（当前 v0.8）
+├── shared/protocol.md          # 两端通信协议（当前 v0.9）
 ├── test/
 │   ├── miniprogram/            # 小程序 Node 回归测试（15 套 / 451 项检查）
-│   ├── desktop/                # 电脑端联调预留（Go 单测在 desktop/internal 各包内）
+│   ├── desktop/                # 电脑端网页 Node 回归测试（3 套 / 62 项检查；Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
 ├── scripts/                    # 图标生成、CRC 校准等开发脚本
@@ -79,6 +79,9 @@ cd desktop && go run .
 # 小程序 15 套，共 451 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
+# 电脑端网页 3 套，共 62 项检查
+for f in test/desktop/*.test.js; do node "$f" || exit 1; done
+
 # 电脑端
 cd desktop
 go test ./...
@@ -97,6 +100,7 @@ go vet ./...
 6. **判重口径改动必须两端同步**：`miniprogram/utils/draft.js` 的 `dedupeKey` 与 `desktop/internal/ledger/identity.go` 的 `identityKey` 是同一套规则，只改一边就是埋雷。
 7. 已知历史债：`utils/einvoice.js`（434 行）偏长，是早期快速验证产物。触碰时顺手拆，不要继续堆逻辑。
 8. **小程序不存台账**：不要重新引入本地持久化，否则又会出现两端对账问题。草稿只放内存。
+9. **改 `desktop/web/` 下任何文件都必须重新编译**：那是 `embed` 进二进制的，改完不 `go build` / 不重启进程，浏览器拿到的还是旧代码。已把静态资源统一设成 `Cache-Control: no-store`，并在控制台显示服务版本，用来区分「代码没生效」和「功能有 bug」。
 
 > 项目约定另记录在 `.workbuddy/memory/MEMORY.md`（不进 Git），每日工作日志在 `.workbuddy/memory/YYYY-MM-DD.md`。
 
@@ -286,6 +290,8 @@ registry.json   设备与事件记录
 
 - **小程序 15 套 / 451 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
   `einvoice 60`、`lanservice 63`、`transfer 41`、`draft 36`、`list 32`、`collect 31`、`filesend 31`、`filetake 29`、`ledger 27`、`scanbatch 27`、`discover 18`、`invoicesend 18`、`zip 14`、`selection 13`、`fsx 11`。
+- **电脑端网页 3 套 / 62 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
+  `preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。
 - 起服务冒烟：启动 `go run .` 后 `curl /api/health`、`/api/connect-qr.png` 应返回 200；台账接收/补录/手动录入/清理/导出接口应返回 200。
 

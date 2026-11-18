@@ -335,6 +335,11 @@ tbody tr:last-child td { border-bottom: 0; }
 .link:hover { background: none; text-decoration: underline; }
 .link.danger { color: var(--danger); }
 
+/* 文件名本身就是预览入口：色和手型都要跟「下载」「删除」一致，否则用户不会去点 */
+.preview-btn { text-align: left; cursor: pointer; font-size: 13px; line-height: 1.4; }
+.preview-btn:hover { text-decoration: underline; }
+.preview-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
 .duplicate-alert:not(:empty) { margin-bottom: 16px; }
 .duplicate-alert .alert {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;

@@ -31,7 +31,12 @@ function renderAll() {
   renderEvents(statusData.events || [])
 }
 
+/**
+ * index 是 uploadItems 的下标（0 起），由 postFiles 按文件顺序给出。
+ * 越界直接忽略：宁可少一行进度，也不要因为下标算错在界面上留一排空洞。
+ */
 function setUploadItem(index, name, percent, state) {
+  if (index < 0 || index >= uploadItems.length) return
   uploadItems[index] = { name, percent, state }
   renderUploadProgress(uploadItems)
 }

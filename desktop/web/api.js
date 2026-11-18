@@ -49,15 +49,20 @@ function postFile(url, file, fields, onProgress) {
   })
 }
 
-/** 顺序上传一批，逐个回报：onProgress(index, name, percent, state)，index 从 1 开始 */
+/**
+ * 顺序上传一批，逐个回报进度：onProgress(index, name, percent, state)。
+ *
+ * index 是**数组下标（0 起）**，不是"第几个"。调用方通常直接写
+ * `items[index] = ...`，传 1 起会写空一位，界面就多出一行"等待 0%"。
+ */
 async function postFiles(url, files, fields, onProgress) {
   const result = []
   for (let i = 0; i < files.length; i++) {
     const file = files[i]
     const record = await postFile(url, file, fields, (percent) => {
-      onProgress(i + 1, file.name, percent, '上传中')
+      onProgress(i, file.name, percent, '上传中')
     })
-    onProgress(i + 1, file.name, 100, record.duplicate ? '已存在' : '完成')
+    onProgress(i, file.name, 100, record.duplicate ? '已存在' : '完成')
     result.push(record)
   }
   return result

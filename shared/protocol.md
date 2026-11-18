@@ -83,7 +83,7 @@ invoice-helper://connect?base=<urlencode 后的电脑地址>
 {
   "ok": true,
   "name": "invoice-helper-desktop",
-  "version": "0.2.0"
+  "version": "0.3.0"
 }
 ```
 

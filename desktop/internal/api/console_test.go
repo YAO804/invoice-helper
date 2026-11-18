@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -109,6 +110,39 @@ func TestDeleteOutgoing(t *testing.T) {
 	}
 }
 
+func TestStaticAssetsNotCached(t *testing.T) {
+	handler, _ := newTestHandler(t)
+
+	// 前端资源是 embed 进二进制的，浏览器留旧副本会让人误判「改了没生效」
+	for _, path := range []string{"/", "/render.js", "/preview.js", "/style.css"} {
+		rec := request(t, handler, http.MethodGet, path, nil, "")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s 状态码错误: %d", path, rec.Code)
+		}
+		if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+			t.Fatalf("%s 的 Cache-Control 应为 no-store，实际 %q", path, got)
+		}
+	}
+}
+
+func TestIndexWiresPreviewScript(t *testing.T) {
+	handler, _ := newTestHandler(t)
+	rec := request(t, handler, http.MethodGet, "/", nil, "")
+	body := rec.Body.String()
+
+	// 弹层的标记和脚本缺任何一个，文件名按钮都会变成「点了没反应」
+	for _, want := range []string{`id="previewModal"`, `id="closePreviewBtn"`, "/preview.js"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("首页缺少 %s", want)
+		}
+	}
+
+	// preview.js 必须在 app.js 之前加载：它自己在加载时注册点击委托
+	if strings.Index(body, "/preview.js") > strings.Index(body, "/app.js") {
+		t.Fatal("preview.js 必须早于 app.js")
+	}
+}
+
 func TestPortFromAddr(t *testing.T) {
 	if got := portFromAddr(":9000"); got != "9000" {
 		t.Fatalf("端口解析错误: %s", got)
@@ -117,7 +151,6 @@ func TestPortFromAddr(t *testing.T) {
 		t.Fatalf("非法地址兜底错误: %s", got)
 	}
 }
-
 func TestAddressScore(t *testing.T) {
 	wlan := addressScore("WLAN", net.ParseIP("192.168.1.20"))
 	tunnel := addressScore("NexPathTunnel", net.ParseIP("172.20.0.1"))
