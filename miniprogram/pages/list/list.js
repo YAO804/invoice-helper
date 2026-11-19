@@ -14,11 +14,12 @@ const ledger = require('../../utils/ledger')
 const lanservice = require('../../utils/lanservice')
 
 const SEARCH_DELAY = 300
+// short 是分段控件里显示的短标签：四个选项并排，全称会挤成两行
 const SORT_LABELS = [
-  { value: 'created', label: '录入时间' },
-  { value: 'number', label: '发票号码' },
-  { value: 'issued', label: '开票日期' },
-  { value: 'reimburser', label: '报销人' }
+  { value: 'created', label: '录入时间', short: '录入' },
+  { value: 'number', label: '发票号码', short: '号码' },
+  { value: 'issued', label: '开票日期', short: '开票' },
+  { value: 'reimburser', label: '报销人', short: '报销' }
 ]
 
 let searchTimer = null
@@ -48,6 +49,9 @@ Page({
     // 筛选状态派生值：有没有条件、是不是正好只看「最近录入」那天
     hasFilter: false,
     latestOn: false,
+    // 日期 pill 的文字：没选时显示「录入起 / 录入止」，选了直接显示日期
+    fromText: '录入起',
+    toText: '录入止',
     items: [],
     total: 0,
     amountText: '0.00',
@@ -150,12 +154,16 @@ Page({
   syncFilterState(patch) {
     const next = Object.assign({}, this.data, patch)
     const latest = String(next.latestCreatedAt || '')
+    const from = String(next.createdFrom || '')
+    const to = String(next.createdTo || '')
     this.setData(Object.assign({
       hasFilter: !!(
         String(next.keyword || '').trim() || next.batchFilter ||
-        next.createdFrom || next.createdTo || next.onlyDuplicates || next.onlyNeedFill
+        from || to || next.onlyDuplicates || next.onlyNeedFill
       ),
-      latestOn: !!latest && next.createdFrom === latest && next.createdTo === latest
+      latestOn: !!latest && from === latest && to === latest,
+      fromText: from ? '起 ' + from : '录入起',
+      toText: to ? '止 ' + to : '录入止'
     }, patch))
   },
 

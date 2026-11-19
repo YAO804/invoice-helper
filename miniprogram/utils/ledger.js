@@ -79,9 +79,11 @@ function clear() {
 function snapshot() {
   const items = cache.items
   let amount = 0
+  // 列表卡片上的时间只显示「月-日 时:分」，本年度的条目省掉年份
+  const thisYear = String(new Date().getFullYear())
   const cards = items.map(function (item) {
     amount += Number(item.total) || 0
-    return card(item)
+    return card(item, thisYear)
   })
   return {
     items: cards,
@@ -101,8 +103,20 @@ function createdDate(value) {
   return cut > 0 ? text.slice(0, cut) : text
 }
 
+/**
+ * 列表卡片上的录入时间："2026-11-18 09:37:29" → "11-18 09:37"。
+ * 卡片一行只放得下这么多；跨年的条目保留年份，避免和今年的看混。
+ */
+function stampShort(value, thisYear) {
+  const text = String(value || '')
+  if (text.length < 16) return text
+  const date = text.slice(0, 10)
+  const hm = text.slice(11, 16)
+  return (date.slice(0, 4) === String(thisYear || new Date().getFullYear()) ? date.slice(5) : date) + ' ' + hm
+}
+
 /** 列表项 → 页面字段。金额是电脑端算好的字符串，原样展示 */
-function card(item) {
+function card(item, thisYear) {
   return {
     id: item.id,
     number: item.number || '',
@@ -112,6 +126,7 @@ function card(item) {
     amount: item.total || '',
     reimburser: item.reimburser || '',
     createdAt: item.created_at || '',
+    createdShort: stampShort(item.created_at, thisYear),
     duplicate: !!item.duplicate,
     needFill: !!item.need_fill
   }

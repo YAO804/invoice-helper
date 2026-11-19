@@ -43,7 +43,7 @@ invoice-helper/
 │   └── README.md
 ├── shared/protocol.md          # 两端通信协议（当前 v0.9）
 ├── test/
-│   ├── miniprogram/            # 小程序 Node 回归测试（20 套 / 607 项检查）
+│   ├── miniprogram/            # 小程序 Node 回归测试（21 套 / 635 项检查）
 │   ├── desktop/                # 电脑端网页 Node 回归测试（11 套 / 225 项检查；Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
@@ -76,7 +76,7 @@ cd desktop && go run .
 **回归测试**（改动后必跑）：
 
 ```bash
-# 小程序 20 套，共 607 项检查
+# 小程序 21 套，共 635 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端网页 11 套，共 225 项检查
@@ -173,7 +173,7 @@ sort = created | issued | number | reimburser   // 默认 created（录入时间
 | 页面 | 职责 |
 |---|---|
 | `collect` | **首页**。四张卡：连接状态、扫码（单张/批量）、文件导入（把票的信息记进台账，XML 填全字段、OFD/PDF 只取名）、文件归档（把原件发到电脑，跳传输页）；未连接时只提示去设置。发送成功弹窗可「查看这批票」，批次号经 `globalData.pendingBatch` 带给台账页（只做筛选，不写进任何文案） |
-| `list` | **只读台账**：对齐电脑端（统计条、关键词、录入时间起止、仅看重复、仅看待补录、四种排序），数据来自 `GET /api/invoices`，支持下拉刷新。「最近录入」卡片显示全表最新录入日期，点一下只看那天，再点取消；录入批次不出现在界面（收票页带过来的批次号仅用于「只看刚发的那批」筛选，不显示原值） |
+| `list` | **只读台账**：三层排布——① 概览卡（张数 · 合计金额 + 可点的「仅看重复 / 仅看待补录」pill + 连接地址与清空条件）；② 筛选卡（搜索、条件 pill、四段排序）；③ 列表项（号码 + 金额一行，票种 · 开票日期一行，报销人标签 + 录入时间一行）。数据来自 `GET /api/invoices`，支持下拉刷新；「最近录入」是筛选卡里的 pill，点一下只看那天，再点取消；录入批次不出现在界面（收票页带来的批次号只用于收敛列表，显示为「刚发的那批」） |
 | `detail` | **只读详情**：7 个票面字段（无录入批次）+ 同组重复记录；可复制号码，没有编辑/删除 |
 | `export` | 导出 CSV：选范围（全部/仅重复/仅待补录）→ 电脑端生成 → 下载 → 微信转发 |
 | `transfer` | **传输中心**：顶层分「发到电脑」「从电脑取」两个方向。发：会话文件上传，看「我的上传」「电脑已收」；取：看「电脑待取」，可单条接收（转发到聊天/预览）或批量接收。两边都支持勾选删除、全部删除、清理超 30 天 |
@@ -306,8 +306,8 @@ registry.json   设备与事件记录
 
 ## 9. 测试体系
 
-- **小程序 20 套 / 607 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
-  `lanservice 63`、`einvoice 60`、`list 53`、`settings 48`（失败统一弹模态框说原因和下一步、取消静默、两种二维码合并入口）、`transfer 41`、`draft 36`、`discover 34`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示、扫码取消标记 cancelled）、`ledger 34`（含 `latest_created_at` 取日期部分、批次参数拼装与清空）、`collect 31`、`filesend 31`、`filetake 29`、`scanbatch 27`、`auth 22`（PIN 存储、登录码解析、登录确认接口、改 PIN）、`connect-hint 18`（失败文案归类：原因判对、401/request:fail 不漏给用户、判断顺序不误判）、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`collect-send 12`（发送弹窗查看这批票：确认跳转、稍后不跳、无批次单按钮）、`fsx 11`。
+- **小程序 21 套 / 635 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
+  `lanservice 63`、`einvoice 60`、`list 53`、`settings 48`（失败统一弹模态框说原因和下一步、取消静默、两种二维码合并入口）、`transfer 41`、`draft 36`、`discover 34`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示、扫码取消标记 cancelled）、`ledger 38`（含 `latest_created_at` 取日期部分、列表时间精简格式、批次参数拼装与清空）、`collect 31`、`filesend 31`、`filetake 29`、`scanbatch 27`、`auth 22`（PIN 存储、登录码解析、登录确认接口、改 PIN）、`connect-hint 18`（失败文案归类：原因判对、401/request:fail 不漏给用户、判断顺序不误判）、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`list-layout 23`（台账页三层结构、概览不留四等分统计条、最近录入降级为 pill、列表项不放 12 位代码、空态一键去收票）、`collect-send 12`（发送弹窗查看这批票：确认跳转、稍后不跳、无批次单按钮）、`fsx 11`。
 - **电脑端网页 11 套 / 225 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
   `invoice-row 25`（台账行渲染：9 列、不再有批次列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`reimburser-fill 29`（粘贴解析、建议池去重、复制按钮有无、批量填报销人走页面内模态框：打开/取消/提交/留空清空）、`suggest 23`（自绘历史值浮层：聚焦展开、打字过滤、最多 8 条、上下键 + 回车选值、Esc 只收浮层、选完补发 change、数据刷新同步）、`stat-filter 21`（统计卡片与筛选面板双向同步、最近录入按日期筛并取全表口径）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`logout 10`（退出按钮绑定、POST logout、重载回登录态、失败提示）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）、`filter-panel 29`（查询参数拼装、不再发送 keyword/batch、重置与计数、colgroup/表头/行三处列数一致、表头居中规则不许被改回左对齐）。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。

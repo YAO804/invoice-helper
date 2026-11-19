@@ -1,104 +1,108 @@
 <view class="page">
 
-  <view wx:if="{{!connected}}" class="card">
-    <view class="row">
-      <text class="card-t">台账在电脑上</text>
-      <text class="badge badge-grey">未连接</text>
-    </view>
-    <view class="tiny muted" style="margin-top:10rpx">小程序不保存发票数据，台账由电脑端维护。连上电脑后这里会自动同步。</view>
-    <view class="btn btn-block" style="margin-top:20rpx" bindtap="onConnect" hover-class="btn-hover">去连接电脑</view>
+  <view wx:if="{{!connected}}" class="card empty-card">
+    <view class="empty-t">台账在电脑上</view>
+    <view class="empty-h">小程序不保存发票数据，台账由电脑端维护。连上电脑后这里会自动同步。</view>
+    <view class="btn btn-block" style="margin-top:24rpx" bindtap="onConnect" hover-class="btn-hover">去连接电脑</view>
   </view>
 
   <block wx:else>
-    <view class="card">
-      <view class="row">
-        <text class="small muted">{{baseText}}</text>
-        <text class="tiny muted">{{syncedText}}</text>
+    <!-- 概览：一眼看清有多少、值多少；重复/待补录是筛选入口 -->
+    <view class="card ov">
+      <view class="ov-head">
+        <view class="ov-main">
+          <text class="ov-n">{{total}}</text>
+          <text class="ov-u">张</text>
+          <text class="ov-sep">·</text>
+          <text class="ov-amt">¥{{amountText}}</text>
+        </view>
+        <text class="ov-sync">{{syncedText}}</text>
       </view>
-      <view class="stats">
-        <view class="stat-cell">
-          <view class="stat-n">{{total}}</view>
-          <view class="tiny muted">张</view>
+
+      <view class="tags">
+        <view class="tag {{onlyDuplicates ? 'on' : ''}}" bindtap="onToggleDuplicates" hover-class="btn-hover">
+          <text>仅看重复</text>
+          <text class="tag-n {{duplicateGroups ? 'warn' : ''}}">{{duplicateGroups}}</text>
         </view>
-        <view class="stat-cell">
-          <view class="stat-n amount">{{amountText}}</view>
-          <view class="tiny muted">合计元</view>
+        <view class="tag {{onlyNeedFill ? 'on' : ''}}" bindtap="onToggleNeedFill" hover-class="btn-hover">
+          <text>仅看待补录</text>
+          <text class="tag-n {{needFill ? 'warn' : ''}}">{{needFill}}</text>
         </view>
-        <view class="stat-cell">
-          <view class="stat-n {{duplicateGroups ? 'warn' : ''}}">{{duplicateGroups}}</view>
-          <view class="tiny muted">重复组</view>
-        </view>
-        <view class="stat-cell">
-          <view class="stat-n {{needFill ? 'warn' : ''}}">{{needFill}}</view>
-          <view class="tiny muted">待补录</view>
-        </view>
+      </view>
+
+      <view class="ov-foot">
+        <text class="base-text ellipsis">{{baseText}}</text>
+        <text wx:if="{{hasFilter}}" class="link" bindtap="onReset">清空条件</text>
       </view>
     </view>
 
-    <view wx:if="{{latestCreatedAt}}" class="card" bindtap="onLatestCreated" hover-class="btn-hover">
-      <view class="row">
-        <text class="small muted">最近录入 · {{latestCreatedAt}}</text>
-        <text class="tiny {{latestOn ? 'muted' : 'link'}}">{{latestOn ? '点此取消筛选' : '只看这天 ›'}}</text>
-      </view>
-      <view class="tiny muted" style="margin-top:8rpx">电脑端最后一批发票的录入日期，点一下只看这天的票。</view>
-    </view>
+    <!-- 筛选：搜索 / 条件 pill / 排序，各占一行，不再堆在一个块里 -->
+    <view class="card filters">
+      <input class="search" placeholder="搜索号码 / 报销人 / 金额" placeholder-class="search-ph"
+        value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" />
 
-    <view class="card">
-      <input class="input" placeholder="搜索号码 / 代码 / 报销人 / 金额" value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" />
-      <view class="date-row">
-        <picker class="date-slot" mode="date" value="{{createdFrom}}" bindchange="onCreatedFromChange">
-          <view class="date-cell {{createdFrom ? 'on' : ''}}">录入起 {{createdFrom || '不限'}}</view>
+      <view class="pill-row">
+        <view wx:if="{{latestCreatedAt}}" class="pill-slot">
+          <view class="pill {{latestOn ? 'on' : ''}}" bindtap="onLatestCreated" hover-class="btn-hover">最近录入 {{latestCreatedAt}}</view>
+        </view>
+        <picker class="pill-slot" mode="date" value="{{createdFrom}}" bindchange="onCreatedFromChange">
+          <view class="pill {{createdFrom ? 'on' : ''}}">{{fromText}}</view>
         </picker>
-        <picker class="date-slot" mode="date" value="{{createdTo}}" bindchange="onCreatedToChange">
-          <view class="date-cell {{createdTo ? 'on' : ''}}">录入止 {{createdTo || '不限'}}</view>
+        <picker class="pill-slot" mode="date" value="{{createdTo}}" bindchange="onCreatedToChange">
+          <view class="pill {{createdTo ? 'on' : ''}}">{{toText}}</view>
         </picker>
+        <view wx:if="{{batchFilter}}" class="pill-slot">
+          <view class="pill on" bindtap="onClearBatch" hover-class="btn-hover">刚发的那批 ✕</view>
+        </view>
+        <view wx:if="{{createdFrom || createdTo}}" class="pill-slot">
+          <view class="pill grey" bindtap="onClearCreated" hover-class="btn-hover">清除日期</view>
+        </view>
       </view>
-      <view class="filter-row">
-        <view class="chip {{onlyDuplicates ? 'on' : ''}}" bindtap="onToggleDuplicates" hover-class="btn-hover">仅看重复</view>
-        <view class="chip {{onlyNeedFill ? 'on' : ''}}" bindtap="onToggleNeedFill" hover-class="btn-hover">仅看待补录</view>
-        <view wx:if="{{batchFilter}}" class="chip on" bindtap="onClearBatch" hover-class="btn-hover">刚发的那批 ✕</view>
-        <text wx:if="{{hasFilter}}" class="link" bindtap="onReset">重置</text>
-      </view>
-      <view wx:if="{{createdFrom || createdTo}}" class="filter-row">
-        <text class="tiny muted">已限定录入日期</text>
-        <text class="link" bindtap="onClearCreated">清除日期</text>
-      </view>
+
       <view class="sort-bar">
-        <view wx:for="{{sorts}}" wx:key="value" class="sort-btn {{item.on ? 'on' : ''}}" data-sort="{{item.value}}" bindtap="onSortChange" hover-class="btn-hover">{{item.label}}</view>
+        <view wx:for="{{sorts}}" wx:key="value" class="sort-btn {{item.on ? 'on' : ''}}" data-sort="{{item.value}}" bindtap="onSortChange" hover-class="btn-hover">{{item.short}}</view>
       </view>
     </view>
 
-    <view wx:if="{{error}}" class="card">
-      <view class="small danger">{{error}}</view>
-      <view class="tiny muted" style="margin-top:8rpx">检查电脑端是否在运行，或到「设置」重新连接。</view>
+    <view wx:if="{{error}}" class="card error-card">
+      <view class="empty-t danger">读不到电脑台账</view>
+      <view class="empty-h">{{error}}</view>
+      <view class="empty-h">检查电脑端是否在运行，或到「设置」重新连接。</view>
     </view>
 
-    <view wx:for="{{items}}" wx:key="id" class="card inv" data-id="{{item.id}}" bindtap="onOpenDetail" hover-class="btn-hover">
-      <view class="row">
-        <view class="grow">
-          <view class="row">
-            <text class="small mono ellipsis grow">{{item.number || '无号码'}}</text>
-            <text wx:if="{{item.duplicate}}" class="badge badge-warn">重复</text>
-            <text wx:if="{{item.needFill}}" class="badge badge-grey">待补录</text>
-          </view>
-          <view class="tiny muted" style="margin-top:6rpx">{{item.code || '无代码'}} · {{item.kind || '票种待补'}}</view>
-        </view>
-        <text class="amount-lg">{{item.amount ? '¥' + item.amount : '金额待补'}}</text>
+    <view wx:for="{{items}}" wx:key="id"
+      class="card inv {{item.duplicate ? 'is-dup' : ''}} {{item.needFill ? 'is-need' : ''}}"
+      data-id="{{item.id}}" bindtap="onOpenDetail" hover-class="inv-hover">
+      <view class="inv-top">
+        <text class="inv-no mono ellipsis">{{item.number || '无号码'}}</text>
+        <text class="inv-amt">{{item.amount ? '¥' + item.amount : '待补'}}</text>
       </view>
-      <view class="row tiny muted" style="margin-top:12rpx">
-        <text class="ellipsis">开票 {{item.issueDate || '待补'}} · {{item.reimburser || '报销人待补'}}</text>
-        <text style="margin-left:12rpx">{{item.createdAt}}</text>
+      <view class="inv-sub">
+        <text class="sub-text ellipsis">{{item.kind || '票种待补'}} · 开票 {{item.issueDate || '待补'}}</text>
+        <text wx:if="{{item.duplicate}}" class="badge badge-warn">重复</text>
+      </view>
+      <view class="inv-meta">
+        <view class="who {{item.reimburser ? '' : 'who-need'}} ellipsis">{{item.reimburser || '报销人待补'}}</view>
+        <text class="when">{{item.createdShort}}</text>
       </view>
     </view>
 
     <view wx:if="{{loading && !items.length}}" class="empty">正在读取电脑台账…</view>
 
-    <view wx:if="{{!loading && !items.length && !error}}" class="empty">
-      <block wx:if="{{hasFilter}}">没有匹配的发票，换个条件试试。</block>
-      <block wx:else>电脑台账还是空的。到「收票」页扫码或导入文件。</block>
+    <view wx:if="{{!loading && !items.length && !error}}" class="card empty-card">
+      <block wx:if="{{hasFilter}}">
+        <view class="empty-t">没有匹配的发票</view>
+        <view class="empty-h">换个关键词，或者清空筛选条件再看看。</view>
+        <view class="btn btn-ghost btn-block" style="margin-top:24rpx" bindtap="onReset" hover-class="btn-hover">清空筛选条件</view>
+      </block>
+      <block wx:else>
+        <view class="empty-t">台账还是空的</view>
+        <view class="empty-h">到「收票」页扫码，或从微信里导入发票文件。</view>
+        <view class="btn btn-block" style="margin-top:24rpx" bindtap="onCollect" hover-class="btn-hover">去收票</view>
+      </block>
     </view>
   </block>
 
-  <view class="foot tiny muted">台账只存在电脑端，小程序仅用于查看与扫码判重；补录、删除、手动录入请到电脑端网页操作。</view>
+  <view class="foot tiny muted">台账只存在电脑端；补录、删除、改报销人请在电脑端网页操作。</view>
 
 </view>

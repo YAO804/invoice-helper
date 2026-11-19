@@ -1,83 +1,267 @@
-/* 台账页：统计条 + 筛选 + 只读卡片列表 */
+/* 台账页：概览 → 筛选 → 列表，三层各有各的卡，不再把条件堆在一个块里 */
 
-.stats {
+.card {
+  border-radius: 20rpx;
+}
+
+/* ---------- 概览 ---------- */
+
+.ov {
+  padding: 28rpx;
+}
+
+.ov-head {
   display: flex;
-  margin-top: 20rpx;
+  align-items: baseline;
+  justify-content: space-between;
 }
 
-.stat-cell {
-  flex: 1;
-  text-align: center;
+.ov-main {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
 }
 
-.stat-n {
-  font-size: 38rpx;
-  font-weight: 500;
-  line-height: 1.4;
+.ov-n {
+  font-size: 46rpx;
+  font-weight: 600;
+  line-height: 1.1;
 }
 
-.filter-row {
+.ov-u {
+  font-size: 24rpx;
+  color: #7a7a75;
+  margin-left: 6rpx;
+}
+
+.ov-sep {
+  color: #d8d8d2;
+  margin: 0 16rpx;
+}
+
+.ov-amt {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: #0f6e56;
+  letter-spacing: -0.5rpx;
+}
+
+.ov-sync {
+  font-size: 22rpx;
+  color: #9a9a94;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+
+/* 重复 / 待补录：既是数字也是筛选开关 */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 22rpx;
+}
+
+.tag {
   display: flex;
   align-items: center;
-  margin: 20rpx 0 0;
-}
-
-/* 录入时间起止：两个日期选择器并排，和下面的条件 chip 分成两行 */
-.date-row {
-  display: flex;
-  margin-top: 16rpx;
-}
-
-.date-slot {
-  flex: 1;
-  margin-right: 12rpx;
-}
-
-.date-slot:last-child {
-  margin-right: 0;
-}
-
-.date-cell {
   font-size: 24rpx;
-  color: #6a6a65;
-  background: #f6f6f4;
-  border-radius: 10rpx;
-  padding: 16rpx 20rpx;
-  text-align: center;
-}
-
-.date-cell.on {
-  color: #0f6e56;
-  background: #e8f2ee;
-  font-weight: 500;
-}
-
-.chip {
-  font-size: 24rpx;
-  color: #6a6a65;
-  background: #ecece8;
+  color: #4a4a46;
+  background: #f3f3ef;
   border-radius: 999rpx;
-  padding: 10rpx 22rpx;
-  margin-right: 12rpx;
+  padding: 12rpx 24rpx;
+  margin: 0 16rpx 8rpx 0;
 }
 
-.chip.on {
+.tag-n {
+  margin-left: 10rpx;
+  font-weight: 600;
+  color: #6a6a65;
+}
+
+.tag.on {
   background: #0f6e56;
   color: #ffffff;
 }
 
-.filter-row .link {
-  margin-left: auto;
+.tag.on .tag-n {
+  color: #ffffff;
 }
+
+.ov-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid #f1f1ec;
+}
+
+/* 长文本要能省略，必须给它 flex:1 + min-width:0，否则会把右侧元素顶出去 */
+.base-text {
+  flex: 1;
+  min-width: 0;
+  margin-right: 16rpx;
+  font-size: 22rpx;
+  color: #9a9a94;
+}
+
+/* ---------- 筛选 ---------- */
+
+.filters {
+  padding: 22rpx 24rpx 24rpx;
+}
+
+.search {
+  width: 100%;
+  box-sizing: border-box;
+  height: 76rpx;
+  background: #f6f6f4;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+  font-size: 27rpx;
+  color: #1f1f1d;
+}
+
+.search-ph {
+  color: #a9a9a3;
+}
+
+/* 条件 pill：最近录入、录入起止、批次，横向排布，放不下就换行。
+   picker 和普通 view 都要包一层 slot，间距才一致（picker 内部的 margin 不会撑开外层）。 */
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 14rpx;
+}
+
+.pill-slot {
+  display: flex;
+  margin: 0 12rpx 12rpx 0;
+}
+
+.pill {
+  font-size: 24rpx;
+  color: #5c5c57;
+  background: #f4f4f0;
+  border-radius: 999rpx;
+  padding: 10rpx 22rpx;
+}
+
+.pill.on {
+  color: #0f6e56;
+  background: #e4f1eb;
+  font-weight: 500;
+}
+
+.pill.grey {
+  color: #8a8a84;
+  background: #fafaf7;
+}
+
+.sort-bar {
+  margin-top: 6rpx;
+  background: #f4f4f0;
+}
+
+/* ---------- 列表 ---------- */
 
 .inv {
-  padding: 24rpx 26rpx;
+  padding: 26rpx;
 }
 
-.amount-lg {
-  font-size: 32rpx;
+/* 左侧色条用 inset 阴影，避免 border 宽度变化导致内容位移 */
+.inv.is-need {
+  box-shadow: inset 6rpx 0 0 #f0b429;
+}
+
+.inv.is-dup {
+  box-shadow: inset 6rpx 0 0 #e8836d;
+}
+
+.inv-hover {
+  background: #fbfbf8;
+}
+
+.inv-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.inv-no {
+  flex: 1;
+  min-width: 0;
+  font-size: 30rpx;
   font-weight: 500;
+  letter-spacing: 0.5rpx;
+}
+
+.inv-amt {
+  font-size: 36rpx;
+  font-weight: 600;
   color: #0f6e56;
+  margin-left: 20rpx;
+  flex-shrink: 0;
+}
+
+.inv-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #77776f;
+}
+
+.sub-text {
+  flex: 1;
+  min-width: 0;
+  margin-right: 12rpx;
+}
+
+.inv-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18rpx;
+}
+
+.who {
+  font-size: 23rpx;
+  color: #3d5c50;
+  background: #f1f7f4;
+  border-radius: 8rpx;
+  padding: 6rpx 16rpx;
+  max-width: 62%;
+}
+
+.who-need {
+  color: #b54708;
+  background: #fdf3e2;
+}
+
+.when {
+  font-size: 22rpx;
+  color: #9a9a94;
   margin-left: 16rpx;
   flex-shrink: 0;
+}
+
+/* ---------- 空态与错误 ---------- */
+
+.empty-card {
+  padding: 44rpx 32rpx;
+  text-align: center;
+}
+
+.empty-t {
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.empty-h {
+  font-size: 24rpx;
+  color: #7a7a75;
+  line-height: 1.7;
+  margin-top: 12rpx;
 }
