@@ -461,26 +461,32 @@ function openForm(item) {
   refreshNumberWarning()
 }
 
-/** 手动录入的位数提示：文案由后端算，网页只负责显示，不自己复制一套规则 */
-function renderNumberWarning(text) {
-  const box = $('editNumberWarning')
-  box.textContent = text || ''
-  box.hidden = !text
+/** 手动录入的位数提示：文案和字段归属都来自后端，网页只负责放到对应输入框下面 */
+function renderNumberWarning(issue) {
+  const warning = (issue && issue.warning) || ''
+  const field = (issue && issue.field) || ''
+  const boxes = { number: $('editNumberWarning'), code: $('editCodeWarning') }
+  Object.keys(boxes).forEach((key) => {
+    // 两列都填反时只放代码下面，同一句话重复两遍反而看不清是哪格的问题
+    const show = !!warning && (field === key || (field === 'both' && key === 'code'))
+    boxes[key].textContent = show ? warning : ''
+    boxes[key].hidden = !show
+  })
 }
 
 async function refreshNumberWarning() {
   const seq = ++numberWarningSeq
   const number = ($('editNumber').value || '').trim()
   const code = ($('editCode').value || '').trim()
-  if (!number && !code) return renderNumberWarning('')
+  if (!number && !code) return renderNumberWarning(null)
 
   try {
     const result = await fetchNumberWarning(number, code)
     // 表单已经关掉或用户又改了值，旧结果不能再盖上去
-    if (seq === numberWarningSeq) renderNumberWarning(result.warning)
+    if (seq === numberWarningSeq) renderNumberWarning(result)
   } catch (_) {
     // 提示是辅助：接口暂时不通也不能挡住录入，保存后后端还会再给一次
-    if (seq === numberWarningSeq) renderNumberWarning('')
+    if (seq === numberWarningSeq) renderNumberWarning(null)
   }
 }
 
@@ -509,7 +515,7 @@ function closeEdit() {
   editingId = 0
   editingIssueRaw = ''
   numberWarningSeq++
-  renderNumberWarning('')
+  renderNumberWarning(null)
   $('invoiceEditModal').hidden = true
 }
 

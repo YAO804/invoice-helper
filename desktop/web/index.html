@@ -348,9 +348,12 @@
         <button id="closeEditBtn" type="button" class="btn btn-ghost">关闭</button>
       </div>
       <div class="modal-body">
-        <label>发票号码 <input id="editNumber" type="text"></label>
-        <label>发票代码 <input id="editCode" type="text"></label>
-        <p id="editNumberWarning" class="number-note" hidden></p>
+        <label>发票号码 <input id="editNumber" type="text">
+          <span id="editNumberWarning" class="number-note" hidden></span>
+        </label>
+        <label>发票代码 <input id="editCode" type="text">
+          <span id="editCodeWarning" class="number-note" hidden></span>
+        </label>
         <label>票种 <input id="editKind" type="text"></label>
         <label>开票日期 <input id="editIssueDate" type="date"></label>
         <label>价税合计 <input id="editTotal" type="text" placeholder="0.00"></label>

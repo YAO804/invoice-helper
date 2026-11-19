@@ -16,12 +16,15 @@ func TestNumberWarningEndpointUsesSameRule(t *testing.T) {
 		number string
 		code   string
 		want   string
+		field  string
 	}{
-		{"032002300911", "00813251", "两列可能填反了"},
-		{"032002300911", "", "更像发票代码"},
-		{"00813251", "032002300911", ""},
-		{"24312000000123456789", "", ""},
-		{"", "032002300911", ""},
+		{"032002300911", "00813251", "两列可能填反了", "both"},
+		{"032002300911", "", "更像发票代码", "number"},
+		// 截图里的场景：号码 8 位正常、代码 8 位不对，提示必须归属代码列
+		{"12322222", "12312312", "发票代码 8 位", "code"},
+		{"00813251", "032002300911", "", ""},
+		{"24312000000123456789", "", "", ""},
+		{"", "032002300911", "", ""},
 	}
 	for _, tc := range cases {
 		values := url.Values{"number": {tc.number}, "code": {tc.code}}
@@ -31,10 +34,14 @@ func TestNumberWarningEndpointUsesSameRule(t *testing.T) {
 		}
 		var result struct {
 			Warning string `json:"warning"`
+			Field   string `json:"field"`
 		}
 		decodeJSON(t, rec, &result)
 		if !containsText(result.Warning, tc.want) {
 			t.Fatalf("号码 %q 代码 %q 的提示应含「%s」，实际 %q", tc.number, tc.code, tc.want, result.Warning)
+		}
+		if result.Field != tc.field {
+			t.Fatalf("号码 %q 代码 %q 的提示应归属 %q 列，实际 %q", tc.number, tc.code, tc.field, result.Field)
 		}
 	}
 }

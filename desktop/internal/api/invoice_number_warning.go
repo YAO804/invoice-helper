@@ -15,5 +15,6 @@ func (d *deps) numberWarning(w http.ResponseWriter, r *http.Request) {
 		Number: r.URL.Query().Get("number"),
 		Code:   r.URL.Query().Get("code"),
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"warning": ledger.NumberWarning(invoice)})
+	issue := ledger.NumberIssueOf(invoice)
+	writeJSON(w, http.StatusOK, issue)
 }
