@@ -64,6 +64,16 @@ check('字段缺失不报错', text({}), '已导入 0 张发票。')
 check('口径缺省按跳过处理', text({ imported: 1, duplicate: 1 }), '已导入 1 张发票，跳过重复 1 张。')
 check('用 hint 样式', renderImportResult({ imported: 1 }).startsWith('<p class="hint">'), true)
 
+// 预览可能被跳过或没留意，导入完再提醒一次位数可疑
+const withNumberWarn = text({ imported: 3, skip_duplicates: true, number_warning_count: 1 })
+contains('导入后补一句位数可疑', withNumberWarn, '其中 1 张的发票号码/代码位数可疑')
+contains('补的这句说清后果', withNumberWarn, '查重会失效')
+check('补的这句不挤掉主文案', withNumberWarn.startsWith('已导入 3 张发票。'), true)
+const allInWithWarn = text({ imported: 5, duplicate: 2, skip_duplicates: false, number_warning_count: 2 })
+contains('全量口径也补这句', allInWithWarn, '其中 2 张的发票号码/代码位数可疑')
+check('位数提醒用独立样式', renderImportResult({ imported: 1, number_warning_count: 1 }).includes('number-note'), true)
+check('没有位数可疑时不出现', renderImportResult({ imported: 1 }).includes('number-note'), false)
+
 // 页面必须走这个函数，不许再自己拼一句「已导入 N 张」把跳过数量藏起来
 const app = fs.readFileSync(path.join(__dirname, '../../desktop/web/ledger-app.js'), 'utf8')
 check('确认导入调用统一的结果渲染', /renderImportResult\(result\)/.test(app), true)

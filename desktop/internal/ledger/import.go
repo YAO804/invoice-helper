@@ -10,25 +10,30 @@ type ImportItem struct {
 	ConflictFrom string   `json:"conflict_from,omitempty"` // ledger | file
 	// Warning 是「能导入但需要你知道」的提醒，目前用于认不出格式的开票日期。
 	Warning string `json:"warning,omitempty"`
+	// NumberWarning 是号码/代码位数可疑的提醒，比日期问题更严重：
+	// 两列填反会让判重键也跟着反，重复票会被当成新票混进来。
+	NumberWarning string `json:"number_warning,omitempty"`
 }
 
 type ImportPreview struct {
-	Total            int          `json:"total"`
-	NewCount         int          `json:"new_count"`
-	DuplicateCount   int          `json:"duplicate_count"`
-	InvalidCount     int          `json:"invalid_count"`
-	DateWarningCount int          `json:"date_warning_count"`
-	Items            []ImportItem `json:"items"`
+	Total              int          `json:"total"`
+	NewCount           int          `json:"new_count"`
+	DuplicateCount     int          `json:"duplicate_count"`
+	InvalidCount       int          `json:"invalid_count"`
+	DateWarningCount   int          `json:"date_warning_count"`
+	NumberWarningCount int          `json:"number_warning_count"`
+	Items              []ImportItem `json:"items"`
 }
 
 // ImportResult 与 ImportPreview 的三个计数一一对应：预览说多少，这里就写多少、跳多少。
 // SkipDuplicates 记下这次是按哪种口径导的，界面据此说「跳过」还是「全量」。
 type ImportResult struct {
-	Imported       int  `json:"imported"`
-	Duplicate      int  `json:"duplicate"`
-	Invalid        int  `json:"invalid"`
-	Skipped        int  `json:"skipped"`
-	SkipDuplicates bool `json:"skip_duplicates"`
+	Imported           int  `json:"imported"`
+	Duplicate          int  `json:"duplicate"`
+	Invalid            int  `json:"invalid"`
+	Skipped            int  `json:"skipped"`
+	SkipDuplicates     bool `json:"skip_duplicates"`
+	NumberWarningCount int  `json:"number_warning_count"`
 }
 
 func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
@@ -45,7 +50,10 @@ func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
 	inLedger := identityIndex(existing)
 	inFile := map[string]Invoice{}
 	batch := newBatch()
-	preview := ImportPreview{Total: len(incoming), Items: []ImportItem{}}
+	preview := ImportPreview{
+		Total: len(incoming), Items: []ImportItem{},
+		NumberWarningCount: countNumberWarnings(incoming),
+	}
 
 	for _, invoice := range incoming {
 		invoice.Batch = fallback(invoice.Batch, batch)
@@ -73,6 +81,7 @@ func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
 			if item.Warning != "" {
 				preview.DateWarningCount++
 			}
+			item.NumberWarning = numberFieldWarning(item.Invoice)
 		}
 		preview.Items = append(preview.Items, item)
 	}
@@ -107,7 +116,10 @@ func (s *Store) CommitImport(content []byte, skipDuplicates bool) (ImportResult,
 
 	index := identityIndex(existing)
 	batch := newBatch()
-	result := ImportResult{SkipDuplicates: skipDuplicates}
+	result := ImportResult{
+		SkipDuplicates:     skipDuplicates,
+		NumberWarningCount: countNumberWarnings(incoming),
+	}
 
 	for _, invoice := range incoming {
 		invoice.Batch = fallback(invoice.Batch, batch)

@@ -326,6 +326,22 @@ code { background: var(--canvas); padding: 2px 5px; border-radius: 4px; }
 .date-note { margin: 8px 0 0; padding: 8px 10px; border-radius: 6px; background: var(--warn-soft); font-size: 12px; color: var(--warn); }
 .date-note code { padding: 1px 4px; border-radius: 3px; background: rgba(0, 0, 0, 0.06); font-size: 11px; }
 
+/* 号码/代码位数可疑：比日期问题严重，用红色。标出两列本身，
+   用户不用读说明就能看出是哪两格填反了；不覆盖重复行的背景色 */
+.preview-item.number { color: var(--danger); }
+.number-hint { display: block; margin-top: 2px; font-size: 12px; color: var(--danger); }
+.number-note {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border: 1px solid #ffc9c2;
+  border-radius: 6px;
+  background: var(--danger-soft);
+  font-size: 12px;
+  color: var(--danger);
+}
+.preview-row.number-suspect td:nth-child(3),
+.preview-row.number-suspect td:nth-child(4) { color: var(--danger); font-weight: 600; }
+
 .dup-banner { margin-bottom: 12px; padding: 10px 12px; border: 1px solid #ffc9c2; border-radius: 6px; background: var(--danger-soft); }
 .dup-banner strong { font-size: 13px; color: var(--danger); }
 .dup-banner p { margin: 4px 0 0; font-size: 12px; }

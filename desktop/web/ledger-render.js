@@ -207,10 +207,15 @@ function renderImportResult(result) {
   const imported = result.imported || 0
   const duplicate = result.duplicate || 0
   const skipDuplicates = result.skip_duplicates !== false
+  // 预览可能被跳过或没留意，导入完再提醒一次：位数填反会让判重失效
+  const numberNote = result.number_warning_count
+    ? `<p class="number-note">其中 ${result.number_warning_count} 张的发票号码/代码位数可疑，
+        判重按「代码+号码」算，填反后查重会失效，请到台账里核对这两列。</p>`
+    : ''
 
   if (!skipDuplicates && duplicate) {
     return `<p class="hint">已全量导入 ${imported} 张发票，其中 ${duplicate} 张是重复的。
-      重复记录已进台账，可在「查重」里清理。</p>`
+      重复记录已进台账，可在「查重」里清理。</p>` + numberNote
   }
 
   const skipped = []
@@ -219,7 +224,7 @@ function renderImportResult(result) {
 
   let text = '已导入 ' + imported + ' 张发票'
   if (skipped.length) text += '，跳过' + skipped.join('、')
-  return `<p class="hint">${text}。</p>`
+  return `<p class="hint">${text}。</p>` + numberNote
 }
 
 const IMPORT_STATUS_LABEL = { new: '新增', duplicate: '重复', invalid: '缺号码' }
@@ -245,8 +250,13 @@ function importRow(item, position) {
   const warning = item.warning
     ? `<span class="date-hint">${esc(item.warning)}</span>`
     : ''
+  // 位数提示比日期提示更严重，单独用红色；号码/代码两列也跟着标出来，
+  // 用户不用读说明就能看出是哪两格填反了
+  const numberWarning = item.number_warning
+    ? `<span class="number-hint">${esc(item.number_warning)}</span>`
+    : ''
   return `
-    <tr class="preview-row ${esc(item.status)}">
+    <tr class="preview-row ${esc(item.status)}${numberWarning ? ' number-suspect' : ''}">
       <td class="muted">${position}</td>
       <td>${esc(IMPORT_STATUS_LABEL[item.status] || item.status)}</td>
       <td>${esc(invoice.number)}</td>
@@ -255,16 +265,18 @@ function importRow(item, position) {
       <td>${esc(invoice.issue_date)}</td>
       <td>${esc(invoice.total)}</td>
       <td>${esc(invoice.reimburser)}</td>
-      <td>${esc(item.message)}${hint ? `<span class="conflict-hint">${esc(hint)}</span>` : ''}${warning}</td>
+      <td>${esc(item.message)}${hint ? `<span class="conflict-hint">${esc(hint)}</span>` : ''}${numberWarning}${warning}</td>
     </tr>
   `
 }
 
-/** 只看重复：重复行可能排在 50 行之外，不提供这个入口等于把重复藏起来。
- *  带上原始序号——筛完之后序号不能从头数，否则对不回文件里的位置。 */
-function visibleImportItems(preview, onlyDuplicate) {
+/** only: '' 全部 / duplicate 只看重复 / number 只看位数可疑。
+ *  两个入口互斥，同时选等于什么都没筛；带上原始序号，筛完还能对回文件里的位置。 */
+function visibleImportItems(preview, only) {
   const items = (preview.items || []).map((item, index) => ({ item: item, position: index + 1 }))
-  return onlyDuplicate ? items.filter((row) => row.item.status === 'duplicate') : items
+  if (only === 'duplicate') return items.filter((row) => row.item.status === 'duplicate')
+  if (only === 'number') return items.filter((row) => row.item.number_warning)
+  return items
 }
 
 function importDuplicateBanner(preview) {
@@ -299,7 +311,10 @@ function importTruncateNote(preview, shownCount) {
   const total = preview.total || 0
   if (!total) return ''
   if (shownCount <= IMPORT_PREVIEW_LIMIT) return ''
-  const hint = preview.duplicate_count ? '，重复行可点上方「只看重复」逐条核对' : ''
+  const hints = []
+  if (preview.duplicate_count) hints.push('重复行可点上方「只看重复」逐条核对')
+  if (preview.number_warning_count) hints.push('位数可疑的行可点上方「只看位数异常」核对')
+  const hint = hints.length ? '；' + hints.join('，') : ''
   return `<p class="preview-more">共 ${total} 行，仅显示前 ${IMPORT_PREVIEW_LIMIT} 行${hint}。</p>`
 }
 
@@ -310,13 +325,29 @@ function importDateNote(preview) {
     台账按开票日期筛选时可能看不到它们，建议导入后在台账里改成 <code>2024-10-28</code> 这种写法。</p>`
 }
 
-function renderImportPreview(preview, onlyDuplicate) {
-  const visible = visibleImportItems(preview, onlyDuplicate)
+/** 位数可疑也不拦截，但后果更重：判重键跟着反，重复票会被当成新票混进来。
+ *  所以除了行内标红，还要给一句可以照着做的动作——取消、交换两列、重新上传。 */
+function importNumberNote(preview) {
+  if (!preview.number_warning_count) return ''
+  return `<p class="number-note"><strong>有 ${preview.number_warning_count} 行发票号码/代码位数可疑。</strong>
+    发票号码应是 8 位（数电票 20 位、且没有发票代码），发票代码是 10 或 12 位；
+    两列填反时判重按「代码+号码」算出来的键也跟着反，查重会失效。
+    建议取消导入、交换两列后重新上传；已经导入的可在台账里逐条改正。</p>`
+}
+
+function renderImportPreview(preview, only) {
+  const visible = visibleImportItems(preview, only)
   const rows = visible.slice(0, IMPORT_PREVIEW_LIMIT)
   const dup = preview.duplicate_count || 0
+  const badNumber = preview.number_warning_count || 0
   const dupChip = dup
-    ? `<button type="button" class="chip ${onlyDuplicate ? 'active' : ''}" data-action="only-duplicates">
-         ${onlyDuplicate ? '显示全部' : '只看重复 ' + dup}
+    ? `<button type="button" class="chip ${only === 'duplicate' ? 'active' : ''}" data-action="only-duplicates">
+         ${only === 'duplicate' ? '显示全部' : '只看重复 ' + dup}
+       </button>`
+    : ''
+  const numberChip = badNumber
+    ? `<button type="button" class="chip ${only === 'number' ? 'active' : ''}" data-action="only-number-warnings">
+         ${only === 'number' ? '显示全部' : '只看位数异常 ' + badNumber}
        </button>`
     : ''
 
@@ -327,7 +358,8 @@ function renderImportPreview(preview, onlyDuplicate) {
       <span class="preview-item duplicate">重复 ${dup}</span>
       <span class="preview-item invalid">缺号码 ${preview.invalid_count || 0}</span>
       ${preview.date_warning_count ? `<span class="preview-item warn">日期待核对 ${preview.date_warning_count}</span>` : ''}
-      ${dupChip}
+      ${badNumber ? `<span class="preview-item number">号码待核对 ${badNumber}</span>` : ''}
+      ${dupChip}${numberChip}
     </div>
     ${importDuplicateBanner(preview)}
     ${rows.length ? `
@@ -341,6 +373,7 @@ function renderImportPreview(preview, onlyDuplicate) {
         </table>
       </div>
     ` : '<p class="hint">没有可预览的行。</p>'}
+    ${importNumberNote(preview)}
     ${importDateNote(preview)}
     ${importTruncateNote(preview, visible.length)}
     <div class="row" style="margin-top:10px">${importActions(preview)}</div>

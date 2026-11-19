@@ -2,7 +2,8 @@ let invoiceData = null
 let selectedInvoices = new Set()
 let pendingImportFile = null
 let pendingImportPreview = null
-let importOnlyDuplicate = false
+// 预览的筛选维度：'' 全部 / duplicate 只看重复 / number 只看号码位数可疑
+let importOnly = ''
 let invoiceSearchTimer = null
 let editingId = 0
 let editingIssueRaw = ''   // 选择器认不出的旧开票日期原文，用户没重挑就原样存回
@@ -305,18 +306,18 @@ async function previewImportFile(file) {
   try {
     pendingImportFile = file
     pendingImportPreview = await previewInvoiceImport(file)
-    importOnlyDuplicate = false
-    renderImportPreview(pendingImportPreview, importOnlyDuplicate)
+    importOnly = ''
+    renderImportPreview(pendingImportPreview, importOnly)
   } catch (error) {
     alertFailure('预览失败', error)
   }
 }
 
-/** 「只看重复」开关：不重新请求，直接按现有预览结果重绘 */
-function toggleOnlyDuplicate() {
+/** 两个筛选入口共用：点已激活的那个回到全部，不重新请求，直接按现有结果重绘 */
+function toggleImportOnly(kind) {
   if (!pendingImportPreview) return
-  importOnlyDuplicate = !importOnlyDuplicate
-  renderImportPreview(pendingImportPreview, importOnlyDuplicate)
+  importOnly = importOnly === kind ? '' : kind
+  renderImportPreview(pendingImportPreview, importOnly)
 }
 
 function previewImport() {
@@ -691,11 +692,12 @@ function bindLedgerEvents() {
     if (event.target.closest('#confirmPasteBtn')) { previewPasteImport(); return }
     if (event.target.closest('#confirmImportBtn')) { confirmImport(); return }
     if (event.target.closest('#importAllBtn')) { importAllIncludingDuplicates(); return }
-    if (event.target.closest('[data-action="only-duplicates"]')) { toggleOnlyDuplicate(); return }
+    if (event.target.closest('[data-action="only-duplicates"]')) { toggleImportOnly('duplicate'); return }
+    if (event.target.closest('[data-action="only-number-warnings"]')) { toggleImportOnly('number'); return }
     if (event.target.closest('#cancelImportBtn')) {
       pendingImportFile = null
       pendingImportPreview = null
-      importOnlyDuplicate = false
+      importOnly = ''
       $('invoiceImportFile').value = ''
       $('importPreview').innerHTML = ''
     }
