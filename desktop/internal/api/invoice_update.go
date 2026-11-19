@@ -23,6 +23,8 @@ func (d *deps) updateInvoice(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "发票号码不能为空")
 		return
 	}
+	// 补录也可能改日期，走同一套归一化，免得又混进 2024/10/28 这种写法
+	request.IssueDate = ledger.NormalizeIssueDate(request.IssueDate)
 
 	updated, ok, err := d.ledger.Update(id, request)
 	if err != nil {

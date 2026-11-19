@@ -321,6 +321,10 @@ code { background: var(--canvas); padding: 2px 5px; border-radius: 4px; }
 .preview-row.duplicate td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
 .preview-row.invalid td { background: var(--warn-soft); }
 .conflict-hint { display: block; margin-top: 2px; font-size: 12px; color: var(--danger); }
+.date-hint { display: block; margin-top: 2px; font-size: 12px; color: var(--warn); }
+.preview-item.warn { color: var(--warn); }
+.date-note { margin: 8px 0 0; padding: 8px 10px; border-radius: 6px; background: var(--warn-soft); font-size: 12px; color: var(--warn); }
+.date-note code { padding: 1px 4px; border-radius: 3px; background: rgba(0, 0, 0, 0.06); font-size: 11px; }
 
 .dup-banner { margin-bottom: 12px; padding: 10px 12px; border: 1px solid #ffc9c2; border-radius: 6px; background: var(--danger-soft); }
 .dup-banner strong { font-size: 13px; color: var(--danger); }

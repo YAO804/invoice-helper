@@ -218,6 +218,9 @@ function conflictHint(item) {
 function importRow(item, position) {
   const invoice = item.invoice
   const hint = conflictHint(item)
+  const warning = item.warning
+    ? `<span class="date-hint">${esc(item.warning)}</span>`
+    : ''
   return `
     <tr class="preview-row ${esc(item.status)}">
       <td class="muted">${position}</td>
@@ -228,7 +231,7 @@ function importRow(item, position) {
       <td>${esc(invoice.issue_date)}</td>
       <td>${esc(invoice.total)}</td>
       <td>${esc(invoice.reimburser)}</td>
-      <td>${esc(item.message)}${hint ? `<span class="conflict-hint">${esc(hint)}</span>` : ''}</td>
+      <td>${esc(item.message)}${hint ? `<span class="conflict-hint">${esc(hint)}</span>` : ''}${warning}</td>
     </tr>
   `
 }
@@ -276,6 +279,13 @@ function importTruncateNote(preview, shownCount) {
   return `<p class="preview-more">共 ${total} 行，仅显示前 ${IMPORT_PREVIEW_LIMIT} 行${hint}。</p>`
 }
 
+/** 日期认不出格式时不会拦截导入，但必须说清后果：这些票会被日期筛选漏掉 */
+function importDateNote(preview) {
+  if (!preview.date_warning_count) return ''
+  return `<p class="date-note">有 ${preview.date_warning_count} 张开票日期认不出格式，会原样导入；
+    台账按开票日期筛选时可能看不到它们，建议导入后在台账里改成 <code>2024-10-28</code> 这种写法。</p>`
+}
+
 function renderImportPreview(preview, onlyDuplicate) {
   const visible = visibleImportItems(preview, onlyDuplicate)
   const rows = visible.slice(0, IMPORT_PREVIEW_LIMIT)
@@ -292,6 +302,7 @@ function renderImportPreview(preview, onlyDuplicate) {
       <span class="preview-item new">新增 ${preview.new_count || 0}</span>
       <span class="preview-item duplicate">重复 ${dup}</span>
       <span class="preview-item invalid">缺号码 ${preview.invalid_count || 0}</span>
+      ${preview.date_warning_count ? `<span class="preview-item warn">日期待核对 ${preview.date_warning_count}</span>` : ''}
       ${dupChip}
     </div>
     ${importDuplicateBanner(preview)}
@@ -305,7 +316,8 @@ function renderImportPreview(preview, onlyDuplicate) {
           <tbody>${rows.map((row) => importRow(row.item, row.position)).join('')}</tbody>
         </table>
       </div>
-    ` : '<p class="hint">没有重复行。</p>'}
+    ` : '<p class="hint">没有可预览的行。</p>'}
+    ${importDateNote(preview)}
     ${importTruncateNote(preview, visible.length)}
     <div class="row" style="margin-top:10px">${importActions(preview)}</div>
   `

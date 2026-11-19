@@ -8,14 +8,17 @@ type ImportItem struct {
 	// 只报「重复」不报「跟谁重复」，用户没法判断该不该跳，所以要把对手带出来。
 	Conflict     *Invoice `json:"conflict,omitempty"`
 	ConflictFrom string   `json:"conflict_from,omitempty"` // ledger | file
+	// Warning 是「能导入但需要你知道」的提醒，目前用于认不出格式的开票日期。
+	Warning string `json:"warning,omitempty"`
 }
 
 type ImportPreview struct {
-	Total          int          `json:"total"`
-	NewCount       int          `json:"new_count"`
-	DuplicateCount int          `json:"duplicate_count"`
-	InvalidCount   int          `json:"invalid_count"`
-	Items          []ImportItem `json:"items"`
+	Total            int          `json:"total"`
+	NewCount         int          `json:"new_count"`
+	DuplicateCount   int          `json:"duplicate_count"`
+	InvalidCount     int          `json:"invalid_count"`
+	DateWarningCount int          `json:"date_warning_count"`
+	Items            []ImportItem `json:"items"`
 }
 
 // ImportResult 与 ImportPreview 的三个计数一一对应：预览说多少，这里就写多少、跳多少。
@@ -64,6 +67,12 @@ func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
 			item.Status = "new"
 			preview.NewCount++
 			inFile[identityKey(invoice)] = invoice
+		}
+		if item.Status != "invalid" {
+			item.Warning = issueDateWarning(item.Invoice)
+			if item.Warning != "" {
+				preview.DateWarningCount++
+			}
 		}
 		preview.Items = append(preview.Items, item)
 	}
@@ -144,6 +153,17 @@ func identityIndex(list []Invoice) map[string]Invoice {
 func hasKey(index map[string]Invoice, invoice Invoice) bool {
 	_, ok := index[identityKey(invoice)]
 	return ok
+}
+
+// issueDateWarning 只在日期仍不是 YYYY-MM-DD 时提示。
+// 认不出的格式会原样入库，而台账是按字符串比较日期来筛选的，
+// 这些票会被静默漏掉，所以必须在导入前让用户看见，而不是等他发现少了票。
+func issueDateWarning(invoice Invoice) string {
+	if invoice.IssueDate == "" || IsISODate(invoice.IssueDate) {
+		return ""
+	}
+	return "开票日期「" + invoice.IssueDate + "」认不出格式，已原样保留，" +
+		"按开票日期筛选时可能漏掉这张"
 }
 
 // duplicateMessage 说清楚是「号码撞了」还是「代码+号码都撞了」，方便用户判断。

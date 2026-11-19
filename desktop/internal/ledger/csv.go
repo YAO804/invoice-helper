@@ -55,7 +55,7 @@ func invoiceFromRow(row []string, index map[string]int) Invoice {
 		Number:     cell(row, index, "发票号码"),
 		Code:       cell(row, index, "发票代码"),
 		Kind:       cell(row, index, "票种"),
-		IssueDate:  cell(row, index, "开票日期"),
+		IssueDate:  NormalizeIssueDate(cell(row, index, "开票日期")),
 		Total:      cell(row, index, "价税合计"),
 		Reimburser: cell(row, index, "报销人"),
 		Batch:      cell(row, index, "录入批次"),

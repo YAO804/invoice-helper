@@ -64,6 +64,7 @@ function previewOf(items) {
     new_count: items.filter((i) => i.status === 'new').length,
     duplicate_count: items.filter((i) => i.status === 'duplicate').length,
     invalid_count: items.filter((i) => i.status === 'invalid').length,
+    date_warning_count: items.filter((i) => i.warning).length,
     items: items
   }
 }
@@ -141,6 +142,25 @@ const many = previewOf(Array.from({ length: 60 }, (_, i) => item('M' + i, '甲',
 renderImportPreview(many, false)
 contains('截断要明写', elements.importPreview.innerHTML, '共 60 行，仅显示前 50 行')
 check('最多渲染 50 行', (elements.importPreview.innerHTML.match(/preview-row/g) || []).length, 50)
+
+// 认不出格式的日期不拦导入，但必须说清后果，否则用户在日期筛选里找不到票
+const oddDate = previewOf([
+  item('N010', '甲', 'new'),
+  Object.assign(item('N011', '乙', 'new'), {
+    warning: '开票日期「05-06-24」认不出格式，已原样保留，按开票日期筛选时可能漏掉这张'
+  })
+])
+renderImportPreview(oddDate, false)
+html = elements.importPreview.innerHTML
+contains('汇总里有日期待核对', html, '日期待核对 1')
+contains('行内显示日期提示', html, 'date-hint')
+contains('提示说清会被筛掉', html, '按开票日期筛选时可能漏掉这张')
+contains('表格下方给出后果与改法', html, '台账按开票日期筛选时可能看不到它们')
+contains('给出标准写法示例', html, '2024-10-28')
+
+renderImportPreview(previewOf([item('N012', '甲', 'new')]), false)
+absent('日期都正常时不提示', elements.importPreview.innerHTML, '日期待核对')
+absent('日期都正常时不出现说明', elements.importPreview.innerHTML, 'date-note')
 
 // 页面接线：三种决策都要有处理，且提交时把口径带给后端
 const app = fs.readFileSync(path.join(__dirname, '../../desktop/web/ledger-app.js'), 'utf8')

@@ -20,7 +20,7 @@ func (d *deps) createInvoice(w http.ResponseWriter, r *http.Request) {
 	request.Number = strings.TrimSpace(request.Number)
 	request.Code = strings.TrimSpace(request.Code)
 	request.Kind = strings.TrimSpace(request.Kind)
-	request.IssueDate = strings.TrimSpace(request.IssueDate)
+	request.IssueDate = ledger.NormalizeIssueDate(request.IssueDate)
 	request.Total = strings.TrimSpace(request.Total)
 	request.Reimburser = strings.TrimSpace(request.Reimburser)
 	if request.Number == "" {
