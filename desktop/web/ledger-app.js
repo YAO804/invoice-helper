@@ -273,10 +273,9 @@ function scheduleLedgerRefresh() {
   invoiceSearchTimer = setTimeout(refreshLedger, 250)
 }
 
-async function previewImport() {
-  const file = $('invoiceImportFile').files[0]
+async function previewImportFile(file) {
   if (!file) {
-    alert('请先选择 Excel（.xlsx）或 CSV 文件')
+    alert('请先选择 Excel（.xlsx）文件')
     return
   }
   try {
@@ -285,6 +284,34 @@ async function previewImport() {
   } catch (error) {
     alert('预览失败：' + error.message)
   }
+}
+
+function previewImport() {
+  previewImportFile($('invoiceImportFile').files[0])
+}
+
+function openPasteImport() {
+  $('pasteImportModal').hidden = false
+  $('pasteImportHint').textContent = ''
+  $('pasteImportText').focus()
+}
+
+function closePasteImport() {
+  $('pasteImportModal').hidden = true
+}
+
+/** 把 Excel 粘贴的 TSV 转成 File，交给同一条预览链路处理。 */
+function previewPasteImport() {
+  const text = $('pasteImportText').value
+  const error = pasteImportError(text)
+  if (error) {
+    $('pasteImportHint').textContent = error
+    return
+  }
+  const csv = tsvToCSV(text)
+  const file = new File([csv], '粘贴导入.csv', { type: 'text/csv' })
+  closePasteImport()
+  previewImportFile(file)
 }
 
 async function confirmImport() {
@@ -507,6 +534,10 @@ function closeDrawer() {
 }
 
 function bindLedgerEvents() {
+  // 文件选择框是 hidden 的，必须由按钮 click 触发；选完文件靠 change 进入预览。
+  // 原来只有按钮点击去读 files[0]，从不触发选择框，所以点了没反应。
+  $('invoiceImportFile').addEventListener('change', previewImport)
+
   // 历史值下拉统一走页面内浮层（suggest.js）：原生 datalist 的弹出层没法跟页面风格对齐
   attachSuggest($('editKind'), 'kind')
   attachSuggest($('editReimburser'), 'reimburser')
@@ -593,7 +624,14 @@ function bindLedgerEvents() {
     }
     if (event.target.closest('#openDuplicateDrawerBtn')) openDrawer()
     if (event.target.closest('#closeDrawerBtn')) closeDrawer()
-    if (event.target.closest('#invoiceImportBtn')) previewImport()
+    if (event.target.closest('#invoiceImportBtn')) {
+      $('invoiceImportFile').value = ''
+      $('invoiceImportFile').click()
+      return
+    }
+    if (event.target.closest('#invoicePasteBtn')) { openPasteImport(); return }
+    if (event.target.closest('#closePasteBtn') || event.target.closest('#cancelPasteBtn')) { closePasteImport(); return }
+    if (event.target.closest('#confirmPasteBtn')) { previewPasteImport(); return }
     if (event.target.closest('#confirmImportBtn')) confirmImport()
     if (event.target.closest('#cancelImportBtn')) {
       pendingImportFile = null

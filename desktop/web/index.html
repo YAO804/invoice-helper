@@ -184,8 +184,9 @@
         <div class="toolbar">
           <div class="toolbar-left">
             <button id="invoiceCreateBtn" type="button" class="btn">新增发票</button>
-            <button id="invoiceImportBtn" type="button" class="btn">导入 Excel / CSV</button>
-            <input id="invoiceImportFile" type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" hidden>
+            <button id="invoiceImportBtn" type="button" class="btn">导入 Excel</button>
+            <input id="invoiceImportFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+            <button id="invoicePasteBtn" type="button" class="btn btn-ghost" title="从 Excel 复制表格后粘贴导入">粘贴导入</button>
             <a class="btn btn-ghost" href="/发票导入模板.xlsx" download="发票导入模板.xlsx" title="下载标准表头的 Excel 模板">下载导入模板</a>
             <button id="invoiceExportAllBtn" type="button" class="btn btn-ghost">导出全部</button>
             <button id="invoiceExportSelectedBtn" type="button" class="btn btn-ghost">导出选中</button>
@@ -310,6 +311,24 @@
     </div>
   </div>
 
+  <div id="pasteImportModal" class="modal" hidden>
+    <div class="modal-panel">
+      <div class="drawer-head">
+        <h2>粘贴导入发票</h2>
+        <button id="closePasteBtn" type="button" class="btn btn-ghost">关闭</button>
+      </div>
+      <div class="modal-body one-col">
+        <p class="hint">在 Excel 里选中表格（含表头）复制，粘贴到下面。列名要用模板里的标准表头，如「发票号码、发票代码、票种、开票日期、价税合计、报销人」。</p>
+        <textarea id="pasteImportText" rows="10" placeholder="发票号码	发票代码	票种	开票日期	价税合计	报销人&#10;032002300911	00813251	电子发票	2024-10-28	176.99	张三" aria-label="从 Excel 粘贴的表格数据"></textarea>
+        <p id="pasteImportHint" class="hint"></p>
+      </div>
+      <div class="row modal-actions">
+        <button id="confirmPasteBtn" type="button" class="btn">预览导入</button>
+        <button id="cancelPasteBtn" type="button" class="btn btn-ghost">取消</button>
+      </div>
+    </div>
+  </div>
+
   <div id="invoiceEditModal" class="modal" hidden>
     <div class="modal-panel">
       <div class="drawer-head">
@@ -357,6 +376,7 @@
   <script src="/events.js"></script>
   <script src="/preview.js"></script>
   <script src="/app.js"></script>
+  <script src="/paste-import.js"></script>
   <script src="/ledger-api.js"></script>
   <script src="/ledger-render.js"></script>
   <script src="/ledger-stats.js"></script>
