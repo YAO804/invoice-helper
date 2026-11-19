@@ -103,7 +103,7 @@ go vet ./...
 9. **改 `desktop/web/` 下任何文件都必须重新编译**：那是 `embed` 进二进制的，改完不 `go build` / 不重启进程，浏览器拿到的还是旧代码。已把静态资源统一设成 `Cache-Control: no-store`，并在控制台显示服务版本，用来区分「代码没生效」和「功能有 bug」。
 10. **台账表是固定布局**（`table-layout: fixed` + `<colgroup>` 百分比列宽，共 9 列）：不要给它加 `min-width`、也不要把内含长文本的单元格改成 `white-space: normal`——前者会重新引入横向滚动条，后者会让 20 位号码折行、被看成两个号。超长内容走 `ellipsis` + `title`。**列数改动必须同时改 `colgroup`、`thead`、行渲染和 `emptyRow` 的 colspan**，`filter-panel.test.js` 会数这三处的列数。
 11. **`desktop/web/*.js` 是经典脚本，顶层全局名只能有一处定义**：统一用 `render.js` 的 `$`，别在别的脚本里再声明 `function $` / `const $`——两个脚本在浏览器里会互相冲突，后加载的整份脚本直接 SyntaxError，界面只剩「renderStatus is not defined」。`script-order.test.js` 守着这条。
-12. **时间显示一律北京时间（UTC+8）**：后端把文件、事件时间按 UTC RFC3339 存，网页渲染必须经 `desktop/web/time.js` 的 `beijingTime()` / `beijingClock()`；不要用 `toLocaleString`（跟随系统时区，机器时区不对界面就错），也不要直接贴 `item.at` / `item.uploaded_at`。台账的 `created_at` 由 `desktop/internal/ledger` 的 `nowText()` 用 `time.FixedZone("CST", 8*3600)` 生成，不依赖机器时区。`time-format.test.js` 与 `TestNowTextIsBeijing` 守着这两端。
+12. **时间显示一律北京时间（UTC+8）**：后端把文件、事件时间按 UTC RFC3339 存，网页渲染必须经 `desktop/web/time.js` 的 `beijingTime()` / `beijingClock()`；不要用 `toLocaleString`（跟随系统时区，机器时区不对界面就错），也不要直接贴 `item.at` / `item.uploaded_at`。台账的 `created_at` 由 `desktop/internal/ledger` 的 `nowText()` 用 `time.FixedZone("CST", 8*3600)` 生成，不依赖机器时区；控制台「今日接收」也按北京自然日统计（`files.todayRange`），不是 UTC 日期。`time-format.test.js`、`TestNowTextIsBeijing`、`TestTodayRangeIsBeijing` 守着这几处。
 
 > 项目约定另记录在 `.workbuddy/memory/MEMORY.md`（不进 Git），每日工作日志在 `.workbuddy/memory/YYYY-MM-DD.md`。
 
