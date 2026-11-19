@@ -123,7 +123,6 @@ page.onShow()
 
 check('打开时丢掉超期记录', filesend.history().length, 2)
 check('只展示保留期内记录', page.data.history.map(function (e) { return e.id }), ['f2', 'f3'])
-check('连接状态', page.data.connected, true)
 check('默认方向为发到电脑', page.data.direction, 'to')
 check('默认分段为本机记录', page.data.tab, 'sent')
 check('当前条数', page.data.currentCount, 2)
@@ -139,6 +138,8 @@ check('全选后 allSelected', page.data.allSelected, true)
 page.onDelete({ currentTarget: { dataset: { all: 'no' } } })
 
 tick().then(function () {
+  // 徽标等探活回来才算数：存过地址不代表连得上
+  check('探活通过后显示已连接', page.data.connected, true)
   check('删除后本机只剩空', page.data.history.length, 0)
   check('删除提示', toasts[toasts.length - 1], '已删除 2 条记录')
 

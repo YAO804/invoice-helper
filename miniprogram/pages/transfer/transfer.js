@@ -60,11 +60,19 @@ const page = {
     this.refreshCurrent()
   },
 
+  /** 徽标只认探活结果：存过地址不等于连得上，电脑关机了要老实说未连接 */
   refreshStatus() {
     const base = lanservice.getBase()
     this.setData({
-      connected: !!base,
+      connected: false,
       baseText: base ? ('电脑地址：' + base) : '未配置电脑地址'
+    })
+    if (!base) return Promise.resolve(false)
+
+    const that = this
+    return lanservice.probe().then(function (ok) {
+      that.setData({ connected: !!ok })
+      return !!ok
     })
   },
 

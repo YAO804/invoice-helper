@@ -46,6 +46,27 @@ function deviceId() {
   return id
 }
 
+/**
+ * 探活：只问电脑在不在，不碰台账也不校验 PIN。
+ * 给「已连接」徽标用——地址存着不等于连得上，电脑关机了也得老实显示未连接。
+ */
+function probe() {
+  const base = getBase()
+  if (!base) return Promise.resolve(false)
+
+  return new Promise(function (resolve) {
+    wx.request({
+      url: base + '/api/health',
+      method: 'GET',
+      timeout: 2000,
+      success: function (res) {
+        resolve(res.statusCode === 200 && !!(res.data && res.data.ok))
+      },
+      fail: function () { resolve(false) }
+    })
+  })
+}
+
 function heartbeat() {
   const base = getBase()
   if (!base) return Promise.resolve({ skipped: true })
@@ -268,6 +289,7 @@ module.exports = {
   getBase: getBase,
   setBase: setBase,
   deviceId: deviceId,
+  probe: probe,
   heartbeat: heartbeat,
   checkInvoices: checkInvoices,
   checkInvoiceNumbers: checkInvoiceNumbers,

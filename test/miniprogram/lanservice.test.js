@@ -208,6 +208,24 @@ lanservice.heartbeat().then(function (data) {
   lastInterval.fn()
   check('定时器回调发现地址已清空就不再报', heartbeatCount, 0)
 
-  console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
-  process.exit(failCount === 0 ? 0 : 1)
+  // ---------- 探活 ----------
+  // 「已连接」徽标靠它背书：必须打到 /api/health、不依赖 PIN、连不上也不能抛
+  lanservice.setBase('192.168.1.20:8765')
+  lastRequest = null
+  return lanservice.probe().then(function (ok) {
+    check('探活打到 /api/health', lastRequest.url, 'http://192.168.1.20:8765/api/health')
+    check('探活是 GET', lastRequest.method, 'GET')
+    check('探活不带 PIN 头（PIN 错了也该显示连上）', lastRequest.header, undefined)
+    check('健康返回正常时算连得上', ok, true)
+
+    lanservice.setBase('')
+    lastRequest = null
+    return lanservice.probe()
+  }).then(function (ok) {
+    check('没配地址直接判未连接', ok, false)
+    check('没配地址不发请求', lastRequest, null)
+
+    console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
+    process.exit(failCount === 0 ? 0 : 1)
+  })
 })

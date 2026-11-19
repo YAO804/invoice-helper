@@ -70,6 +70,62 @@ function failureTip(message) {
   return FALLBACK
 }
 
+/**
+ * 连接状态徽标。
+ *
+ * 「已连接」必须由真实请求背书：只有台账同步成功才叫已连接。以前只看
+ * 「存没存过电脑地址」，电脑一关机、一换 WiFi，右上角照样绿着说已连接，
+ * 而台账其实一张都同步不到。
+ */
+function statusView(status, opts) {
+  const o = opts || {}
+  if (status === 'ok') {
+    return {
+      badge: '已连接',
+      tone: '',
+      hint: '电脑台账现有 ' + (o.count || 0) + ' 张' + (o.syncing ? '（同步中…）' : '') +
+        '。扫到的票会先查重再发送。'
+    }
+  }
+  if (status === 'checking') {
+    return { badge: '连接中', tone: 'badge-grey', hint: '正在连电脑，稍等一下…' }
+  }
+  if (status === 'fail') {
+    return {
+      badge: '连不上',
+      tone: 'badge-warn',
+      hint: '连不上电脑' + (o.base ? '（' + o.base + '）' : '') +
+        '。确认电脑端程序还开着、手机和电脑连的是同一个 WiFi，再试一次。'
+    }
+  }
+  return {
+    badge: '未连接',
+    tone: 'badge-grey',
+    hint: '还没连电脑。小程序不存台账，必须先连上电脑才能收票。'
+  }
+}
+
+/**
+ * 「当前状态 + 这次要改的字段」→ 一次 setData 补丁。
+ * 文案从合成后的状态算，免得先 setData 再算，出现一轮陈旧数字。
+ */
+function viewState(current, patch) {
+  const state = Object.assign({}, current || {}, patch || {})
+  const view = statusView(state.status, {
+    count: state.ledgerCount,
+    syncing: state.syncing,
+    base: state.baseText
+  })
+  return Object.assign({}, patch || {}, {
+    statusBadge: view.badge,
+    statusTone: view.tone,
+    statusHint: view.hint,
+    needConnect: state.status !== 'ok' && state.status !== 'checking'
+  })
+}
+
 module.exports = {
-  failureTip: failureTip
+  failureTip: failureTip,
+  statusView: statusView,
+  viewState: viewState
 }

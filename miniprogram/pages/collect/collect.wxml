@@ -3,13 +3,10 @@
   <view class="card">
     <view class="row">
       <text class="card-t">把发票收进来</text>
-      <text class="badge {{connected ? '' : 'badge-grey'}}">{{connected ? '已连接' : '未连接'}}</text>
+      <text class="badge {{statusTone}}">{{statusBadge}}</text>
     </view>
-    <view class="tiny muted" style="margin-top:10rpx">
-      <block wx:if="{{connected}}">电脑台账现有 {{ledgerCount}} 张{{syncing ? '（同步中…）' : ''}}。扫到的票会先查重再发送。</block>
-      <block wx:else>还没连电脑。小程序不存台账，必须先连上电脑才能收票。</block>
-    </view>
-    <view wx:if="{{!connected}}" class="btn btn-block" style="margin-top:18rpx" bindtap="onSettings" hover-class="btn-hover">去连接电脑</view>
+    <view class="tiny muted" style="margin-top:10rpx">{{statusHint}}</view>
+    <view wx:if="{{needConnect}}" class="btn btn-block" style="margin-top:18rpx" bindtap="onSettings" hover-class="btn-hover">去连接电脑</view>
   </view>
 
   <view class="card">

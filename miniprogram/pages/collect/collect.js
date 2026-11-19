@@ -11,10 +11,16 @@ const scanbatch = require('../../utils/scanbatch')
 const invoicesend = require('../../utils/invoicesend')
 const ledger = require('../../utils/ledger')
 const lanservice = require('../../utils/lanservice')
+const hint = require('../../utils/connect-hint')
 
 Page({
   data: {
-    connected: false,
+    // 状态只认「台账同步有没有成功」，存过地址不等于连上了
+    status: 'none',
+    statusBadge: '未连接',
+    statusTone: 'badge-grey',
+    statusHint: '还没连电脑。小程序不存台账，必须先连上电脑才能收票。',
+    needConnect: true,
     baseText: '',
     syncing: false,
     ledgerCount: 0,
@@ -25,21 +31,29 @@ Page({
     this.refresh()
   },
 
+  /** 状态与文案统一由 hint.viewState 产出，页面只负责把状态摆对 */
+  setState(patch) {
+    this.setData(hint.viewState(this.data, patch))
+  },
+
   refresh() {
     const base = lanservice.getBase()
-    this.setData({ connected: !!base, baseText: base })
-    if (!base) return Promise.resolve()
-    // 顺手把台账同步到内存，扫码时才能当场判断是否重复
+    if (!base) {
+      this.setState({ status: 'none', baseText: '', ledgerCount: 0, syncing: false })
+      return Promise.resolve()
+    }
+    this.setState({ status: 'checking', baseText: base })
+    // 同步台账就是最好的探活：这次请求成功才敢说「已连接」
     return this.syncLedger()
   },
 
   syncLedger() {
     const that = this
-    this.setData({ syncing: true })
+    this.setState({ syncing: true })
     return ledger.sync({}).then(function (snap) {
-      that.setData({ ledgerCount: snap.total, syncing: false })
+      that.setState({ status: 'ok', ledgerCount: snap.total, syncing: false })
     }).catch(function () {
-      that.setData({ ledgerCount: 0, syncing: false })
+      that.setState({ status: 'fail', ledgerCount: 0, syncing: false })
     })
   },
 

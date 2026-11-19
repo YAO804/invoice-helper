@@ -50,5 +50,38 @@ check('空消息给下一步', hint.failureTip('').content.indexOf('扫码连接
 check('未知错误不回显原始串', hint.failureTip('some internal panic at 0x0').content.indexOf('0x0') < 0, true)
 check('非字符串不炸', hint.failureTip(undefined).title, '连接失败')
 
+console.log('\n--- 连接状态徽标 ---')
+// 「已连接」必须有真实请求背书。之前只看存没存过电脑地址，电脑关机了照样显示已连接
+check('没配地址说未连接', hint.statusView('none').badge, '未连接')
+check('未连接是灰的', hint.statusView('none').tone, 'badge-grey')
+check('未连接说清为什么不能收票', hint.statusView('none').hint.indexOf('必须先连上电脑') >= 0, true)
+check('同步中显示连接中', hint.statusView('checking').badge, '连接中')
+check('同步成功才是已连接', hint.statusView('ok', { count: 12 }).badge, '已连接')
+check('已连接复述台账张数', hint.statusView('ok', { count: 12 }).hint.indexOf('现有 12 张') >= 0, true)
+check('同步中带括号提示', hint.statusView('ok', { count: 3, syncing: true }).hint.indexOf('（同步中…）') >= 0, true)
+check('张数为 0 也要写出来', hint.statusView('ok', { count: 0 }).hint.indexOf('现有 0 张') >= 0, true)
+check('同步失败显示连不上', hint.statusView('fail', { base: 'http://192.168.1.20:8765' }).badge, '连不上')
+check('连不上用警示色', hint.statusView('fail').tone, 'badge-warn')
+check('连不上把地址写出来，方便核对', hint.statusView('fail', { base: 'http://192.168.1.20:8765' }).hint.indexOf('192.168.1.20') >= 0, true)
+check('未知状态按未连接处理', hint.statusView('whatever').badge, '未连接')
+
+console.log('\n--- 状态合成 ---')
+// 页面只 setData 一次，徽标/提示都从合成后的状态算，避免出现一轮陈旧张数
+const stateNone = hint.viewState({ status: 'none' }, { status: 'checking', baseText: 'http://x:8765' })
+check('切到连接中：徽标跟着变', stateNone.statusBadge, '连接中')
+check('切到连接中：先不弹去连接按钮（检查期间弹出来只会闪一下）', stateNone.needConnect, false)
+const stateOk = hint.viewState(
+  { status: 'checking', ledgerCount: 0, baseText: 'http://x:8765' },
+  { status: 'ok', ledgerCount: 12, syncing: false })
+check('同步成功：这次就要用新的张数', stateOk.statusBadge, '已连接')
+check('同步成功：张数是这次的', stateOk.statusHint.indexOf('现有 12 张') >= 0, true)
+check('同步成功：收起去连接按钮', stateOk.needConnect, false)
+const stateFail = hint.viewState(
+  { status: 'ok', ledgerCount: 12, baseText: 'http://x:8765' },
+  { status: 'fail', ledgerCount: 0 })
+check('同步失败：立刻不再说已连接', stateFail.statusBadge, '连不上')
+check('同步失败：把去连接按钮放回来', stateFail.needConnect, true)
+check('同步失败：地址取自上一个状态', stateFail.statusHint.indexOf('http://x:8765') >= 0, true)
+
 console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
 process.exit(failCount === 0 ? 0 : 1)
