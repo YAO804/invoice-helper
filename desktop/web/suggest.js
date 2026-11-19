@@ -12,12 +12,17 @@
 
 const SUGGEST_MAX = 8
 const SUGGEST_GAP = 4
+/** 底部「还有多少」提示里的量词：数字带量词才像中文 */
+const SUGGEST_UNITS = { reimburser: '位报销人', kind: '种票种' }
 
 /** 建议值按用途分开放；台账刷新时整体替换，不随当前筛选结果漂移 */
 const suggestStore = { reimburser: [], kind: [] }
+/** 本次会话刚填过的值，下次展开置顶（连续补录同一个人时不用每次往下翻） */
+const suggestRecent = { reimburser: [], kind: [] }
 
 let suggestPanel = null
 let suggestItems = []
+let suggestTotal = 0
 let suggestActive = -1
 let suggestOwner = null
 let suggestKey = ''
@@ -31,12 +36,31 @@ function setSuggestValues(key, values) {
   if (suggestOwner && suggestKey === key) renderSuggestList(suggestOwner)
 }
 
-/** 当前输入内容能匹配上的建议；不过滤时给前 8 条，等于「点开就能选」 */
-function suggestMatches(input) {
+/**
+ * 记下刚填过的值，下一次展开时置顶。
+ * 一批票往往是同一两个报销人，连着填时不置顶就得每次进浮层往下翻。
+ */
+function markSuggestRecent(key, value) {
+  const text = String(value || '').trim()
+  if (!text || !suggestRecent[key]) return
+  const list = suggestRecent[key]
+  const at = list.indexOf(text)
+  if (at >= 0) list.splice(at, 1)
+  list.unshift(text)
+  if (list.length > SUGGEST_MAX) list.length = SUGGEST_MAX
+}
+
+/**
+ * 全部候选（未截断）：保持传入顺序（台账那边已按使用次数排好），
+ * 再把本次会话用过的提到最前。总数要留着给底部提示用，所以不能先截断。
+ */
+function suggestCandidates(input) {
   const word = suggestFilter ? String((input && input.value) || '').trim().toLowerCase() : ''
   const all = suggestStore[suggestKey] || []
   const hit = word ? all.filter((value) => value.toLowerCase().indexOf(word) >= 0) : all
-  return hit.slice(0, SUGGEST_MAX)
+  const recent = (suggestRecent[suggestKey] || []).filter((value) => hit.indexOf(value) >= 0)
+  if (!recent.length) return hit
+  return recent.concat(hit.filter((value) => recent.indexOf(value) < 0))
 }
 
 function ensureSuggestPanel() {
@@ -81,17 +105,31 @@ function ensureSuggestPanel() {
 
 function renderSuggestList(input) {
   const panel = ensureSuggestPanel()
-  suggestItems = suggestMatches(input)
+  const candidates = suggestCandidates(input)
+  suggestTotal = candidates.length
+  suggestItems = candidates.slice(0, SUGGEST_MAX)
   suggestActive = -1
   if (!suggestItems.length) {
     closeSuggest()
     return
   }
-  panel.innerHTML = suggestItems
-    .map((value) => `<button type="button" class="suggest-item" role="option" data-value="${esc(value)}">${esc(value)}</button>`)
-    .join('')
+  panel.innerHTML = suggestItems.map(suggestItemHtml).join('') + suggestMoreHtml()
   panel.hidden = false
   placeSuggestPanel(input)
+}
+
+function suggestItemHtml(value) {
+  return `<button type="button" class="suggest-item" role="option" data-value="${esc(value)}">${esc(value)}</button>`
+}
+
+/**
+ * 底部提示：还有没显示出来的才写。
+ * 只有 8 条以内时不写——否则「共 5 位」贴着最后一行，看着像还有下文。
+ */
+function suggestMoreHtml() {
+  if (suggestTotal <= suggestItems.length) return ''
+  const unit = SUGGEST_UNITS[suggestKey] || '项'
+  return `<div class="suggest-more">共 ${suggestTotal} ${unit} · 继续输入可筛选</div>`
 }
 
 function placeSuggestPanel(input) {
@@ -117,18 +155,25 @@ function showSuggest(input, key, filter) {
 function closeSuggest() {
   if (suggestPanel) suggestPanel.hidden = true
   suggestItems = []
+  suggestTotal = 0
   suggestActive = -1
   suggestOwner = null
   suggestKey = ''
   suggestHeld = false
 }
 
+/** 浮层里除选项外还有底部提示，高亮下标只能数选项本身 */
+function suggestItemNodes() {
+  return Array.prototype.filter.call(suggestPanel.children, (node) =>
+    node.classList && node.classList.contains('suggest-item'))
+}
+
 function markActive() {
   if (!suggestPanel) return
-  Array.prototype.forEach.call(suggestPanel.children, (item, index) => {
+  suggestItemNodes().forEach((item, index) => {
     const active = index === suggestActive
     item.classList.toggle('active', active)
-    // 列表最高 216px，8 条装不下。键盘往下走到看不见的项要跟着滚，
+    // 列表最高 280px，偶尔仍装不下。键盘往下走到看不见的项要跟着滚，
     // 否则高亮移到了视口外，屏幕上没变化，用户会以为方向键坏了。
     if (active && item.scrollIntoView) item.scrollIntoView({ block: 'nearest' })
   })
@@ -138,6 +183,7 @@ function pickSuggest(value) {
   const input = suggestOwner
   if (!input) return
   input.value = value
+  markSuggestRecent(suggestKey, value)
   closeSuggest()
   // 补发 input/change：行内编辑靠 change 直接落库（与原生 datalist 选值的行为一致），
   // 否则用户选完以为存了，其实还在等回车。

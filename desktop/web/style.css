@@ -143,9 +143,9 @@ input[type="text"] { min-width: 180px; }
   position: fixed;
   z-index: 70;
   padding: 4px;
-  /* 一条 33px 左右，8 条（SUGGEST_MAX）+ 内边距刚好放下：默认不用滚也能看全，
-     真出现滚动时由 suggest.js 的滚动监听放行，不再一拖就收 */
-  max-height: 280px;
+  /* 一条 33px 左右，8 条（SUGGEST_MAX）加内边距是 272px；再有「共 N 位」提示时
+     多一行 30px，给到 320 才会一次看全，不至于为了看提示还得滚一下 */
+  max-height: 320px;
   overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -170,6 +170,21 @@ input[type="text"] { min-width: 180px; }
   cursor: pointer;
 }
 .suggest-item:hover, .suggest-item.active { background: var(--accent-soft); color: var(--accent); }
+/*
+ * 底部「共 N 位 · 继续输入可筛选」：说明还有更多，本身不可点。
+ * 粘在底部，列表滚起来也不会把提示带出视口——这条提示的作用就是防止
+ * 用户以为「就这么几个人」，看不见就白写了。
+ */
+.suggest-more {
+  position: sticky;
+  bottom: -4px;
+  margin-top: 4px;
+  padding: 6px 10px 4px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+}
 
 /* ---------- Toast ---------- */
 .toast {

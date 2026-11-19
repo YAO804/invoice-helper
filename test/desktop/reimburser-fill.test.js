@@ -68,8 +68,12 @@ check('空文本不解析', parsePastedInvoice('   '), null)
 check('普通逗号句不误判', parsePastedInvoice('张三,李四'), null)
 
 console.log('\n--- 建议池去重 ---')
-check('去重后只剩两个', orderedValues(new Set(['张三', '李四', '张三'])).length, 2)
-check('去重内容正确', orderedValues(new Set(['张三', '李四', '张三'])).sort(), ['张三', '李四'].sort())
+const dupStats = new Map([
+  ['张三', { count: 2, lastAt: '' }],
+  ['李四', { count: 1, lastAt: '' }]
+])
+check('去重后只剩两个', orderedValues(dupStats).length, 2)
+check('去重内容正确', orderedValues(dupStats).sort(), ['张三', '李四'].sort())
 
 console.log('\n--- 报销人单元格复制按钮 ---')
 const withName = reimburserCell({ id: 1, reimburser: '张三' })
@@ -88,8 +92,31 @@ vm.runInThisContext("invoiceData = { items: [" +
   '], duplicates: [] }')
 refreshSuggestions()
 check('报销人建议去重', suggestStore.reimburser, ['张三'])
-check('票种建议去重（按拼音排序）', suggestStore.kind, ['普通发票', '数电票'])
+check('票种建议按出现次数排序（数电票 2 次在前）', suggestStore.kind, ['数电票', '普通发票'])
 check('建议不再塞进原生 datalist', elements.reimburserSuggestions, undefined)
+
+console.log('\n--- 建议排序：常用优先 ---')
+// 报销人一多，前 8 条就是全部能选的东西。按次数排能把常用的顶上来，
+// 误填进这一列的一次性脏值（截图里 1/111/122 那些）自然落到后面。
+vm.runInThisContext('suggestionPool.reimburser.clear(); suggestionPool.kind.clear()')
+vm.runInThisContext("invoiceData = { items: [" +
+  "{ id: 1, reimburser: '张三', kind: '', created_at: '2026-11-18T01:00:00Z' }," +
+  "{ id: 2, reimburser: '李四', kind: '', created_at: '2026-11-18T02:00:00Z' }," +
+  "{ id: 3, reimburser: '张三', kind: '', created_at: '2026-11-18T03:00:00Z' }," +
+  "{ id: 4, reimburser: '赵六', kind: '', created_at: '2026-11-19T01:00:00Z' }" +
+  '], duplicates: [] }')
+refreshSuggestions()
+check('出现次数多的排最前', suggestStore.reimburser[0], '张三')
+check('次数相同时最近录入的在前', suggestStore.reimburser[1], '赵六')
+check('三条都在，没丢人', suggestStore.reimburser.length, 3)
+
+// 只增不减：再筛成只剩一个空报销人的结果，池子不能因此缩水
+vm.runInThisContext("invoiceData = { items: [" +
+  "{ id: 9, reimburser: '', kind: '', created_at: '2026-11-19T02:00:00Z' }" +
+  '], duplicates: [] }')
+refreshSuggestions()
+check('筛选后建议池不缩水', suggestStore.reimburser.length, 3)
+check('常用名仍在第一位', suggestStore.reimburser[0], '张三')
 
 console.log('\n--- 批量填报销人 ---')
 alerts = []

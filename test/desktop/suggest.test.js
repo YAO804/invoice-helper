@@ -58,7 +58,7 @@ function makeNode(tag) {
     appendChild(child) { node.children.push(child); return child },
     dispatchEvent(event) { node.dispatch(event.type, event) },
     focus() { node.focused = true },
-    classList: { toggle() {}, add() {}, remove() {} }
+    classList: { toggle() {}, add() {}, remove() {}, contains() { return false } }
   }
   return node
 }
@@ -168,9 +168,41 @@ input.dispatch('focus')
 check('最多 8 条', suggestItems.length, 8)
 check('第 9 条不渲染', panel.innerHTML.indexOf('A9'), -1)
 
+console.log('\n--- 总数提示 ---')
+// 只剩 8 条可见时用户会以为「系统里就这几个人」，所以要告诉他还有多少
+check('超过 8 条时写出总数', panel.innerHTML.indexOf('共 10 位报销人') >= 0, true)
+check('提示告诉用户可以继续输入', panel.innerHTML.indexOf('继续输入可筛选') >= 0, true)
+check('总数是全量而不是截断后的 8', suggestTotal, 10)
+input.value = 'A1'
+input.dispatch('input')
+check('过滤后总数跟着匹配数走', suggestTotal, 2)
+check('匹配只剩 2 条就不写提示', panel.innerHTML.indexOf('suggest-more'), -1)
+
+input.value = ''
 setSuggestValues('reimburser', ['只有我'])
 check('数据刷新后已展开的浮层同步', panel.innerHTML.indexOf('只有我') >= 0, true)
 check('旧值被替换', panel.innerHTML.indexOf('A1'), -1)
+check('8 条以内外不写总数（免得像还有下文）', panel.innerHTML.indexOf('suggest-more'), -1)
+
+console.log('\n--- 最近用过的置顶 ---')
+setSuggestValues('reimburser', ['张三', '李四', '王五'])
+input.value = ''
+input.dispatch('focus')
+check('默认保持传入顺序（台账已按次数排好）', suggestItems, ['张三', '李四', '王五'])
+// 一批票常常是同一两个人，连着填时刚填过的应该排在第一个
+markSuggestRecent('reimburser', '王五')
+input.dispatch('focus')
+check('刚填过的置顶', suggestItems, ['王五', '张三', '李四'])
+markSuggestRecent('reimburser', '李四')
+input.dispatch('focus')
+check('再填一个，最近的两个按倒序在前', suggestItems, ['李四', '王五', '张三'])
+check('没有重复项', suggestItems.length, 3)
+input.value = '张'
+input.dispatch('input')
+check('过滤时仍按最近优先', suggestItems, ['张三'])
+input.value = ''
+input.dispatch('focus')
+check('清空输入后最近顺序还在', suggestItems[0], '李四')
 
 console.log('\n--- 浮层自己滚动不能把浮层收掉 ---')
 // scroll 不冒泡，但捕获阶段会经过 document；之前无条件 closeSuggest，

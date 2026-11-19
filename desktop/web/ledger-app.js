@@ -20,25 +20,60 @@ function showToast(message) {
 }
 
 /**
- * datalist 建议池：只增不减。
+ * 建议池：只增不减，同时记下出现次数和最近一次录入时间。
  * 直接拿当前列表会受筛选影响——一筛「待补录」就只剩空值，
  * 建议池反而丢了最常用的历史报销人。
  */
-const suggestionPool = { reimburser: new Set(), kind: new Set() }
+const suggestionPool = { reimburser: new Map(), kind: new Map() }
 
-function orderedValues(set) {
-  return Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
+/** 统计一批台账里某个字段的出现次数与最近录入时间 */
+function countValues(items, field) {
+  const stats = new Map()
+  items.forEach((item) => {
+    const value = String(item[field] || '').trim()
+    if (!value) return
+    const entry = stats.get(value) || { count: 0, lastAt: '' }
+    entry.count++
+    const at = String(item.created_at || '')
+    if (at > entry.lastAt) entry.lastAt = at
+    stats.set(value, entry)
+  })
+  return stats
+}
+
+/** 合并历次统计：次数取历史最大值（筛选后变少也别把常用值降级），时间取最新 */
+function mergeStats(pool, stats) {
+  stats.forEach((entry, value) => {
+    const old = pool.get(value)
+    if (!old) {
+      pool.set(value, entry)
+      return
+    }
+    old.count = Math.max(old.count, entry.count)
+    if (entry.lastAt > old.lastAt) old.lastAt = entry.lastAt
+  })
+}
+
+/**
+ * 次数降序 → 最近录入降序 → 字典序兜底。
+ * 次数优先而不是拼音：误填进报销人列的数字（截图里 1/111/122 那些）只出现一次，
+ * 排到后面去了，真正的人名才不会被挤出浮层的前 8 条。
+ */
+function orderedValues(stats) {
+  return Array.from(stats.keys()).sort((a, b) => {
+    const left = stats.get(a)
+    const right = stats.get(b)
+    if (left.count !== right.count) return right.count - left.count
+    if (left.lastAt !== right.lastAt) return left.lastAt < right.lastAt ? 1 : -1
+    return a.localeCompare(b, 'zh-Hans-CN')
+  })
 }
 
 /** 把台账里已有的报销人/票种收进建议池，补录时可直接下拉选 */
 function refreshSuggestions() {
   const items = (invoiceData && invoiceData.items) || []
-  items.forEach((item) => {
-    const who = String(item.reimburser || '').trim()
-    if (who) suggestionPool.reimburser.add(who)
-    const kind = String(item.kind || '').trim()
-    if (kind) suggestionPool.kind.add(kind)
-  })
+  mergeStats(suggestionPool.reimburser, countValues(items, 'reimburser'))
+  mergeStats(suggestionPool.kind, countValues(items, 'kind'))
   setSuggestValues('reimburser', orderedValues(suggestionPool.reimburser))
   setSuggestValues('kind', orderedValues(suggestionPool.kind))
 }
@@ -106,6 +141,7 @@ function startReimburserEdit(cell) {
 
     try {
       await updateInvoice(id, invoicePayload(item, { reimburser: value }))
+      markSuggestRecent('reimburser', value)
       showToast(value ? '报销人已保存：' + value : '已清空报销人')
       await refreshLedger()
       if (window.refresh) window.refresh()
@@ -313,6 +349,7 @@ async function confirmBatchReimburser() {
     }
   }
   showToast('已更新 ' + done + ' 张的报销人')
+  if (done) markSuggestRecent('reimburser', value)
   await refreshLedger()
   if (window.refresh) window.refresh()
 }
@@ -364,6 +401,8 @@ async function saveEdit() {
   try {
     if (creating) await createInvoice(payload)
     else await updateInvoice(editingId, payload)
+    markSuggestRecent('reimburser', payload.reimburser)
+    markSuggestRecent('kind', payload.kind)
     closeEdit()
     await refreshLedger()
     if (window.refresh) window.refresh()
