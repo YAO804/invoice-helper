@@ -35,5 +35,8 @@ func (d *deps) createInvoice(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = d.registry.MarkEvent("import", "手动录入发票 "+created.Number, "", 0)
 
-	writeJSON(w, http.StatusCreated, map[string]any{"invoice": created})
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"invoice":        created,
+		"number_warning": ledger.NumberWarning(created),
+	})
 }

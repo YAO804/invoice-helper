@@ -16,7 +16,7 @@ func TestNumberWarningAcceptsRealShapes(t *testing.T) {
 		{Number: "", Code: "032002300911"},          // 空号码由「缺号码」负责
 	}
 	for _, invoice := range cases {
-		if got := numberFieldWarning(invoice); got != "" {
+		if got := NumberWarning(invoice); got != "" {
 			t.Errorf("不该误报 %+v: %s", invoice, got)
 		}
 	}
@@ -24,7 +24,7 @@ func TestNumberWarningAcceptsRealShapes(t *testing.T) {
 
 // 这正是被模板误导后填出来的样子：12 位数字进了号码列、8 位数字进了代码列。
 func TestNumberWarningFlagsSwappedColumns(t *testing.T) {
-	warning := numberFieldWarning(Invoice{Number: "032002300911", Code: "00813251"})
+	warning := NumberWarning(Invoice{Number: "032002300911", Code: "00813251"})
 	if warning == "" {
 		t.Fatal("两列填反必须提示")
 	}
@@ -37,7 +37,7 @@ func TestNumberWarningFlagsSwappedColumns(t *testing.T) {
 
 func TestNumberWarningFlagsCodeInNumberColumn(t *testing.T) {
 	for _, number := range []string{"032002300911", "0320023009"} {
-		warning := numberFieldWarning(Invoice{Number: number, Code: ""})
+		warning := NumberWarning(Invoice{Number: number, Code: ""})
 		if warning == "" || !strings.Contains(warning, "更像发票代码") {
 			t.Fatalf("号码列填了 %s 应提示: %q", number, warning)
 		}
@@ -53,7 +53,7 @@ func TestNumberWarningFlagsOddLengths(t *testing.T) {
 		{Invoice{Number: "00813251", Code: "1234567"}, "不像常见的 10 或 12 位"},
 	}
 	for _, tc := range cases {
-		warning := numberFieldWarning(tc.invoice)
+		warning := NumberWarning(tc.invoice)
 		if !strings.Contains(warning, tc.want) {
 			t.Fatalf("%+v 应提示「%s」，实际 %q", tc.invoice, tc.want, warning)
 		}

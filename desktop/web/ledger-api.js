@@ -40,6 +40,14 @@ function updateInvoice(id, data) {
   })
 }
 
+// 位数提示用后端同一套规则算，网页不再自己复制一份位数判断
+function fetchNumberWarning(number, code) {
+  const params = new URLSearchParams()
+  if (number) params.set('number', number)
+  if (code) params.set('code', code)
+  return requestJSON('/api/invoices/number-warning?' + params.toString())
+}
+
 function createInvoice(data) {
   return requestJSON('/api/invoices/manual', {
     method: 'POST',

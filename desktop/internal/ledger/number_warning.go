@@ -18,12 +18,12 @@ const (
 	invoiceCodeLong    = 12
 )
 
-// numberFieldWarning 发现号码/代码位数可疑时给出提示，正常时返回空串。
+// NumberWarning 发现号码/代码位数可疑时给出提示，正常时返回空串。
 //
 // 只提示、不拦截、不自动交换：票种规则在变，猜错的代价是让一张真票变成废数据。
 // 但必须说清后果——判重是「代码+号码」，两列填反后键也跟着反了，
 // 重复票会被当成新票混进来，用户不看见提示根本不会发现。
-func numberFieldWarning(invoice Invoice) string {
+func NumberWarning(invoice Invoice) string {
 	number := strings.TrimSpace(invoice.Number)
 	code := strings.TrimSpace(invoice.Code)
 
@@ -69,7 +69,7 @@ func allDigits(value string) bool {
 func countNumberWarnings(list []Invoice) int {
 	count := 0
 	for _, invoice := range list {
-		if invoice.Number != "" && numberFieldWarning(invoice) != "" {
+		if invoice.Number != "" && NumberWarning(invoice) != "" {
 			count++
 		}
 	}

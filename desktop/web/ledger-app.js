@@ -7,6 +7,8 @@ let importOnly = ''
 let invoiceSearchTimer = null
 let editingId = 0
 let editingIssueRaw = ''   // 选择器认不出的旧开票日期原文，用户没重挑就原样存回
+let numberWarningTimer = null
+let numberWarningSeq = 0   // 关掉弹窗或又改了值时，作废在途的提示请求
 
 /** 每页条数。两万行时一次全量返回 4.7MB，浏览器渲染直接卡住 */
 const INVOICE_PAGE_SIZE = 20
@@ -456,6 +458,35 @@ function openForm(item) {
   $('editModalTitle').textContent = item ? '补录发票信息' : '新增发票'
   $('saveEditBtn').textContent = item ? '保存补录' : '保存新增'
   $('invoiceEditModal').hidden = false
+  refreshNumberWarning()
+}
+
+/** 手动录入的位数提示：文案由后端算，网页只负责显示，不自己复制一套规则 */
+function renderNumberWarning(text) {
+  const box = $('editNumberWarning')
+  box.textContent = text || ''
+  box.hidden = !text
+}
+
+async function refreshNumberWarning() {
+  const seq = ++numberWarningSeq
+  const number = ($('editNumber').value || '').trim()
+  const code = ($('editCode').value || '').trim()
+  if (!number && !code) return renderNumberWarning('')
+
+  try {
+    const result = await fetchNumberWarning(number, code)
+    // 表单已经关掉或用户又改了值，旧结果不能再盖上去
+    if (seq === numberWarningSeq) renderNumberWarning(result.warning)
+  } catch (_) {
+    // 提示是辅助：接口暂时不通也不能挡住录入，保存后后端还会再给一次
+    if (seq === numberWarningSeq) renderNumberWarning('')
+  }
+}
+
+function scheduleNumberWarning() {
+  clearTimeout(numberWarningTimer)
+  numberWarningTimer = setTimeout(refreshNumberWarning, 200)
 }
 
 /** 日期选择器只认 YYYY-MM-DD；常见的 2024/10/28、2024.10.28、20241028 先归一 */
@@ -477,6 +508,8 @@ function dateSaveValue(raw, picked) {
 function closeEdit() {
   editingId = 0
   editingIssueRaw = ''
+  numberWarningSeq++
+  renderNumberWarning('')
   $('invoiceEditModal').hidden = true
 }
 
@@ -488,14 +521,18 @@ async function saveEdit() {
 
   const creating = !editingId
   try {
-    if (creating) await createInvoice(payload)
-    else await updateInvoice(editingId, payload)
+    const response = creating ? await createInvoice(payload) : await updateInvoice(editingId, payload)
     markSuggestRecent('reimburser', payload.reimburser)
     markSuggestRecent('kind', payload.kind)
     closeEdit()
     await refreshLedger()
     if (window.refresh) window.refresh()
-    if (creating) showToast('已新增发票 ' + payload.number)
+    if (response && response.number_warning) {
+      // 实时提示可能被用户忽略或接口失败过；保存后这是最后一道提醒，
+      // 但仍不拦：数据已经按用户要求写进去了，让他自己决定改不改。
+      alert((creating ? '已新增发票 ' : '已补录发票 ') + payload.number + '。\n\n' +
+        response.number_warning + '\n\n发票已保存，请在台账里核对这两列。')
+    } else if (creating) showToast('已新增发票 ' + payload.number)
   } catch (error) {
     alert((creating ? '新增' : '补录') + '失败：' + error.message)
   }
@@ -593,6 +630,9 @@ function bindLedgerEvents() {
   attachSuggest($('editKind'), 'kind')
   attachSuggest($('editReimburser'), 'reimburser')
   attachSuggest($('batchReimburserInput'), 'reimburser')
+
+  $('editNumber').addEventListener('input', scheduleNumberWarning)
+  $('editCode').addEventListener('input', scheduleNumberWarning)
 
   ;['invNumber', 'invReimburser', 'invDateFrom', 'invDateTo',
     'invCreatedFrom', 'invCreatedTo', 'invAmountMin', 'invAmountMax'].forEach((id) => {

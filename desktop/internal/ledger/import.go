@@ -81,7 +81,7 @@ func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
 			if item.Warning != "" {
 				preview.DateWarningCount++
 			}
-			item.NumberWarning = numberFieldWarning(item.Invoice)
+			item.NumberWarning = NumberWarning(item.Invoice)
 		}
 		preview.Items = append(preview.Items, item)
 	}

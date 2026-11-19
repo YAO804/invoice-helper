@@ -37,5 +37,9 @@ func (d *deps) updateInvoice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = d.registry.MarkEvent("import", "补录发票 "+request.Number, "", 0)
-	writeJSON(w, http.StatusOK, map[string]any{"updated": true, "invoice": updated})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"updated":        true,
+		"invoice":        updated,
+		"number_warning": ledger.NumberWarning(updated),
+	})
 }
