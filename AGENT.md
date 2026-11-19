@@ -44,7 +44,7 @@ invoice-helper/
 ├── shared/protocol.md          # 两端通信协议（当前 v0.9）
 ├── test/
 │   ├── miniprogram/            # 小程序 Node 回归测试（21 套 / 635 项检查）
-│   ├── desktop/                # 电脑端网页 Node 回归测试（12 套 / 287 项检查；Go 单测在 desktop/internal 各包内）
+│   ├── desktop/                # 电脑端网页 Node 回归测试（12 套 / 290 项检查；Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
 ├── scripts/                    # 图标生成、CRC 校准等开发脚本
@@ -79,7 +79,7 @@ cd desktop && go run .
 # 小程序 21 套，共 635 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
-# 电脑端网页 12 套，共 287 项检查
+# 电脑端网页 12 套，共 290 项检查
 for f in test/desktop/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端
@@ -309,8 +309,8 @@ registry.json   设备与事件记录
 
 - **小程序 21 套 / 635 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
   `lanservice 63`、`einvoice 60`、`list 53`、`settings 48`（失败统一弹模态框说原因和下一步、取消静默、两种二维码合并入口）、`transfer 41`、`draft 36`、`discover 34`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示、扫码取消标记 cancelled）、`ledger 38`（含 `latest_created_at` 取日期部分、列表时间精简格式、批次参数拼装与清空）、`collect 31`、`filesend 31`、`filetake 29`、`scanbatch 27`、`auth 22`（PIN 存储、登录码解析、登录确认接口、改 PIN）、`connect-hint 18`（失败文案归类：原因判对、401/request:fail 不漏给用户、判断顺序不误判）、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`list-layout 23`（台账页三层结构、概览不留四等分统计条、最近录入降级为 pill、列表项不放 12 位代码、空态一键去收票）、`collect-send 12`（发送弹窗查看这批票：确认跳转、稍后不跳、无批次单按钮）、`fsx 11`。
-- **电脑端网页 12 套 / 287 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
-  `invoice-row 25`（台账行渲染：9 列、不再有批次列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 24`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏；事件时间必须是北京时间）、`reimburser-fill 46`（粘贴解析、建议池去重与按出现次数排序（常用的排前、筛选后不缩水）、复制按钮有无、批量填报销人走页面内模态框：打开/取消/提交/留空清空、开票日期用原生日期选择器：旧格式归一成 ISO、认不出的脏值保存时原样保留不被抹掉）、`suggest 42`（自绘历史值浮层：聚焦展开、打字过滤、最多 8 条、上下键 + 回车选值、Esc 只收浮层、选完补发 change、数据刷新同步、浮层自身滚动不收起、刚填过的置顶、超过 8 条时给出「共 N 位」总数提示）、`stat-filter 21`（统计卡片与筛选面板双向同步、最近录入按日期筛并取全表口径）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`logout 10`（退出按钮绑定、POST logout、重载回登录态、失败提示）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）、`filter-panel 31`（查询参数拼装、不再发送 keyword/batch、重置与计数、colgroup/表头/行三处列数一致、表头必须跟随列内容对齐：文字列左、金额和操作右，不许改回统一居中；操作列与金额列一样补 14px 右内边距）、`time-format 22`（UTC 串统一换北京时间、带偏移按绝对时刻算、本地文本不二次 +8、系统时区改成 UTC 后结果不变）。
+- **电脑端网页 12 套 / 290 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
+  `invoice-row 25`（台账行渲染：9 列、不再有批次列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 24`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏；事件时间必须是北京时间）、`reimburser-fill 49`（粘贴解析、建议池去重与按出现次数排序（常用的排前、筛选后不缩水、无筛选时按全量重建让改名后的旧值消失）、复制按钮有无、批量填报销人走页面内模态框：打开/取消/提交/留空清空、开票日期用原生日期选择器：旧格式归一成 ISO、认不出的脏值保存时原样保留不被抹掉）、`suggest 42`（自绘历史值浮层：聚焦展开、打字过滤、最多 8 条、上下键 + 回车选值、Esc 只收浮层、选完补发 change、数据刷新同步、浮层自身滚动不收起、刚填过的置顶、超过 8 条时给出「共 N 位」总数提示）、`stat-filter 21`（统计卡片与筛选面板双向同步、最近录入按日期筛并取全表口径）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`logout 10`（退出按钮绑定、POST logout、重载回登录态、失败提示）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）、`filter-panel 31`（查询参数拼装、不再发送 keyword/batch、重置与计数、colgroup/表头/行三处列数一致、表头必须跟随列内容对齐：文字列左、金额和操作右，不许改回统一居中；操作列与金额列一样补 14px 右内边距）、`time-format 22`（UTC 串统一换北京时间、带偏移按绝对时刻算、本地文本不二次 +8、系统时区改成 UTC 后结果不变）。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。
 - 起服务冒烟：启动 `go run .` 后 `curl /api/health`、`/api/connect-qr.png` 应返回 200；台账接收/补录/手动录入/清理/导出接口应返回 200。
 

@@ -110,13 +110,31 @@ check('出现次数多的排最前', suggestStore.reimburser[0], '张三')
 check('次数相同时最近录入的在前', suggestStore.reimburser[1], '赵六')
 check('三条都在，没丢人', suggestStore.reimburser.length, 3)
 
-// 只增不减：再筛成只剩一个空报销人的结果，池子不能因此缩水
+// 有筛选时结果只是子集，重建会把常用值冲掉，所以那时只合并不清理
+elements.invReimburser.value = '张三'
 vm.runInThisContext("invoiceData = { items: [" +
   "{ id: 9, reimburser: '', kind: '', created_at: '2026-11-19T02:00:00Z' }" +
   '], duplicates: [] }')
 refreshSuggestions()
-check('筛选后建议池不缩水', suggestStore.reimburser.length, 3)
+check('筛选时建议池不缩水', suggestStore.reimburser.length, 3)
 check('常用名仍在第一位', suggestStore.reimburser[0], '张三')
+elements.invReimburser.value = ''
+
+console.log('\n--- 改名后旧值要能消失 ---')
+// 没筛选时拿到的就是全量，池子按它重建：报销人改完名，旧名字不能赖在下拉里
+vm.runInThisContext("invoiceData = { items: [" +
+  "{ id: 1, reimburser: '旧名字', kind: '', created_at: '2026-11-18T01:00:00Z' }," +
+  "{ id: 2, reimburser: '旧名字', kind: '', created_at: '2026-11-18T02:00:00Z' }" +
+  '], duplicates: [] }')
+refreshSuggestions()
+check('改名前的值在池子里', suggestStore.reimburser, ['旧名字'])
+vm.runInThisContext("invoiceData = { items: [" +
+  "{ id: 1, reimburser: '新名字', kind: '', created_at: '2026-11-18T01:00:00Z' }," +
+  "{ id: 2, reimburser: '新名字', kind: '', created_at: '2026-11-18T02:00:00Z' }" +
+  '], duplicates: [] }')
+refreshSuggestions()
+check('全量刷新后旧值消失', suggestStore.reimburser, ['新名字'])
+check('新值出现', suggestStore.reimburser.indexOf('新名字'), 0)
 
 console.log('\n--- 批量填报销人 ---')
 alerts = []

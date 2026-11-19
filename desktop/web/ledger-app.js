@@ -69,9 +69,20 @@ function orderedValues(stats) {
   })
 }
 
-/** 把台账里已有的报销人/票种收进建议池，补录时可直接下拉选 */
+/**
+ * 把台账里已有的报销人/票种收进建议池，补录时可直接下拉选。
+ *
+ * 没筛选时 invoiceData.items 就是全量，直接拿它重建池子——报销人改名、发票删掉
+ * 之后旧值必须能消失，否则下拉里会一直挂着一个台账里早就不存在的名字。
+ * 有筛选时结果只是子集，重建会把常用值冲掉，所以那种情况只合并不清理。
+ */
 function refreshSuggestions() {
   const items = (invoiceData && invoiceData.items) || []
+  const complete = activeFilterCount() === 0
+  if (complete) {
+    suggestionPool.reimburser.clear()
+    suggestionPool.kind.clear()
+  }
   mergeStats(suggestionPool.reimburser, countValues(items, 'reimburser'))
   mergeStats(suggestionPool.kind, countValues(items, 'kind'))
   setSuggestValues('reimburser', orderedValues(suggestionPool.reimburser))
