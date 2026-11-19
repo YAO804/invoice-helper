@@ -82,6 +82,34 @@ const stateFail = hint.viewState(
 check('同步失败：立刻不再说已连接', stateFail.statusBadge, '连不上')
 check('同步失败：把去连接按钮放回来', stateFail.needConnect, true)
 check('同步失败：地址取自上一个状态', stateFail.statusHint.indexOf('http://x:8765') >= 0, true)
+check('只有已连接才算可用', hint.viewState({ status: 'ok' }, {}).ready, true)
+check('连接中不算可用（免得半秒里点进扫码）', hint.viewState({ status: 'checking' }, {}).ready, false)
+check('未连接不算可用', hint.viewState({ status: 'none' }, {}).ready, false)
+
+console.log('\n--- 顶部状态条 ---')
+const NOW = 1763510400000
+check('未连接用琥珀色（不是报错色）', hint.barView('none').tone, 'warn')
+check('未连接给出动作', hint.barView('none').action, '去连接')
+check('连不上才用警示色', hint.barView('fail').tone, 'bad')
+check('连不上给出设置入口', hint.barView('fail').action, '去设置')
+check('连不上直接显示主机端口',
+  hint.barView('fail', { base: 'http://192.168.1.20:8765' }).detail, '192.168.1.20:8765')
+check('没有地址时给检查建议',
+  hint.barView('fail', { base: '' }).detail, '确认电脑端程序还开着')
+check('连接中不给动作（避免重复点）', hint.barView('checking').action, '')
+check('已连接不放动作，只报状态', hint.barView('ok', { count: 12, syncedAt: NOW }).action, '')
+check('已连接带张数与时间',
+  hint.barView('ok', { count: 12, syncedAt: NOW - 3 * 60 * 1000, now: NOW }).detail, '12 张 · 3 分钟前')
+check('没有张数时只说时间',
+  hint.barView('ok', { syncedAt: NOW - 65 * 1000, now: NOW }).detail, '1 分钟前')
+check('一分钟内说刚刚', hint.agoText(NOW, NOW - 30 * 1000), '刚刚')
+check('分钟级', hint.agoText(NOW, NOW - 20 * 60 * 1000), '20 分钟前')
+check('小时级', hint.agoText(NOW, NOW - 5 * 3600 * 1000), '5 小时前')
+check('超过一天给天数', hint.agoText(NOW, NOW - 26 * 3600 * 1000), '1 天前')
+check('从没同步过', hint.agoText(NOW, 0), '还没同步过')
+check('时间不会算成负数', hint.agoText(NOW, NOW + 60000), '刚刚')
+check('地址去掉协议和尾斜杠', hint.hostText('https://pc.local:9000/'), 'pc.local:9000')
+check('地址为空时不写', hint.hostText(''), '')
 
 console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
 process.exit(failCount === 0 ? 0 : 1)

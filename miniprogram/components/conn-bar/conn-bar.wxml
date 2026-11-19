@@ -1,0 +1,6 @@
+<view class="bar bar-{{tone}}" bindtap="onTap" hover-class="{{action ? 'bar-hover' : 'none'}}">
+  <view class="dot"></view>
+  <text class="badge">{{badge}}</text>
+  <text class="detail">{{detail}}</text>
+  <text wx:if="{{action}}" class="action">{{action}} ›</text>
+</view>

@@ -1,31 +1,31 @@
 <view class="page">
 
+  <!-- 连接状态条常驻第一屏顶部：四个 tab 页一致，连上后仍保留「几分钟前」 -->
+  <conn-bar status="{{status}}" count="{{ledgerCount}}" syncedAt="{{syncedAt}}" base="{{baseText}}" />
+
   <view class="card">
-    <view class="row">
-      <text class="card-t">把发票收进来</text>
-      <text class="badge {{statusTone}}">{{statusBadge}}</text>
-    </view>
+    <view class="card-t">把发票收进来</view>
     <view class="tiny muted" style="margin-top:10rpx">{{statusHint}}</view>
     <view wx:if="{{needConnect}}" class="btn btn-block" style="margin-top:18rpx" bindtap="onSettings" hover-class="btn-hover">去连接电脑</view>
   </view>
 
   <view class="card">
     <view class="card-t" style="margin-bottom:14rpx">扫码</view>
-    <view class="btn btn-block" bindtap="onScan" hover-class="btn-hover">扫数电票二维码</view>
+    <view class="btn btn-block {{ready ? '' : 'btn-off'}}" bindtap="onScan" hover-class="{{ready ? 'btn-hover' : 'none'}}">扫数电票二维码</view>
     <view class="tiny muted" style="margin-top:14rpx">每扫一张会问是否继续。二维码只有号码、金额、日期，报销人发送后到电脑端补录。</view>
-    <view class="btn btn-ghost btn-block" style="margin-top:16rpx" bindtap="onBatchScan" hover-class="btn-hover">批量连续扫码</view>
+    <view class="btn btn-ghost btn-block {{ready ? '' : 'btn-off'}}" style="margin-top:16rpx" bindtap="onBatchScan" hover-class="{{ready ? 'btn-hover' : 'none'}}">批量连续扫码</view>
     <view class="tiny muted" style="margin-top:14rpx">一次扫很多张时用这个：点左上角 × 或手机返回键结束，每 10 张也会问一次。扫完一次性发送。</view>
   </view>
 
   <view class="card">
     <view class="card-t" style="margin-bottom:14rpx">文件导入</view>
-    <view class="btn btn-ghost btn-block" bindtap="onImport" hover-class="btn-hover">批量导入文件（最多 20 个）</view>
+    <view class="btn btn-ghost btn-block {{ready ? '' : 'btn-off'}}" bindtap="onImport" hover-class="{{ready ? 'btn-hover' : 'none'}}">批量导入文件（最多 20 个）</view>
     <view class="tiny muted" style="margin-top:14rpx">从微信会话里选发票文件，把票的信息记进台账。XML 能自动填全号码、金额、日期、票种；OFD / PDF 只取到文件名，字段要到电脑端补。文件需先以「文件」消息发到文件传输助手，发成图片会被改名。</view>
   </view>
 
   <view class="card">
     <view class="card-t" style="margin-bottom:14rpx">文件归档</view>
-    <view class="btn btn-block" bindtap="onTransfer" hover-class="btn-hover">把原件发到电脑 / 查看发送记录 ›</view>
+    <view class="btn btn-block {{ready ? '' : 'btn-off'}}" bindtap="onTransfer" hover-class="{{ready ? 'btn-hover' : 'none'}}">把原件发到电脑 / 查看发送记录 ›</view>
     <view class="tiny muted" style="margin-top:14rpx">把发票原件文件存到电脑留档，可查看已发送哪些文件。和上面的「文件导入」不同：导入是把票的信息记进台账，归档是把文件本身存起来。</view>
   </view>
 

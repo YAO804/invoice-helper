@@ -28,5 +28,8 @@
     ]
   },
   "style": "v2",
+  "usingComponents": {
+    "conn-bar": "/components/conn-bar/conn-bar"
+  },
   "sitemapLocation": "sitemap.json"
 }

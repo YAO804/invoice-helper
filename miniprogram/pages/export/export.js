@@ -29,7 +29,8 @@ function fileName() {
 
 Page({
   data: {
-    connected: false,
+    status: 'none',
+    baseText: '',
     scopes: scopesOf('all'),
     scope: 'all',
     count: 0,
@@ -40,8 +41,15 @@ Page({
 
   onShow() {
     const base = lanservice.getBase()
-    this.setData({ connected: !!base })
-    if (base) this.preview()
+    this.setData({ status: base ? 'checking' : 'none', baseText: base || '' })
+    if (!base) return
+    const that = this
+    // 存过地址不代表连得上：先探活，通过才拉台账。否则界面会先说「连上了」再弹失败 toast。
+    lanservice.probe().then(function (ok) {
+      if (!ok) return that.setData({ status: 'fail' })
+      that.setData({ status: 'ok' })
+      that.preview()
+    })
   },
 
   current() {
@@ -76,6 +84,7 @@ Page({
 
   onExport() {
     if (this.data.exporting) return
+    if (this.data.status !== 'ok') return wx.showToast({ title: '还没连上电脑', icon: 'none' })
     const scope = this.current()
     const url = lanservice.exportURL(ledger.buildQuery({
       onlyDuplicates: scope.onlyDuplicates,

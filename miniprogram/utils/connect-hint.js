@@ -120,12 +120,69 @@ function viewState(current, patch) {
     statusBadge: view.badge,
     statusTone: view.tone,
     statusHint: view.hint,
-    needConnect: state.status !== 'ok' && state.status !== 'checking'
+    needConnect: state.status !== 'ok' && state.status !== 'checking',
+    // 只有真连上才允许走需要电脑的操作；checking 期间也算不能用，
+    // 免得用户在「正在连」的半秒里点进扫码，然后发送失败
+    ready: state.status === 'ok'
   })
+}
+
+/**
+ * 「多久以前」的短说法。超过一天就不再折算了，直接给天数——
+ * 具体到小时对「数据是不是旧的」这个问题没有帮助。
+ */
+function agoText(now, at) {
+  const stamp = Number(at) || 0
+  if (!stamp) return '还没同步过'
+  const sec = Math.max(0, Math.round((Number(now || Date.now()) - stamp) / 1000))
+  if (sec < 60) return '刚刚'
+  const min = Math.floor(sec / 60)
+  if (min < 60) return min + ' 分钟前'
+  const hour = Math.floor(min / 60)
+  if (hour < 24) return hour + ' 小时前'
+  return Math.floor(hour / 24) + ' 天前'
+}
+
+/** 地址去掉协议头，条上只够放主机和端口 */
+function hostText(base) {
+  return String(base || '').replace(/^https?:\/\//, '').replace(/\/$/, '')
+}
+
+/**
+ * 顶部状态条的视图模型。
+ *
+ * 条上的空间只够「结论 + 一点细节 + 一个动作」，所以和卡片里的长句子分开：
+ * 卡片解释「为什么不能收票」，条只说「现在什么状态、多久没同步、点哪儿」。
+ * 四种状态都常驻显示，已连接时降到白底灰字，因为「同步于几分钟前」本身
+ * 就是有用的信息，不能一连接上就藏起来。
+ */
+function barView(status, opts) {
+  const o = opts || {}
+  if (status === 'ok') {
+    const parts = []
+    if (o.count) parts.push(o.count + ' 张')
+    parts.push(agoText(o.now || Date.now(), o.syncedAt))
+    return { tone: 'ok', badge: '已连接', detail: parts.join(' · '), action: '' }
+  }
+  if (status === 'checking') {
+    return { tone: 'idle', badge: '正在连电脑', detail: '稍等一下', action: '' }
+  }
+  if (status === 'fail') {
+    return {
+      tone: 'bad',
+      badge: '连不上电脑',
+      detail: hostText(o.base) || '确认电脑端程序还开着',
+      action: '去设置'
+    }
+  }
+  return { tone: 'warn', badge: '未连接电脑', detail: '扫码收票前要先连上', action: '去连接' }
 }
 
 module.exports = {
   failureTip: failureTip,
   statusView: statusView,
-  viewState: viewState
+  viewState: viewState,
+  barView: barView,
+  agoText: agoText,
+  hostText: hostText
 }

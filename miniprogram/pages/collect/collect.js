@@ -21,7 +21,9 @@ Page({
     statusTone: 'badge-grey',
     statusHint: '还没连电脑。小程序不存台账，必须先连上电脑才能收票。',
     needConnect: true,
+    ready: false,
     baseText: '',
+    syncedAt: 0,
     syncing: false,
     ledgerCount: 0,
     sending: false
@@ -51,18 +53,27 @@ Page({
     const that = this
     this.setState({ syncing: true })
     return ledger.sync({}).then(function (snap) {
-      that.setState({ status: 'ok', ledgerCount: snap.total, syncing: false })
+      that.setState({ status: 'ok', ledgerCount: snap.total, syncedAt: Date.now(), syncing: false })
     }).catch(function () {
       that.setState({ status: 'fail', ledgerCount: 0, syncing: false })
     })
   },
 
+  /** 需要电脑的操作统一先看 ready，别让用户扫完码才发现发不出去 */
+  requireReady() {
+    if (this.data.ready) return true
+    wx.showToast({ title: '还没连上电脑，先点顶部状态条去连接', icon: 'none', duration: 2500 })
+    return false
+  },
+
   onScan() {
+    if (!this.requireReady()) return
     const that = this
     collect.scanDrafts().then(function (r) { that.send(r.drafts) })
   },
 
   onBatchScan() {
+    if (!this.requireReady()) return
     const that = this
     scanbatch.notice().then(function (go) {
       if (!go) return
@@ -85,6 +96,7 @@ Page({
   },
 
   onImport() {
+    if (!this.requireReady()) return
     const that = this
     collect.fileDrafts().then(function (r) {
       if (!r.ok) return wx.showToast({ title: r.message, icon: 'none', duration: 2500 })
@@ -162,6 +174,7 @@ Page({
   },
 
   onTransfer() {
+    if (!this.requireReady()) return
     wx.switchTab({ url: '/pages/transfer/transfer' })
   },
 

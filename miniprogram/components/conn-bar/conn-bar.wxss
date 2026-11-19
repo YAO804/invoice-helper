@@ -1,0 +1,52 @@
+/* 连接状态条：一条 30px 左右的横条，页面顶部第一眼看到的位置 */
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 12rpx 24rpx;
+  font-size: 22rpx;
+  line-height: 1.4;
+}
+
+.bar .dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  flex: none;
+}
+
+.bar .badge { font-weight: 500; flex: none; }
+
+/* 细节会被截断，别把右侧动作挤掉 */
+.bar .detail {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bar .action { flex: none; font-weight: 500; }
+
+.bar-hover { opacity: 0.75; }
+
+/* 未连接用琥珀色：这是「还没准备好」的状态，不是错误，别用红 */
+.bar-warn { background: #FAEEDA; color: #854F0B; }
+.bar-warn .dot { background: #BA7517; }
+
+/* 连不上才是出错：地址在但请求通不了 */
+.bar-bad { background: #FCEBEB; color: #A32D2D; }
+.bar-bad .dot { background: #A32D2D; }
+
+.bar-idle { background: #ecece8; color: #444441; }
+.bar-idle .dot { background: #888780; }
+
+/* 已连接：白底细线，保留「几分钟前」这条信息但不抢眼 */
+.bar-ok {
+  background: #ffffff;
+  color: #7a7a75;
+  border-bottom: 1rpx solid #ecece8;
+}
+.bar-ok .badge { color: #0f6e56; }
+.bar-ok .dot { background: #0f6e56; }

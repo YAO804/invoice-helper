@@ -34,6 +34,8 @@ function clockText(ts) {
 Page({
   data: {
     connected: false,
+    status: 'none',
+    syncedAt: 0,
     baseText: '',
     keyword: '',
     // 收票页带过来的批次号，只在内存里过滤用，不展示
@@ -88,8 +90,10 @@ Page({
     if (!base) {
       ledger.clear()
       this.setData({
+        status: 'none',
         connected: false,
         baseText: '',
+        syncedAt: 0,
         items: [],
         total: 0,
         amountText: '0.00',
@@ -103,7 +107,7 @@ Page({
       return Promise.resolve()
     }
 
-    this.setData({ connected: true, baseText: base, loading: true, error: '' })
+    this.setData({ status: 'checking', baseText: base, loading: true, error: '' })
     return this.load()
   },
 
@@ -120,6 +124,9 @@ Page({
         latestCreatedAt: latest,
         latestOn: !!latest && that.data.createdFrom === latest && that.data.createdTo === latest,
         syncedText: clockText(snap.syncedAt),
+        status: 'ok',
+        connected: true,
+        syncedAt: Number(snap.syncedAt) || Date.now(),
         loading: false
       })
     }).catch(function (error) {
@@ -133,6 +140,9 @@ Page({
         latestCreatedAt: '',
         latestOn: false,
         loading: false,
+        // 地址还在但拉不到台账：和「没配地址」是两回事，状态条说「连不上」
+        status: 'fail',
+        connected: false,
         error: error.message || '读取电脑台账失败'
       })
     })

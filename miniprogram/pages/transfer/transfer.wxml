@@ -1,5 +1,7 @@
 <view class="page">
 
+  <conn-bar status="{{status}}" syncedAt="{{syncedAt}}" base="{{baseText}}" />
+
   <view class="dir-bar">
     <view class="dir-btn {{direction === 'to' ? 'on' : ''}}" data-direction="to" bindtap="onDirection" hover-class="btn-hover">发到电脑</view>
     <view class="dir-btn {{direction === 'from' ? 'on' : ''}}" data-direction="from" bindtap="onDirection" hover-class="btn-hover">从电脑取</view>
@@ -8,7 +10,6 @@
   <view class="card">
     <view class="row">
       <view class="card-t">{{direction === 'to' ? '传到电脑' : '从电脑取文件'}}</view>
-      <view class="badge {{connected ? '' : 'badge-grey'}}">{{connected ? '已连接' : '未连接'}}</view>
     </view>
     <view class="tiny muted" style="margin-top:8rpx">{{baseText}}</view>
     <view wx:if="{{!connected}}" class="tiny warn" style="margin-top:14rpx">尚未连接电脑端。请先在「设置」里连上电脑，手机和电脑要在同一 WiFi。</view>

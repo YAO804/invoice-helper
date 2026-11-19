@@ -36,6 +36,8 @@ function confirmRemove(title, content, done) {
 const page = {
   data: {
     connected: false,
+    status: 'none',
+    syncedAt: 0,
     baseText: '未配置电脑地址',
     direction: 'to',   // to=发到电脑，from=从电脑取
     tab: 'sent',       // 仅发到电脑：sent=我的上传，remote=电脑已收
@@ -64,14 +66,20 @@ const page = {
   refreshStatus() {
     const base = lanservice.getBase()
     this.setData({
+      status: base ? 'checking' : 'none',
       connected: false,
+      syncedAt: 0,
       baseText: base ? ('电脑地址：' + base) : '未配置电脑地址'
     })
     if (!base) return Promise.resolve(false)
 
     const that = this
     return lanservice.probe().then(function (ok) {
-      that.setData({ connected: !!ok })
+      that.setData({
+        connected: !!ok,
+        status: ok ? 'ok' : 'fail',
+        syncedAt: ok ? Date.now() : 0
+      })
       return !!ok
     })
   },

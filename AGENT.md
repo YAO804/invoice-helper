@@ -43,7 +43,7 @@ invoice-helper/
 │   └── README.md
 ├── shared/protocol.md          # 两端通信协议（当前 v0.9）
 ├── test/
-│   ├── miniprogram/            # 小程序 Node 回归测试（22 套 / 679 项检查）
+│   ├── miniprogram/            # 小程序 Node 回归测试（23 套 / 732 项检查）
 │   ├── desktop/                # 电脑端网页 Node 回归测试（12 套 / 290 项检查；Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
@@ -76,7 +76,7 @@ cd desktop && go run .
 **回归测试**（改动后必跑）：
 
 ```bash
-# 小程序 22 套，共 679 项检查
+# 小程序 23 套，共 732 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端网页 12 套，共 290 项检查
@@ -104,6 +104,7 @@ go vet ./...
 10. **台账表是固定布局**（`table-layout: fixed` + `<colgroup>` 百分比列宽，共 9 列）：不要给它加 `min-width`、也不要把内含长文本的单元格改成 `white-space: normal`——前者会重新引入横向滚动条，后者会让 20 位号码折行、被看成两个号。超长内容走 `ellipsis` + `title`。**列数改动必须同时改 `colgroup`、`thead`、行渲染和 `emptyRow` 的 colspan**，`filter-panel.test.js` 会数这三处的列数。
 11. **`desktop/web/*.js` 是经典脚本，顶层全局名只能有一处定义**：统一用 `render.js` 的 `$`，别在别的脚本里再声明 `function $` / `const $`——两个脚本在浏览器里会互相冲突，后加载的整份脚本直接 SyntaxError，界面只剩「renderStatus is not defined」。`script-order.test.js` 守着这条。
 12. **时间显示一律北京时间（UTC+8）**：后端把文件、事件时间按 UTC RFC3339 存，网页渲染必须经 `desktop/web/time.js` 的 `beijingTime()` / `beijingClock()`；不要用 `toLocaleString`（跟随系统时区，机器时区不对界面就错），也不要直接贴 `item.at` / `item.uploaded_at`。台账的 `created_at` 由 `desktop/internal/ledger` 的 `nowText()` 用 `time.FixedZone("CST", 8*3600)` 生成，不依赖机器时区；控制台「今日接收」也按北京自然日统计（`files.todayRange`），不是 UTC 日期。`time-format.test.js`、`TestNowTextIsBeijing`、`TestTodayRangeIsBeijing` 守着这几处。
+13. **连接状态只有一个来源、一套说法**：所有页面用 `status` 四态（`none` / `checking` / `ok` / `fail`）+ 顶部 `<conn-bar>` 组件，不许再出现「`getBase()` 有值就是已连接」这种判断——那只是「存过地址」。收票页用台账同步当探活、传输页和导出页调 `lanservice.probe()`，**徽标必须由真实请求背书**；文案一律从 `utils/connect-hint.js` 取，页面和组件里不写死状态字。新页面要连电脑就挂 `<conn-bar>`，别自己再画一个徽标。`conn-bar.test.js` 守着「谁挂了、谁没挂、旧徽标有没有回来」。
 
 > 项目约定另记录在 `.workbuddy/memory/MEMORY.md`（不进 Git），每日工作日志在 `.workbuddy/memory/YYYY-MM-DD.md`。
 
@@ -173,11 +174,11 @@ sort = created | issued | number | reimburser   // 默认 created（录入时间
 
 | 页面 | 职责 |
 |---|---|
-| `collect` | **首页**。四张卡：连接状态、扫码（单张/批量）、文件导入（把票的信息记进台账，XML 填全字段、OFD/PDF 只取名）、文件归档（把原件发到电脑，跳传输页）；未连接时只提示去设置。发送成功弹窗可「查看这批票」，批次号经 `globalData.pendingBatch` 带给台账页（只做筛选，不写进任何文案） |
-| `list` | **只读台账**：三层排布——① 概览卡（张数 · 合计金额 + 可点的「仅看重复 / 仅看待补录」pill + 连接地址与清空条件）；② 筛选卡（搜索、条件 pill、四段排序）；③ 列表项（号码 + 金额一行，票种 · 开票日期一行，报销人标签 + 录入时间一行）。数据来自 `GET /api/invoices`，支持下拉刷新；「最近录入」是筛选卡里的 pill，点一下只看那天，再点取消；录入批次不出现在界面（收票页带来的批次号只用于收敛列表，显示为「刚发的那批」） |
+| `collect` | **首页**。顶部 `<conn-bar>` 统一显示连接状态，下面是导读卡（`statusHint` 一句话讲这一步做什么，未连接时多给一个「去连接电脑」按钮）＋三张操作卡：扫码（单张/批量）、文件导入（把票的信息记进台账，XML 填全字段、OFD/PDF 只取名）、文件归档（把原件发到电脑，跳传输页）。未连接时四个操作按钮置灰（`btn-off`）、点了弹 toast 指回顶部状态条（`requireReady`）。发送成功弹窗可「查看这批票」，批次号经 `globalData.pendingBatch` 带给台账页（只做筛选，不写进任何文案） |
+| `list` | **只读台账**：顶部 `<conn-bar>` + 三层排布——① 概览卡（张数 · 合计金额 + 可点的「仅看重复 / 仅看待补录」pill + 清空条件）；② 筛选卡（搜索、条件 pill、四段排序）；③ 列表项（号码 + 金额一行，票种 · 开票日期一行，报销人标签 + 录入时间一行）。空态按 `status` 分两段：`fail` 说「连不上电脑」并给出地址，「none」说「台账在电脑上」。数据来自 `GET /api/invoices`，支持下拉刷新；「最近录入」是筛选卡里的 pill，点一下只看那天，再点取消；录入批次不出现在界面（收票页带来的批次号只用于收敛列表，显示为「刚发的那批」） |
 | `detail` | **只读详情**：7 个票面字段（无录入批次）+ 同组重复记录；可复制号码，没有编辑/删除 |
-| `export` | 导出 CSV：选范围（全部/仅重复/仅待补录）→ 电脑端生成 → 下载 → 微信转发 |
-| `transfer` | **传输中心**：顶层分「发到电脑」「从电脑取」两个方向。发：会话文件上传，看「我的上传」「电脑已收」；取：看「电脑待取」，可单条接收（转发到聊天/预览）或批量接收。两边都支持勾选删除、全部删除、清理超 30 天 |
+| `export` | 导出 CSV：顶部 `<conn-bar>`（先 `probe()` 探活再拉台账，不再「存过地址就当连上」）→ 选范围（全部/仅重复/仅待补录）→ 电脑端生成 → 下载 → 微信转发 |
+| `transfer` | **传输中心**：顶部 `<conn-bar>`（同样四态，靠 `lanservice.probe()` 探活而不是靠「存过地址」），下面分「发到电脑」「从电脑取」两个方向。发：会话文件上传，看「我的上传」「电脑已收」；取：看「电脑待取」，可单条接收（转发到聊天/预览）或批量接收。两边都支持勾选删除、全部删除、清理超 30 天 |
 | `settings` | 桌面端连接（自动搜索 / **一个扫码按钮同时认登录码和连接码** / 手填）、PIN 设置与修改、数据在哪、导出入口、关于 |
 | `index` | M0 技术验证页（保留） |
 
@@ -185,14 +186,24 @@ sort = created | issued | number | reimburser   // 默认 created（录入时间
 > 这些活现在都在电脑端：新增发票走网页「新增发票」，补录点报销人单元格，删除/清理在台账页，待复核用「仅看待补录」筛选。
 > 收票页同日移除「查看台账」入口（tabBar 已直达）和 M0 入口（开发期残留，设置页仍保留入口）；文件导入与文件归档分卡，文案讲清区别。
 
+### 组件（`components/`）
+
+| 组件 | 职责 |
+|---|---|
+| `conn-bar` | 顶部**连接状态条**，四个要连电脑的页面共用（收票 / 台账 / 传输 / 导出）。四态由 `connect-hint.js` 的 `barView()` 算：`none` 琥珀「未连接电脑·扫码收票前要先连上·去连接」、`checking` 灰「正在连电脑·稍等一下」、`ok` 白底细线「已连接 · 12 张 · 3 分钟前」、`fail` 红「连不上电脑 · 地址 · 去设置」。点它跳设置页（`ok` / `checking` 时点了没用，直接 return），`ok` 时每 30 秒重算一次「几分钟前」，`detached` 里清定时器。文案全在 `utils/connect-hint.js`，组件不写死任何一个状态字。 |
+
+> 为什么不用 toast/右上角徽标：web.dev 与 WCAG 的共识是**持续状态不能用转瞬即逝的提示**，且状态不能只靠颜色区分（色盲看不出）。状态条带文字、常驻、还附带「下一步」，三条都满足。
+
 ### 工具（`utils/`，按职责拆分）
 
+- `connect-hint.js`：连接状态的所有文案与派生态，页面只管传 `status`。
+  `statusView(status, opts)` → 状态卡用的 `badge` / `tone` / `hint`；`viewState(current, patch)` 把四态折成 `needConnect` / `ready`；`barView(status, opts)` → 顶部状态条的 `tone` / `badge` / `detail` / `action`；`agoText(now, at)` 出「刚刚 / N 分钟前 / N 小时前 / 昨天 / 日期」；`hostText(base)` 把地址裁成 `ip:端口`；`failureTip(error)` 翻译扫码/探活失败。**状态徽标必须由真实请求背书**——`!!getBase()` 只说明「存过地址」，不是「连得上」。
 - `einvoice.js`：XML 树 + 完整路径取值、标签 dump、二维码解析（最长，历史债）。
 - `draft.js`：纯函数。二维码/XML/版式文件 → 草稿，金额分↔元、判重键、号码位数校验、转电脑端 payload。
 - `ledger.js`：电脑台账的内存镜像。拼查询串、`sync()` 拉取、卡片映射、判重索引（同键保留最早一条）、重复组。
 - `collect.js` / `scanbatch.js`：扫码与文件导入 / 批量连续扫码（扫到取消、每 10 张确认、重复靠镜像当场弹窗）。
 - `zip.js` / `fsx.js`：ZIP-OFD 结构探测 / 私有目录读写（只剩 M0 验证页在用）。
-- `lanservice.js`：桌面端地址、心跳、查重、发送、上传、台账只读拉取、导出地址、待取文件的下载地址/删除/清理。
+- `lanservice.js`：桌面端地址、**探活 `probe()`（GET `/api/health`，2s 超时，不带 PIN、不抛错，只回 `true`/`false`）**、心跳、查重、发送、上传、台账只读拉取、导出地址、待取文件的下载地址/删除/清理。
 - `filesend.js`：原件上传（只支持微信会话文件），本地留 100 条发送历史，单文件 20MB、单次 20 个；
   发送记录与电脑端副本都只保留 **30 天**，`purgeOldHistory()` 在页面打开时顺手清超期记录。
 - `invoicesend.js`：草稿 → 电脑端、重复确认、**200 张上限提示**。
@@ -307,8 +318,8 @@ registry.json   设备与事件记录
 
 ## 9. 测试体系
 
-- **小程序 22 套 / 679 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
-  `lanservice 69`（含探活：认 /api/health、不带 PIN 头、没地址不发请求）、`einvoice 60`、`list 53`、`settings 48`（失败统一弹模态框说原因和下一步、取消静默、两种二维码合并入口）、`transfer 41`、`draft 36`、`discover 34`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示、扫码取消标记 cancelled）、`ledger 38`（含 `latest_created_at` 取日期部分、列表时间精简格式、批次参数拼装与清空）、`collect 31`、`filesend 31`、`filetake 29`、`scanbatch 27`、`auth 22`（PIN 存储、登录码解析、登录确认接口、改 PIN）、`connect-hint 38`（失败文案归类：原因判对、401/request:fail 不漏给用户、判断顺序不误判）、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`collect-status 18`（收票页状态机：没配地址说未连接、请求失败说连不上并给连接入口、同步成功才说已连接、中途断线立刻改口且张数清零）、`list-layout 23`（台账页三层结构、概览不留四等分统计条、最近录入降级为 pill、列表项不放 12 位代码、空态一键去收票）、`collect-send 12`（发送弹窗查看这批票：确认跳转、稍后不跳、无批次单按钮）、`fsx 11`。
+- **小程序 23 套 / 732 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
+  `lanservice 69`（含探活：认 /api/health、不带 PIN 头、没地址不发请求）、`einvoice 60`、`list 53`、`settings 48`（失败统一弹模态框说原因和下一步、取消静默、两种二维码合并入口）、`transfer 41`、`draft 36`、`discover 34`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示、扫码取消标记 cancelled）、`ledger 38`（含 `latest_created_at` 取日期部分、列表时间精简格式、批次参数拼装与清空）、`collect 31`、`filesend 31`、`filetake 29`、`scanbatch 27`、`auth 22`（PIN 存储、登录码解析、登录确认接口、改 PIN）、`connect-hint 59`（失败文案归类：原因判对、401/request:fail 不漏给用户、判断顺序不误判）、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`conn-bar 32`（状态条组件四件套、全局注册、四个页面挂载、详情与设置页不挂、旧徽标不许回来、导出页不再「存过地址就当连上」）、`collect-status 18`（收票页状态机：没配地址说未连接、请求失败说连不上并给连接入口、同步成功才说已连接、中途断线立刻改口且张数清零）、`list-layout 23`（台账页三层结构、概览不留四等分统计条、最近录入降级为 pill、列表项不放 12 位代码、空态一键去收票）、`collect-send 12`（发送弹窗查看这批票：确认跳转、稍后不跳、无批次单按钮）、`fsx 11`。
 - **电脑端网页 12 套 / 290 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
   `invoice-row 25`（台账行渲染：9 列、不再有批次列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 24`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏；事件时间必须是北京时间）、`reimburser-fill 49`（粘贴解析、建议池去重与按出现次数排序（常用的排前、筛选后不缩水、无筛选时按全量重建让改名后的旧值消失）、复制按钮有无、批量填报销人走页面内模态框：打开/取消/提交/留空清空、开票日期用原生日期选择器：旧格式归一成 ISO、认不出的脏值保存时原样保留不被抹掉）、`suggest 42`（自绘历史值浮层：聚焦展开、打字过滤、最多 8 条、上下键 + 回车选值、Esc 只收浮层、选完补发 change、数据刷新同步、浮层自身滚动不收起、刚填过的置顶、超过 8 条时给出「共 N 位」总数提示）、`stat-filter 21`（统计卡片与筛选面板双向同步、最近录入按日期筛并取全表口径）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`logout 10`（退出按钮绑定、POST logout、重载回登录态、失败提示）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）、`filter-panel 31`（查询参数拼装、不再发送 keyword/batch、重置与计数、colgroup/表头/行三处列数一致、表头必须跟随列内容对齐：文字列左、金额和操作右，不许改回统一居中；操作列与金额列一样补 14px 右内边距）、`time-format 22`（UTC 串统一换北京时间、带偏移按绝对时刻算、本地文本不二次 +8、系统时区改成 UTC 后结果不变）。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。

@@ -1,6 +1,15 @@
 <view class="page">
 
-  <view wx:if="{{!connected}}" class="card empty-card">
+  <!-- 有内容时顶部常驻状态条，回答「现在这几张是不是新数据」 -->
+  <conn-bar status="{{status}}" count="{{total}}" syncedAt="{{syncedAt}}" base="{{baseText}}" />
+
+  <view wx:if="{{status == 'fail'}}" class="card empty-card">
+    <view class="empty-t">连不上电脑</view>
+    <view class="empty-h">地址还留着（{{baseText}}），但拉不到台账。确认电脑端程序还开着、手机和电脑连的是同一个 WiFi，或去设置重连一次。</view>
+    <view class="btn btn-block" style="margin-top:24rpx" bindtap="onConnect" hover-class="btn-hover">去设置检查</view>
+  </view>
+
+  <view wx:elif="{{status == 'none'}}" class="card empty-card">
     <view class="empty-t">台账在电脑上</view>
     <view class="empty-h">小程序不保存发票数据，台账由电脑端维护。连上电脑后这里会自动同步。</view>
     <view class="btn btn-block" style="margin-top:24rpx" bindtap="onConnect" hover-class="btn-hover">去连接电脑</view>

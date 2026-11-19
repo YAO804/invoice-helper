@@ -76,6 +76,13 @@ page {
 .btn-block { width: 100%; box-sizing: border-box; }
 .btn-hover { opacity: 0.72; }
 
+/*
+ * 未连电脑时，需要电脑的操作置灰。写 .btn.btn-off 是为了压过
+ * .btn / .btn-ghost 各自的背景色——「点了才知道发不出去」比置灰更烦人。
+ * 原因由顶部状态条负责解释，这里不再加一行小字。
+ */
+.btn.btn-off { background: #e6e6e1; color: #a5a59e; }
+
 .btn-row {
   display: flex;
   flex-wrap: wrap;
