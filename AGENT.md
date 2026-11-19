@@ -43,7 +43,7 @@ invoice-helper/
 │   └── README.md
 ├── shared/protocol.md          # 两端通信协议（当前 v0.9）
 ├── test/
-│   ├── miniprogram/            # 小程序 Node 回归测试（19 套 / 571 项检查）
+│   ├── miniprogram/            # 小程序 Node 回归测试（20 套 / 607 项检查）
 │   ├── desktop/                # 电脑端网页 Node 回归测试（11 套 / 225 项检查；Go 单测在 desktop/internal 各包内）
 │   └── integration/            # 两端联调预留
 ├── docs/                       # requirements / miniprogram-plan / spike
@@ -76,7 +76,7 @@ cd desktop && go run .
 **回归测试**（改动后必跑）：
 
 ```bash
-# 小程序 19 套，共 571 项检查
+# 小程序 20 套，共 607 项检查
 for f in test/miniprogram/*.test.js; do node "$f" || exit 1; done
 
 # 电脑端网页 11 套，共 225 项检查
@@ -263,6 +263,8 @@ registry.json   设备与事件记录
    - A 记录只能放有效局域网 IP。`Register(..., nil)` 会把所有网卡地址（含 `169.254.x.x` APIPA、VMware/蓝牙虚拟网卡）塞进同一条应答；微信 `onLocalServiceFound` 只回一个 `ip`，拿到无效地址后探活失败，最终被误报成「找不到电脑」。必须用 `RegisterProxy` 并通过 `ips` 参数只传 `api.LANAddresses()` 的结果。
    - `ifaces` 参数必须保留**全部**组播网卡（`api.MulticastInterfaces()`），不能用裁剪后的有效网卡列表。只给单张网卡时 Windows 上 mDNS 组播收发异常，局域网内其他设备搜不到服务（已用独立进程 browse 实测：单网卡无效、全网卡有效）。小程序侧另有 `discover.js` 的 `validIP` 做二次过滤。
 2. **扫码连接**（兜底主力，安卓/iOS 都可用）：电脑端有两类二维码——未登录遮罩上的登录码 `invoice-helper://login?base=...&c=...`、已登录控制台里的连接码 `invoice-helper://connect?base=...`。设置页只有一个「扫码连接电脑」按钮，扫到哪类就办哪件事：登录码额外带 PIN 确认挑战码并授权网页（没 PIN 会现场问），连接码只探 `/api/health` 后保存地址。用户不需要二选一。
+   - **失败提示**：一律走 `showConnectFailure` → `utils/connect-hint.js` 的 `failureTip()`，弹模态框给「结论 + 下一步」（toast 一行装不下原因），状态卡留一行结论。内部串（`HTTP 401`、`request:fail`）由该模块翻译，不许直出。
+   - **取消不算失败**：`discover.scanRaw` 把 `scanCode:fail cancel` 标成 `error.cancelled`，设置页静默复位；停搜、取消设 PIN 同理。新增扫码入口别自己再包一层 `wx.scanCode`，否则取消又会被报成「扫码失败」。
 3. **手动填地址**（最后手段）：地址在电脑端网页「连接小程序」里能看到，可复制。
 
 | 方法 | 路径 | 用途 |
@@ -304,8 +306,8 @@ registry.json   设备与事件记录
 
 ## 9. 测试体系
 
-- **小程序 19 套 / 571 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
-  `lanservice 63`、`einvoice 60`、`transfer 41`、`draft 36`、`discover 33`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示）、`collect 31`、`filesend 31`、`filetake 29`、`settings 29`（自动搜索提示 + 两种二维码合并入口）、`ledger 34`（含 `latest_created_at` 取日期部分、批次参数拼装与清空）、`scanbatch 27`、`list 53`（最近录入按日期回看、录入时间手选与清除、收票页带批次跳来且不占搜索框）、`auth 24`、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`collect-send 12`（发送弹窗查看这批票：确认跳转、稍后不跳、无批次单按钮）、`fsx 11`。
+- **小程序 20 套 / 607 项检查**（Node 直接跑，模拟 `wx` API 与内存 FS）：
+  `lanservice 63`、`einvoice 60`、`list 53`、`settings 48`（失败统一弹模态框说原因和下一步、取消静默、两种二维码合并入口）、`transfer 41`、`draft 36`、`discover 34`（多网卡/无效 IP 过滤、找到但连不上与没找到分开提示、扫码取消标记 cancelled）、`ledger 34`（含 `latest_created_at` 取日期部分、批次参数拼装与清空）、`collect 31`、`filesend 31`、`filetake 29`、`scanbatch 27`、`auth 22`（PIN 存储、登录码解析、登录确认接口、改 PIN）、`connect-hint 18`（失败文案归类：原因判对、401/request:fail 不漏给用户、判断顺序不误判）、`invoicesend 18`、`zip 14`、`selection 13`、`collect-page 12`（收票页四卡结构、bindtap 与方法一一对应、冗余入口不回归、导入/归档文案区分）、`collect-send 12`（发送弹窗查看这批票：确认跳转、稍后不跳、无批次单按钮）、`fsx 11`。
 - **电脑端网页 11 套 / 225 项检查**（`vm.runInThisContext` + 假 DOM / 假 XHR，直接加载 `desktop/web/*.js`）：
   `invoice-row 25`（台账行渲染：9 列、不再有批次列、录入时间拆行、标移到号码下面、转义与空列表）、`preview 25`（预览弹层：打开、关闭、不可预览格式只提示、文本转义与体积上限）、`ledger-render 23`（选中合计金额按分累加）、`events 22`（事件类型中文标签，含扫描后端 `MarkEvent` 校验无遗漏）、`reimburser-fill 29`（粘贴解析、建议池去重、复制按钮有无、批量填报销人走页面内模态框：打开/取消/提交/留空清空）、`suggest 23`（自绘历史值浮层：聚焦展开、打字过滤、最多 8 条、上下键 + 回车选值、Esc 只收浮层、选完补发 change、数据刷新同步）、`stat-filter 21`（统计卡片与筛选面板双向同步、最近录入按日期筛并取全表口径）、`upload-progress 14`（批量上传回调下标从 0 起，一个文件只占一行）、`logout 10`（退出按钮绑定、POST logout、重载回登录态、失败提示）、`script-order 4`（按 index.html 顺序加载全部脚本，防顶层声明冲突把 render.js 整份搞挂）、`filter-panel 29`（查询参数拼装、不再发送 keyword/batch、重置与计数、colgroup/表头/行三处列数一致、表头居中规则不许被改回左对齐）。
 - **电脑端**：Go 标准测试分布在 `internal/api`、`internal/files`、`internal/ledger`、`internal/registry`、`internal/discovery` 各包内。

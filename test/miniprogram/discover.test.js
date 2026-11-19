@@ -198,7 +198,8 @@ discover.scan({ settleMs: 10, timeoutMs: 200 }).then(function (url) {
     return discover.scanConnectCode().then(function () {
       check('取消扫码应拒绝', false, true)
     }, function (error) {
-      check('取消扫码有提示', error.message.indexOf('扫码失败') >= 0, true)
+      check('取消扫码标记 cancelled', error.cancelled === true, true)
+      check('取消文案不叫失败', error.message.indexOf('扫码失败') < 0, true)
     })
   })
 }).then(function () {

@@ -1,7 +1,8 @@
 /**
  * 设置页连接流程回归测试。
  *
- * 两条底线：失败必须有 toast（底部 tiny 文案太容易被忽略）；
+ * 三条底线：失败必须弹模态框说清原因和下一步（toast 装不下原因）；
+ * 用户自己取消（扫码返回、停搜、取消设 PIN）不许当成失败报错；
  * 一个「扫码连接电脑」按钮必须同时认登录码和连接码，用户不用二选一。
  */
 
@@ -24,7 +25,7 @@ global.wx = {
   showToast(options) { toasts.push(options) },
   showModal(options) {
     modals.push({ title: options.title, content: options.content })
-    options.success(modalAnswer)
+    if (options.success) options.success(modalAnswer)
   },
   getSystemInfoSync() { return { platform: 'android' } },
   startLocalServiceDiscovery() {},
@@ -40,11 +41,12 @@ const auth = require('../../miniprogram/utils/auth')
 require('../../miniprogram/pages/settings/settings')
 
 let scanResult = ''
+let scanError = null
 let verifyOk = true
 let heartbeatCount = 0
 let confirmCalls = []
 
-discover.scanRaw = () => Promise.resolve(scanResult)
+discover.scanRaw = () => (scanError ? Promise.reject(scanError) : Promise.resolve(scanResult))
 discover.verifyUrl = () => Promise.resolve(verifyOk)
 lanservice.startAutoHeartbeat = () => { heartbeatCount++ }
 auth.confirmLogin = (base, code) => {
@@ -65,30 +67,40 @@ function reset() {
   confirmCalls = []
   heartbeatCount = 0
   modalAnswer = { confirm: true, content: '123456' }
+  scanError = null
+  verifyOk = true
+}
+
+/** 失败时唯一该弹的框：标题说原因，正文说下一步 */
+function failureModal() {
+  return modals[modals.length - 1] || {}
 }
 
 async function main() {
-  console.log('--- 自动搜索失败 ---')
+  console.log('--- 自动搜索失败：模态框说清原因与下一步 ---')
   let page = newPage(); reset()
-  lanservice.autoConnect = () => Promise.reject(new Error('没有找到可连接的电脑'))
+  lanservice.autoConnect = () => Promise.reject(new Error('没有找到电脑，请确认电脑端已开启、且手机与电脑在同一 WiFi，或改用扫码连接'))
   await page.onDiscover()
-  check('弹出错误提示', toasts.length, 1)
-  check('提示文案', toasts[0] && toasts[0].title, '自动搜索未找到电脑')
-  check('详情保留在页面', page.data.discoverTip, '没有找到可连接的电脑')
+  check('不弹 toast', toasts.length, 0)
+  check('弹一个模态框', modals.length, 1)
+  check('标题说结论', failureModal().title, '没找到电脑')
+  check('正文给下一步', failureModal().content.indexOf('扫码连接电脑') >= 0, true)
+  check('状态卡留结论', page.data.discoverTip, '没找到电脑')
   check('搜索状态已复位', page.data.discovering, false)
 
-  console.log('\n--- 找到但连不上：toast 与详情都要区分 ---')
+  console.log('\n--- 找到但连不上：与「没找到」区分开 ---')
   page = newPage(); reset()
   lanservice.autoConnect = () => Promise.reject(new Error('找到电脑但连不上，请确认电脑端服务在运行、且手机与电脑在同一 WiFi'))
   await page.onDiscover()
-  check('toast 区分连不上', toasts[0] && toasts[0].title, '找到电脑但连不上')
-  check('详情保留原因', page.data.discoverTip.indexOf('同一 WiFi') >= 0, true)
+  check('标题区分连不上', failureModal().title, '找到电脑了但连不上')
+  check('正文提服务在运行', failureModal().content.indexOf('同一个 WiFi') >= 0, true)
+  check('状态卡同步', page.data.discoverTip, '找到电脑了但连不上')
 
-  console.log('\n--- 用户主动停止 ---')
+  console.log('\n--- 用户主动停止搜索：静默 ---')
   page = newPage(); reset()
   lanservice.autoConnect = () => Promise.reject(new Error('搜索已取消'))
   await page.onDiscover()
-  check('取消不弹错误提示', toasts.length, 0)
+  check('不弹提示', toasts.length + modals.length, 0)
   check('取消文案', page.data.discoverTip, '已停止搜索')
 
   console.log('\n--- 自动搜索成功 ---')
@@ -130,14 +142,55 @@ async function main() {
   check('提示还要扫登录码', page.data.discoverTip.indexOf('如需登录网页') > 0, true)
   check('成功文案', toasts[0] && toasts[0].title, '已连接电脑')
 
-  console.log('\n--- 扫了不认识的码 ---')
+  console.log('\n--- 扫了不认识的码：说清扫哪种码 ---')
   page = newPage(); reset()
   scanResult = 'not-a-qrcode'
   await page.onScanConnect()
-  check('弹出错误提示', toasts.length, 1)
-  check('提示文案', toasts[0] && toasts[0].title, '扫码失败')
-  check('详情说明原因', page.data.discoverTip, '这不是攒票小匣的二维码')
+  check('不弹 toast', toasts.length, 0)
+  check('标题说结论', failureModal().title, '扫错二维码了')
+  check('正文指到网页扫码入口', failureModal().content.indexOf('连接小程序') >= 0, true)
+  check('状态卡留结论', page.data.discoverTip, '扫错二维码了')
   check('扫码状态已复位', page.data.scanning, false)
+
+  console.log('\n--- 扫码时按返回键：静默 ---')
+  page = newPage(); reset()
+  scanError = new Error('已取消扫码')
+  scanError.cancelled = true
+  await page.onScanConnect()
+  check('不弹提示', toasts.length + modals.length, 0)
+  check('取消文案', page.data.discoverTip, '已取消扫码')
+  check('扫码状态已复位', page.data.scanning, false)
+
+  console.log('\n--- PIN 不对：告诉用户去哪儿改 ---')
+  page = newPage(); reset()
+  scanResult = 'invoice-helper://login?base=http%3A%2F%2F192.168.1.20%3A8765&c=abc123'
+  auth.confirmLogin = () => Promise.reject(new Error('HTTP 401'))
+  await page.onScanConnect()
+  check('标题说 PIN 不对', failureModal().title, 'PIN 不对')
+  check('正文指到设置 PIN', failureModal().content.indexOf('设置 PIN') >= 0, true)
+  check('不把 401 漏给用户', failureModal().content.indexOf('401') < 0, true)
+  check('状态卡留结论', page.data.discoverTip, 'PIN 不对')
+
+  console.log('\n--- 连接码地址探活失败 ---')
+  page = newPage(); reset()
+  scanResult = 'invoice-helper://connect?base=http%3A%2F%2F192.168.1.22%3A8765'
+  verifyOk = false
+  await page.onScanConnect()
+  check('标题说连不上', failureModal().title, '连不上电脑')
+  check('正文提同一 WiFi', failureModal().content.indexOf('同一个 WiFi') >= 0, true)
+  check('地址没被写入', page.data.desktopUrl === 'http://192.168.1.22:8765', false)
+  check('扫码状态已复位', page.data.scanning, false)
+
+  console.log('\n--- 没 PIN 又在输入框取消：静默 ---')
+  page = newPage(); reset()
+  delete storage.desktop_pin
+  scanResult = 'invoice-helper://login?base=http%3A%2F%2F192.168.1.20%3A8765&c=abc123'
+  modalAnswer = { confirm: false, content: '' }
+  await page.onScanConnect()
+  check('只弹过 PIN 输入框', modals.length, 1)
+  check('没弹失败框', failureModal().title, '设置 PIN')
+  check('取消文案', page.data.discoverTip, '已取消扫码登录')
+  check('没有发起登录请求', confirmCalls.length, 0)
 }
 
 main().catch((error) => {

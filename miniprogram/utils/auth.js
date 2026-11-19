@@ -88,24 +88,8 @@ function changePIN(oldPIN, newPIN, base) {
   })
 }
 
-/** 扫电脑网页上的登录二维码：一次扫码同时连地址并授权网页。 */
-function scanLoginCode() {
-  return new Promise(function (resolve, reject) {
-    wx.scanCode({
-      onlyFromCamera: false,
-      scanType: ['qrCode'],
-      success: function (res) { resolve((res && res.result) || '') },
-      fail: function (err) { reject(new Error('扫码失败：' + ((err && err.errMsg) || ''))) }
-    })
-  }).then(function (raw) {
-    const parsed = parseLoginCode(raw)
-    if (!parsed) return Promise.reject(new Error('这不是攒票小匣的登录二维码'))
-    if (!hasPIN()) return Promise.reject(new Error('请先设置 PIN，再扫码登录'))
-    return confirmLogin(parsed.base, parsed.code).then(function () {
-      return parsed.base
-    })
-  })
-}
+// 扫码本身由 utils/discover.js 统一封装（区分「登录码 / 连接码」、取消静默），
+// 这里只负责解析登录码和确认挑战码，别再复制一份 wx.scanCode。
 
 module.exports = {
   getPIN: getPIN,
@@ -114,6 +98,5 @@ module.exports = {
   authHeader: authHeader,
   parseLoginCode: parseLoginCode,
   confirmLogin: confirmLogin,
-  changePIN: changePIN,
-  scanLoginCode: scanLoginCode
+  changePIN: changePIN
 }

@@ -1,6 +1,7 @@
 const lanservice = require('../../utils/lanservice')
 const discover = require('../../utils/discover')
 const auth = require('../../utils/auth')
+const hint = require('../../utils/connect-hint')
 
 /** 弹输入框要 PIN；取消或位数不够都返回空串，由调用方决定怎么提示 */
 function promptPIN(title, content) {
@@ -21,6 +22,11 @@ function promptPIN(title, content) {
       }
     })
   })
+}
+
+/** 用户自己取消（扫码按返回、停止搜索）不算失败，静默复位即可 */
+function isCancelled(error) {
+  return !!(error && (error.cancelled || error.message === '搜索已取消'))
 }
 
 Page({
@@ -50,10 +56,19 @@ Page({
     this.setData({ pinSet: set, pinMask: set ? '已设置（******）' : '未设置' })
   },
 
-  /** 连接失败必须弹 toast：底部那行 tiny 提示太容易被忽略 */
-  showConnectFailure(tip, toast) {
-    this.setData({ discoverTip: tip, discovering: false, scanning: false })
-    wx.showToast({ title: toast, icon: 'none' })
+  /**
+   * 连接失败统一出口：状态卡留一行结论，模态框讲清「为什么」和「下一步」。
+   * 不用 toast——一行装不下原因，而原因恰恰是用户唯一需要的东西。
+   */
+  showConnectFailure(message) {
+    const tip = hint.failureTip(message)
+    this.setData({ discoverTip: tip.title, discovering: false, scanning: false })
+    wx.showModal({
+      title: tip.title,
+      content: tip.content,
+      showCancel: false,
+      confirmText: '知道了'
+    })
   },
 
   onHide() { discover.cancel() },
@@ -89,15 +104,11 @@ Page({
       })
       wx.showToast({ title: '已自动连接', icon: 'none' })
     } catch (e) {
-      if (e && e.message === '搜索已取消') {
+      if (isCancelled(e)) {
         this.setData({ discoverTip: '已停止搜索', discovering: false })
         return
       }
-      const tip = (e && e.message) || '没有找到电脑，请扫码连接或手动填写地址'
-      this.showConnectFailure(
-        tip,
-        tip.indexOf('找到电脑但连不上') >= 0 ? '找到电脑但连不上' : '自动搜索未找到电脑'
-      )
+      this.showConnectFailure(e && e.message)
     }
   },
 
@@ -131,8 +142,11 @@ Page({
       })
       wx.showToast({ title: login ? '连接并登录成功' : '已连接电脑', icon: 'none' })
     } catch (e) {
-      const message = (e && e.message) || '扫码失败，请手动填写地址'
-      this.showConnectFailure(message, message.indexOf('401') >= 0 ? 'PIN 不正确' : '扫码失败')
+      if (isCancelled(e)) {
+        this.setData({ discoverTip: (e && e.message) || '已取消扫码', scanning: false })
+        return
+      }
+      this.showConnectFailure(e && e.message)
     }
   },
 
@@ -140,7 +154,11 @@ Page({
   async loginWithCode(login) {
     if (!auth.hasPIN()) {
       const pin = await promptPIN('设置 PIN', '扫码登录需要 PIN，请输入电脑端 PIN（默认 123456）')
-      if (!pin) throw new Error('尚未设置 PIN，已取消扫码登录')
+      if (!pin) {
+        const cancelled = new Error('已取消扫码登录')
+        cancelled.cancelled = true
+        throw cancelled
+      }
       auth.setPIN(pin)
       this.refreshPINStatus()
     }

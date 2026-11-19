@@ -1,5 +1,6 @@
 /**
- * 小程序鉴权回归测试：PIN 存储、登录码解析、扫码登录、改 PIN。
+ * 小程序鉴权回归测试：PIN 存储、登录码解析、登录确认接口、改 PIN。
+ * 扫码动作本身在 discover.test.js / settings.test.js 里覆盖。
  *
  *   node test/miniprogram/auth.test.js
  */
@@ -13,17 +14,11 @@ function check(name, actual, expected) {
 }
 
 const storage = {}
-let scanRaw = ''
-let scanFails = false
 let requests = []
 
 global.wx = {
   getStorageSync(k) { return storage[k] },
   setStorageSync(k, v) { storage[k] = v },
-  scanCode(options) {
-    if (scanFails) return options.fail({ errMsg: 'scanCode:fail' })
-    options.success({ result: scanRaw })
-  },
   request(options) {
     requests.push(options)
     const path = options.url
@@ -61,28 +56,21 @@ async function main() {
   check('空串', auth.parseLoginCode(''), null)
   check('普通网址', auth.parseLoginCode('http://a:1'), null)
 
-  console.log('\n--- 扫码登录 ---')
-  scanRaw = good
-  const base = await auth.scanLoginCode()
-  check('扫码返回地址', base, 'http://192.168.1.20:8765')
+  console.log('\n--- 登录确认接口 ---')
+  const base = 'http://192.168.1.20:8765'
+  await auth.confirmLogin(base, 'abc123')
   const confirm = requests[requests.length - 1]
-  check('确认接口路径', confirm.url.indexOf('/api/auth/confirm') >= 0, true)
+  check('确认接口路径', confirm.url, base + '/api/auth/confirm')
   check('确认带 PIN', confirm.data.pin, '123456')
   check('确认带挑战码', confirm.data.code, 'abc123')
   check('确认带 X-PIN 头', confirm.header['X-PIN'], '123456')
 
-  scanRaw = 'invoice-helper://connect?base=http%3A%2F%2Fa%3A1'
+  auth.setPIN('wrong')
   try {
-    await auth.scanLoginCode()
-    check('非登录码应拒绝', false, true)
-  } catch (e) { check('非登录码应拒绝', true, true) }
-
-  scanFails = true
-  try {
-    await auth.scanLoginCode()
-    check('扫码失败应拒绝', false, true)
-  } catch (e) { check('扫码失败应拒绝', true, true) }
-  scanFails = false
+    await auth.confirmLogin(base, 'abc123')
+    check('PIN 错应拒绝', false, true)
+  } catch (e) { check('PIN 错应拒绝', e.message, 'HTTP 401') }
+  auth.setPIN('123456')
 
   console.log('\n--- 改 PIN ---')
   const baseURL = 'http://192.168.1.20:8765'

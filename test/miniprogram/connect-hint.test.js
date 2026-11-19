@@ -1,0 +1,54 @@
+/**
+ * 连接失败提示文案回归测试。
+ *
+ *   node test/miniprogram/connect-hint.test.js
+ *
+ * 重点不是文案漂亮，而是：原因能被正确归类、内部错误串不漏给用户、
+ * 判断顺序不会让「尚未设置 PIN」被误判成「PIN 不对」。
+ */
+
+let failCount = 0
+function check(name, actual, expected) {
+  const ok = JSON.stringify(actual) === JSON.stringify(expected)
+  if (!ok) failCount++
+  console.log((ok ? 'PASS  ' : 'FAIL  ') + name +
+    (ok ? '' : '\n      期望 ' + JSON.stringify(expected) + '\n      实际 ' + JSON.stringify(actual)))
+}
+
+const hint = require('../../miniprogram/utils/connect-hint')
+
+console.log('--- 扫码失败 ---')
+check('不是本应用的码', hint.failureTip('这不是攒票小匣的二维码').title, '扫错二维码了')
+check('扫错码时告诉用户扫哪儿',
+  hint.failureTip('这不是攒票小匣的二维码').content.indexOf('连接小程序') >= 0, true)
+check('相机没读到码', hint.failureTip('扫码失败：scanCode:fail 系统错误').title, '扫码没成功')
+
+console.log('\n--- PIN 相关 ---')
+check('没设 PIN 优先于 PIN 不对', hint.failureTip('尚未设置 PIN，已取消扫码登录').title, '还没有设置 PIN')
+check('401 归为 PIN 不对', hint.failureTip('HTTP 401').title, 'PIN 不对')
+check('PIN 不对给去哪儿改',
+  hint.failureTip('HTTP 401').content.indexOf('设置 PIN') >= 0, true)
+check('不把 401 漏给用户', hint.failureTip('HTTP 401').content.indexOf('401') < 0, true)
+
+console.log('\n--- 连不上 ---')
+check('找到但连不上优先于通用连不上',
+  hint.failureTip('找到电脑但连不上，请确认电脑端服务在运行、且手机与电脑在同一 WiFi').title,
+  '找到电脑了但连不上')
+check('探活失败', hint.failureTip('扫到地址了但电脑没响应，确认在同一个 WiFi').title, '连不上电脑')
+check('网络超时', hint.failureTip('request:fail timeout').title, '连不上电脑')
+check('不把 request:fail 漏给用户',
+  hint.failureTip('request:fail timeout').content.indexOf('request:fail') < 0, true)
+
+console.log('\n--- 自动搜索 ---')
+check('没搜到', hint.failureTip('没有找到电脑，请确认电脑端已开启、且手机与电脑在同一 WiFi，或改用扫码连接').title, '没找到电脑')
+check('iOS 不支持', hint.failureTip('这台设备不支持自动发现，请扫码连接或手动填写电脑地址').title, '这台手机不能自动搜索')
+check('搜索被打断', hint.failureTip('搜索电脑时出错，请改用扫码连接或手动填写地址').title, '搜索出错了')
+
+console.log('\n--- 兜底 ---')
+check('空消息也有话说', hint.failureTip('').title, '连接失败')
+check('空消息给下一步', hint.failureTip('').content.indexOf('扫码连接电脑') >= 0, true)
+check('未知错误不回显原始串', hint.failureTip('some internal panic at 0x0').content.indexOf('0x0') < 0, true)
+check('非字符串不炸', hint.failureTip(undefined).title, '连接失败')
+
+console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
+process.exit(failCount === 0 ? 0 : 1)

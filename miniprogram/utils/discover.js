@@ -107,14 +107,28 @@ function parseConnectCode(raw) {
   return ''
 }
 
-/** 只拿扫码原始串；设置页靠它区分「连接码」和「登录码」两种二维码 */
+/**
+ * 只拿扫码原始串；设置页靠它区分「连接码」和「登录码」两种二维码。
+ *
+ * 用户按返回键取消时 errMsg 是 "scanCode:fail cancel"，这不是错误：
+ * 用 cancelled 标记交给调用方静默退出，别弹「扫码失败」吓人。
+ */
 function scanRaw() {
   return new Promise(function (resolve, reject) {
     wx.scanCode({
       onlyFromCamera: false,
       scanType: ['qrCode'],
       success: function (res) { resolve((res && res.result) || '') },
-      fail: function (err) { reject(new Error('扫码失败：' + ((err && err.errMsg) || ''))) }
+      fail: function (err) {
+        const reason = (err && err.errMsg) || ''
+        if (reason.indexOf('cancel') >= 0) {
+          const cancelled = new Error('已取消扫码')
+          cancelled.cancelled = true
+          reject(cancelled)
+          return
+        }
+        reject(new Error('扫码失败：' + (reason || '未知原因')))
+      }
     })
   })
 }
