@@ -178,6 +178,17 @@ function renderDuplicatePanel(groups) {
   `).join('')
 }
 
+/** 确认导入后的结果提示：必须写清跳过了什么，只报导入数会让用户以为数据丢了 */
+function renderImportResult(result) {
+  const skipped = []
+  if (result.duplicate) skipped.push('重复 ' + result.duplicate + ' 张')
+  if (result.invalid) skipped.push('缺发票号码 ' + result.invalid + ' 张')
+
+  let text = '已导入 ' + (result.imported || 0) + ' 张发票'
+  if (skipped.length) text += '，跳过' + skipped.join('、')
+  return `<p class="hint">${text}。</p>`
+}
+
 function renderImportPreview(preview) {
   $('importPreview').innerHTML = `
     <div class="preview-summary">

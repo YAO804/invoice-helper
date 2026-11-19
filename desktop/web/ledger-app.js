@@ -321,7 +321,7 @@ async function confirmImport() {
   }
   try {
     const result = await commitInvoiceImport(pendingImportFile)
-    $('importPreview').innerHTML = `<p class="hint">已导入 ${result.imported} 张发票。</p>`
+    $('importPreview').innerHTML = renderImportResult(result)
     pendingImportFile = null
     $('invoiceImportFile').value = ''
     await refreshLedger()

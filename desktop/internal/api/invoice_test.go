@@ -67,15 +67,22 @@ func TestInvoiceLatestBatchIgnoresFilter(t *testing.T) {
 	}
 }
 
+// 重复票的真实来源是两个同事各自扫了同一张票，走收票接口进来；查重页要能标出来。
 func TestInvoiceListAndDuplicates(t *testing.T) {
 	handler, _ := newTestHandler(t)
-	content := invoiceCSV(invoiceRow("N001", "甲公司", "113.00"), invoiceRow("N001", "乙公司", "113.00"))
-	body, contentType := uploadBody(t, "invoices.csv", string(content))
 
-	importRec := request(t, handler, http.MethodPost, "/api/invoices/import?confirm=1", body, contentType)
-	if importRec.Code != http.StatusOK {
-		t.Fatalf("导入状态码错误: %d, body=%s", importRec.Code, importRec.Body.String())
+	receive := func(reimburser string) {
+		payload := map[string]any{
+			"device_id": "phone-1",
+			"invoices":  []map[string]any{{"number": "N001", "total": "113.00", "reimburser": reimburser}},
+		}
+		rec := request(t, handler, http.MethodPost, "/api/invoices", jsonBody(t, payload), "application/json")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("收票失败: %d, body=%s", rec.Code, rec.Body.String())
+		}
 	}
+	receive("甲公司")
+	receive("乙公司")
 
 	listRec := request(t, handler, http.MethodGet, "/api/invoices", nil, "")
 	var list invoiceListResponse
@@ -87,6 +94,41 @@ func TestInvoiceListAndDuplicates(t *testing.T) {
 	if !list.Items[0].Duplicate || !list.Items[1].Duplicate {
 		t.Fatal("重复发票未标记")
 	}
+}
+
+// 导入不是造重复数据的途径：同一份文件导两次，第二次应全部跳过。
+func TestImportSkipsAlreadyImported(t *testing.T) {
+	handler, _ := newTestHandler(t)
+	content := invoiceCSV(invoiceRow("N500", "甲公司", "113.00"))
+
+	first := importOnce(t, handler, content)
+	if first.Imported != 1 || first.Duplicate != 0 {
+		t.Fatalf("首次导入应写入 1 张: %+v", first)
+	}
+
+	second := importOnce(t, handler, content)
+	if second.Imported != 0 || second.Duplicate != 1 {
+		t.Fatalf("重复导入应全部跳过: %+v", second)
+	}
+
+	listRec := request(t, handler, http.MethodGet, "/api/invoices", nil, "")
+	var list invoiceListResponse
+	decodeJSON(t, listRec, &list)
+	if list.Total != 1 || list.DuplicateGroups != 0 {
+		t.Fatalf("重复导入不应产生重复组: total=%d groups=%d", list.Total, list.DuplicateGroups)
+	}
+}
+
+func importOnce(t *testing.T, handler http.Handler, content []byte) ledger.ImportResult {
+	t.Helper()
+	body, contentType := uploadBody(t, "invoices.csv", string(content))
+	rec := request(t, handler, http.MethodPost, "/api/invoices/import?confirm=1", body, contentType)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("导入状态码错误: %d, body=%s", rec.Code, rec.Body.String())
+	}
+	var result ledger.ImportResult
+	decodeJSON(t, rec, &result)
+	return result
 }
 
 func TestInvoiceImportPreviewAndCommit(t *testing.T) {

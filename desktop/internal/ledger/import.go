@@ -14,6 +14,14 @@ type ImportPreview struct {
 	Items          []ImportItem `json:"items"`
 }
 
+// ImportResult 与 ImportPreview 的三个计数一一对应：预览说多少，这里就写多少、跳多少。
+// 分开回传是让界面能说清「重复的没进去」，而不是让用户以为少导了。
+type ImportResult struct {
+	Imported  int `json:"imported"`
+	Duplicate int `json:"duplicate"`
+	Invalid   int `json:"invalid"`
+}
+
 func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
 	incoming, err := parseInvoices(content)
 	if err != nil {
@@ -53,10 +61,10 @@ func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
 	return preview, nil
 }
 
-func (s *Store) CommitImport(content []byte) (int, error) {
+func (s *Store) CommitImport(content []byte) (ImportResult, error) {
 	incoming, err := parseInvoices(content)
 	if err != nil {
-		return 0, err
+		return ImportResult{}, err
 	}
 
 	s.mu.Lock()
@@ -64,27 +72,33 @@ func (s *Store) CommitImport(content []byte) (int, error) {
 
 	existing, err := s.load()
 	if err != nil {
-		return 0, err
+		return ImportResult{}, err
 	}
 
 	seen := identitySet(existing)
 	batch := newBatch()
-	added := 0
+	result := ImportResult{}
 
 	for _, invoice := range incoming {
 		invoice.Batch = fallback(invoice.Batch, batch)
 		invoice.CreatedAt = fallback(invoice.CreatedAt, nowText())
 		if invoice.Number == "" {
+			result.Invalid++
+			continue
+		}
+		// 预览已经把这张标成「重复」，确认时就必须真跳过，否则界面上的数字是假的。
+		if seen[identityKey(invoice)] {
+			result.Duplicate++
 			continue
 		}
 		seen[identityKey(invoice)] = true
 		existing = append(existing, invoice)
-		added++
+		result.Imported++
 	}
-	if added == 0 {
-		return 0, nil
+	if result.Imported == 0 {
+		return result, nil
 	}
-	return added, s.save(existing)
+	return result, s.save(existing)
 }
 
 // identitySet 用「代码+号码」标记已存在的发票，与 duplicateGroups 保持同一口径。

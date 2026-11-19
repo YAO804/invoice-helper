@@ -29,13 +29,13 @@ func (d *deps) importInvoices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.URL.Query().Get("confirm") == "1" {
-		count, err := d.ledger.CommitImport(content)
+		result, err := d.ledger.CommitImport(content)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "导入失败: "+err.Error())
 			return
 		}
-		_ = d.registry.MarkEvent("import", fmt.Sprintf("导入发票 %d 张", count), "", 0)
-		writeJSON(w, http.StatusOK, map[string]any{"imported": count})
+		_ = d.registry.MarkEvent("import", fmt.Sprintf("导入发票 %d 张", result.Imported), "", 0)
+		writeJSON(w, http.StatusOK, result)
 		return
 	}
 

@@ -143,8 +143,8 @@ func TestXLSXAndCSVShareDedupe(t *testing.T) {
 	}
 
 	count, err := store.CommitImport(xlsxContent)
-	if err != nil || count != 1 {
-		t.Fatalf("xlsx 写入失败: count=%d err=%v", count, err)
+	if err != nil || count.Imported != 1 {
+		t.Fatalf("xlsx 写入失败: count=%+v err=%v", count, err)
 	}
 	preview, err := store.PreviewImport(csvContent)
 	if err != nil {
@@ -173,7 +173,7 @@ func TestXLSXPreviewAndCommit(t *testing.T) {
 		t.Fatalf("预览统计错误: %+v", preview)
 	}
 	count, err := store.CommitImport(content)
-	if err != nil || count != 1 {
-		t.Fatalf("写入错误: count=%d err=%v", count, err)
+	if err != nil || count.Imported != 1 {
+		t.Fatalf("写入错误: count=%+v err=%v", count, err)
 	}
 }
