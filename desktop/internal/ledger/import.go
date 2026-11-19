@@ -4,6 +4,10 @@ type ImportItem struct {
 	Invoice Invoice `json:"invoice"`
 	Status  string  `json:"status"`
 	Message string  `json:"message"`
+	// Conflict 是撞上的那一张：来源可能是台账里的旧记录，也可能是本文件前面的行。
+	// 只报「重复」不报「跟谁重复」，用户没法判断该不该跳，所以要把对手带出来。
+	Conflict     *Invoice `json:"conflict,omitempty"`
+	ConflictFrom string   `json:"conflict_from,omitempty"` // ledger | file
 }
 
 type ImportPreview struct {
@@ -15,11 +19,13 @@ type ImportPreview struct {
 }
 
 // ImportResult 与 ImportPreview 的三个计数一一对应：预览说多少，这里就写多少、跳多少。
-// 分开回传是让界面能说清「重复的没进去」，而不是让用户以为少导了。
+// SkipDuplicates 记下这次是按哪种口径导的，界面据此说「跳过」还是「全量」。
 type ImportResult struct {
-	Imported  int `json:"imported"`
-	Duplicate int `json:"duplicate"`
-	Invalid   int `json:"invalid"`
+	Imported       int  `json:"imported"`
+	Duplicate      int  `json:"duplicate"`
+	Invalid        int  `json:"invalid"`
+	Skipped        int  `json:"skipped"`
+	SkipDuplicates bool `json:"skip_duplicates"`
 }
 
 func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
@@ -33,7 +39,8 @@ func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
 		return ImportPreview{}, err
 	}
 
-	seen := identitySet(existing)
+	inLedger := identityIndex(existing)
+	inFile := map[string]Invoice{}
 	batch := newBatch()
 	preview := ImportPreview{Total: len(incoming), Items: []ImportItem{}}
 
@@ -47,21 +54,35 @@ func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
 			item.Status = "invalid"
 			item.Message = "缺少发票号码"
 			preview.InvalidCount++
-		case seen[identityKey(invoice)]:
-			item.Status = "duplicate"
-			item.Message = duplicateMessage(invoice)
+		case hasKey(inLedger, invoice):
+			item = duplicateItem(item, inLedger, "ledger")
+			preview.DuplicateCount++
+		case hasKey(inFile, invoice):
+			item = duplicateItem(item, inFile, "file")
 			preview.DuplicateCount++
 		default:
 			item.Status = "new"
 			preview.NewCount++
-			seen[identityKey(invoice)] = true
+			inFile[identityKey(invoice)] = invoice
 		}
 		preview.Items = append(preview.Items, item)
 	}
 	return preview, nil
 }
 
-func (s *Store) CommitImport(content []byte) (ImportResult, error) {
+// duplicateItem 把「跟谁撞了」填进预览项：台账里的记来源，本文件里的记第几条。
+func duplicateItem(item ImportItem, index map[string]Invoice, from string) ImportItem {
+	conflict := index[identityKey(item.Invoice)]
+	item.Status = "duplicate"
+	item.Message = duplicateMessage(item.Invoice)
+	item.Conflict = &conflict
+	item.ConflictFrom = from
+	return item
+}
+
+// CommitImport 按用户的选择导入：skipDuplicates 为真时跳过重复，
+// 为假时全量写入（用户明确选择「重复的也要」时不能替他做主）。
+func (s *Store) CommitImport(content []byte, skipDuplicates bool) (ImportResult, error) {
 	incoming, err := parseInvoices(content)
 	if err != nil {
 		return ImportResult{}, err
@@ -75,23 +96,26 @@ func (s *Store) CommitImport(content []byte) (ImportResult, error) {
 		return ImportResult{}, err
 	}
 
-	seen := identitySet(existing)
+	index := identityIndex(existing)
 	batch := newBatch()
-	result := ImportResult{}
+	result := ImportResult{SkipDuplicates: skipDuplicates}
 
 	for _, invoice := range incoming {
 		invoice.Batch = fallback(invoice.Batch, batch)
 		invoice.CreatedAt = fallback(invoice.CreatedAt, nowText())
 		if invoice.Number == "" {
 			result.Invalid++
+			result.Skipped++
 			continue
 		}
-		// 预览已经把这张标成「重复」，确认时就必须真跳过，否则界面上的数字是假的。
-		if seen[identityKey(invoice)] {
+		if hasKey(index, invoice) {
 			result.Duplicate++
-			continue
+			if skipDuplicates {
+				result.Skipped++
+				continue
+			}
 		}
-		seen[identityKey(invoice)] = true
+		index[identityKey(invoice)] = invoice
 		existing = append(existing, invoice)
 		result.Imported++
 	}
@@ -101,15 +125,25 @@ func (s *Store) CommitImport(content []byte) (ImportResult, error) {
 	return result, s.save(existing)
 }
 
-// identitySet 用「代码+号码」标记已存在的发票，与 duplicateGroups 保持同一口径。
-func identitySet(list []Invoice) map[string]bool {
-	result := map[string]bool{}
+// identityIndex 用「代码+号码」给已有发票建索引，与 duplicateGroups 保持同一口径。
+// 同一个 key 有多张时留最早录入的那张，冲突提示才不会每次刷新都换人。
+func identityIndex(list []Invoice) map[string]Invoice {
+	result := map[string]Invoice{}
 	for _, invoice := range list {
-		if invoice.Number != "" {
-			result[identityKey(invoice)] = true
+		if invoice.Number == "" {
+			continue
+		}
+		key := identityKey(invoice)
+		if _, ok := result[key]; !ok {
+			result[key] = invoice
 		}
 	}
 	return result
+}
+
+func hasKey(index map[string]Invoice, invoice Invoice) bool {
+	_, ok := index[identityKey(invoice)]
+	return ok
 }
 
 // duplicateMessage 说清楚是「号码撞了」还是「代码+号码都撞了」，方便用户判断。

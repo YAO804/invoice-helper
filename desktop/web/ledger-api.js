@@ -15,8 +15,10 @@ function previewInvoiceImport(file) {
   })
 }
 
-function commitInvoiceImport(file) {
-  return requestJSON('/api/invoices/import?confirm=1', {
+// skipDuplicates=false 是用户明确选择「全量导入」时才发的口径
+function commitInvoiceImport(file, skipDuplicates) {
+  const skip = skipDuplicates ? '1' : '0'
+  return requestJSON('/api/invoices/import?confirm=1&skip_duplicates=' + skip, {
     method: 'POST',
     body: invoiceForm(file)
   })

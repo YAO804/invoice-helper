@@ -1,6 +1,8 @@
 let invoiceData = null
 let selectedInvoices = new Set()
 let pendingImportFile = null
+let pendingImportPreview = null
+let importOnlyDuplicate = false
 let invoiceSearchTimer = null
 let editingId = 0
 let editingIssueRaw = ''   // 选择器认不出的旧开票日期原文，用户没重挑就原样存回
@@ -280,10 +282,19 @@ async function previewImportFile(file) {
   }
   try {
     pendingImportFile = file
-    renderImportPreview(await previewInvoiceImport(file))
+    pendingImportPreview = await previewInvoiceImport(file)
+    importOnlyDuplicate = false
+    renderImportPreview(pendingImportPreview, importOnlyDuplicate)
   } catch (error) {
     alert('预览失败：' + error.message)
   }
+}
+
+/** 「只看重复」开关：不重新请求，直接按现有预览结果重绘 */
+function toggleOnlyDuplicate() {
+  if (!pendingImportPreview) return
+  importOnlyDuplicate = !importOnlyDuplicate
+  renderImportPreview(pendingImportPreview, importOnlyDuplicate)
 }
 
 function previewImport() {
@@ -314,21 +325,38 @@ function previewPasteImport() {
   previewImportFile(file)
 }
 
-async function confirmImport() {
+/** skipDuplicates=true 走「跳过重复」，false 走「全部导入（含重复）」 */
+async function commitPendingImport(skipDuplicates) {
   if (!pendingImportFile) {
     alert('请先预览导入文件')
     return
   }
   try {
-    const result = await commitInvoiceImport(pendingImportFile)
+    const result = await commitInvoiceImport(pendingImportFile, skipDuplicates)
     $('importPreview').innerHTML = renderImportResult(result)
     pendingImportFile = null
+    pendingImportPreview = null
     $('invoiceImportFile').value = ''
     await refreshLedger()
     if (window.refresh) window.refresh()
   } catch (error) {
     alert('导入失败：' + error.message)
   }
+}
+
+function confirmImport() {
+  return commitPendingImport(true)
+}
+
+/** 用户明确选择不跳过重复：会造出重复记录，所以再确认一次 */
+function importAllIncludingDuplicates() {
+  const duplicate = pendingImportPreview ? pendingImportPreview.duplicate_count || 0 : 0
+  const ok = confirm(
+    `确定把 ${duplicate} 张重复发票也导入台账？\n\n` +
+      '导入后台账里会有重复记录，需要去「查重」里手工清理。'
+  )
+  if (!ok) return
+  return commitPendingImport(false)
 }
 
 async function removeInvoices(ids) {
@@ -632,9 +660,13 @@ function bindLedgerEvents() {
     if (event.target.closest('#invoicePasteBtn')) { openPasteImport(); return }
     if (event.target.closest('#closePasteBtn') || event.target.closest('#cancelPasteBtn')) { closePasteImport(); return }
     if (event.target.closest('#confirmPasteBtn')) { previewPasteImport(); return }
-    if (event.target.closest('#confirmImportBtn')) confirmImport()
+    if (event.target.closest('#confirmImportBtn')) { confirmImport(); return }
+    if (event.target.closest('#importAllBtn')) { importAllIncludingDuplicates(); return }
+    if (event.target.closest('[data-action="only-duplicates"]')) { toggleOnlyDuplicate(); return }
     if (event.target.closest('#cancelImportBtn')) {
       pendingImportFile = null
+      pendingImportPreview = null
+      importOnlyDuplicate = false
       $('invoiceImportFile').value = ''
       $('importPreview').innerHTML = ''
     }

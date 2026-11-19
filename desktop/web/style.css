@@ -306,10 +306,28 @@ code { background: var(--canvas); padding: 2px 5px; border-radius: 4px; }
 
 .import-preview { padding: 0 16px; }
 .import-preview:not(:empty) { padding: 16px; border-bottom: 1px solid var(--border-muted); }
-.preview-summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px; }
+.preview-summary { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; font-size: 13px; }
 .preview-item.new { color: var(--success); }
 .preview-item.duplicate { color: var(--danger); }
 .preview-item.invalid { color: var(--warn); }
+
+/* 重复行必须一眼看见：整行淡红 + 左侧色条，不只靠文字颜色（色盲也要能分辨） */
+.preview-row.duplicate td { background: var(--danger-soft); }
+.preview-row.duplicate td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+.preview-row.invalid td { background: var(--warn-soft); }
+.conflict-hint { display: block; margin-top: 2px; font-size: 12px; color: var(--danger); }
+
+.dup-banner { margin-bottom: 12px; padding: 10px 12px; border: 1px solid #ffc9c2; border-radius: 6px; background: var(--danger-soft); }
+.dup-banner strong { font-size: 13px; color: var(--danger); }
+.dup-banner p { margin: 4px 0 0; font-size: 12px; }
+.dup-note { color: var(--warn); }
+
+.chip { padding: 2px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); font: inherit; font-size: 12px; color: var(--muted); cursor: pointer; }
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip.active { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
+.preview-more { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+.btn-warn { background: var(--warn-soft); border-color: #e3c96b; color: var(--warn); }
+.btn-warn:hover { background: #fdf0b3; }
 
 .table-meta {
   display: flex;

@@ -29,12 +29,18 @@ func (d *deps) importInvoices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.URL.Query().Get("confirm") == "1" {
-		result, err := d.ledger.CommitImport(content)
+		// 默认跳过重复（安全侧）；只有用户明确选择「全量导入」时前端才发 skip_duplicates=0。
+		skipDuplicates := r.URL.Query().Get("skip_duplicates") != "0"
+		result, err := d.ledger.CommitImport(content, skipDuplicates)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "导入失败: "+err.Error())
 			return
 		}
-		_ = d.registry.MarkEvent("import", fmt.Sprintf("导入发票 %d 张", result.Imported), "", 0)
+		action := "导入发票"
+		if !skipDuplicates {
+			action = "全量导入发票（含重复）"
+		}
+		_ = d.registry.MarkEvent("import", fmt.Sprintf("%s %d 张", action, result.Imported), "", 0)
 		writeJSON(w, http.StatusOK, result)
 		return
 	}

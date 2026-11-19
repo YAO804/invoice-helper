@@ -101,12 +101,12 @@ func TestImportSkipsAlreadyImported(t *testing.T) {
 	handler, _ := newTestHandler(t)
 	content := invoiceCSV(invoiceRow("N500", "甲公司", "113.00"))
 
-	first := importOnce(t, handler, content)
+	first := importOnce(t, handler, content, true)
 	if first.Imported != 1 || first.Duplicate != 0 {
 		t.Fatalf("首次导入应写入 1 张: %+v", first)
 	}
 
-	second := importOnce(t, handler, content)
+	second := importOnce(t, handler, content, true)
 	if second.Imported != 0 || second.Duplicate != 1 {
 		t.Fatalf("重复导入应全部跳过: %+v", second)
 	}
@@ -119,10 +119,32 @@ func TestImportSkipsAlreadyImported(t *testing.T) {
 	}
 }
 
-func importOnce(t *testing.T, handler http.Handler, content []byte) ledger.ImportResult {
+// 用户拒绝跳过重复时，接口必须全量写入，不能替他做主。
+func TestImportWritesDuplicatesWhenSkipDisabled(t *testing.T) {
+	handler, _ := newTestHandler(t)
+	content := invoiceCSV(invoiceRow("N600", "甲公司", "113.00"), invoiceRow("N600", "乙公司", "113.00"))
+
+	result := importOnce(t, handler, content, false)
+	if result.Imported != 2 || result.Duplicate != 1 || result.SkipDuplicates {
+		t.Fatalf("全量导入结果错误: %+v", result)
+	}
+
+	listRec := request(t, handler, http.MethodGet, "/api/invoices", nil, "")
+	var list invoiceListResponse
+	decodeJSON(t, listRec, &list)
+	if list.Total != 2 || list.DuplicateGroups != 1 {
+		t.Fatalf("全量导入应留下重复记录: total=%d groups=%d", list.Total, list.DuplicateGroups)
+	}
+}
+
+func importOnce(t *testing.T, handler http.Handler, content []byte, skipDuplicates bool) ledger.ImportResult {
 	t.Helper()
+	skip := "1"
+	if !skipDuplicates {
+		skip = "0"
+	}
 	body, contentType := uploadBody(t, "invoices.csv", string(content))
-	rec := request(t, handler, http.MethodPost, "/api/invoices/import?confirm=1", body, contentType)
+	rec := request(t, handler, http.MethodPost, "/api/invoices/import?confirm=1&skip_duplicates="+skip, body, contentType)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("导入状态码错误: %d, body=%s", rec.Code, rec.Body.String())
 	}

@@ -142,7 +142,7 @@ func TestXLSXAndCSVShareDedupe(t *testing.T) {
 		t.Fatalf("两种格式判重不一致: xlsx=%+v csv=%+v", xlsxPreview, csvPreview)
 	}
 
-	count, err := store.CommitImport(xlsxContent)
+	count, err := store.CommitImport(xlsxContent, true)
 	if err != nil || count.Imported != 1 {
 		t.Fatalf("xlsx 写入失败: count=%+v err=%v", count, err)
 	}
@@ -172,7 +172,7 @@ func TestXLSXPreviewAndCommit(t *testing.T) {
 	if preview.NewCount != 1 || preview.InvalidCount != 1 {
 		t.Fatalf("预览统计错误: %+v", preview)
 	}
-	count, err := store.CommitImport(content)
+	count, err := store.CommitImport(content, true)
 	if err != nil || count.Imported != 1 {
 		t.Fatalf("写入错误: count=%+v err=%v", count, err)
 	}

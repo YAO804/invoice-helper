@@ -178,44 +178,126 @@ function renderDuplicatePanel(groups) {
   `).join('')
 }
 
-/** 确认导入后的结果提示：必须写清跳过了什么，只报导入数会让用户以为数据丢了 */
+/** 确认导入后的结果提示：必须写清跳过了什么、或者重复的进了台账，不能让用户猜 */
 function renderImportResult(result) {
+  const imported = result.imported || 0
+  const duplicate = result.duplicate || 0
+  const skipDuplicates = result.skip_duplicates !== false
+
+  if (!skipDuplicates && duplicate) {
+    return `<p class="hint">已全量导入 ${imported} 张发票，其中 ${duplicate} 张是重复的。
+      重复记录已进台账，可在「查重」里清理。</p>`
+  }
+
   const skipped = []
-  if (result.duplicate) skipped.push('重复 ' + result.duplicate + ' 张')
+  if (duplicate) skipped.push('重复 ' + duplicate + ' 张')
   if (result.invalid) skipped.push('缺发票号码 ' + result.invalid + ' 张')
 
-  let text = '已导入 ' + (result.imported || 0) + ' 张发票'
+  let text = '已导入 ' + imported + ' 张发票'
   if (skipped.length) text += '，跳过' + skipped.join('、')
   return `<p class="hint">${text}。</p>`
 }
 
-function renderImportPreview(preview) {
+const IMPORT_STATUS_LABEL = { new: '新增', duplicate: '重复', invalid: '缺号码' }
+const IMPORT_PREVIEW_LIMIT = 50
+
+/** 冲突说明：说清是跟台账哪一张撞了，还是跟本文件前面的行撞了 */
+function conflictHint(item) {
+  const conflict = item.conflict
+  if (!conflict) return ''
+  if (item.conflict_from === 'file') return '与本文件前面的行重复'
+  const parts = []
+  if (conflict.id) parts.push('台账 #' + conflict.id)
+  if (conflict.reimburser) parts.push(conflict.reimburser)
+  if (conflict.total) parts.push('¥' + conflict.total)
+  return parts.length ? '与' + parts.join(' ') + ' 重复' : '与台账已有记录重复'
+}
+
+function importRow(item, position) {
+  const hint = conflictHint(item)
+  return `
+    <tr class="preview-row ${esc(item.status)}">
+      <td class="muted">${position}</td>
+      <td>${esc(IMPORT_STATUS_LABEL[item.status] || item.status)}</td>
+      <td>${esc(item.invoice.number)}</td>
+      <td>${esc(item.invoice.reimburser || '')}</td>
+      <td>${esc(item.invoice.total)}</td>
+      <td>${esc(item.message)}${hint ? `<span class="conflict-hint">${esc(hint)}</span>` : ''}</td>
+    </tr>
+  `
+}
+
+/** 只看重复：重复行可能排在 50 行之外，不提供这个入口等于把重复藏起来。
+ *  带上原始序号——筛完之后序号不能从头数，否则对不回文件里的位置。 */
+function visibleImportItems(preview, onlyDuplicate) {
+  const items = (preview.items || []).map((item, index) => ({ item: item, position: index + 1 }))
+  return onlyDuplicate ? items.filter((row) => row.item.status === 'duplicate') : items
+}
+
+function importDuplicateBanner(preview) {
+  if (!preview.duplicate_count) return ''
+  const invalid = preview.invalid_count
+    ? `<p class="dup-note">缺发票号码的 ${preview.invalid_count} 张无论选哪种都不会导入。</p>`
+    : ''
+  return `
+    <div class="dup-banner" role="status">
+      <strong>发现 ${preview.duplicate_count} 张重复发票</strong>
+      <p>已在下表中标红并写明与哪张重复。请确认是跳过它们，还是照样全部导入。</p>
+      ${invalid}
+    </div>
+  `
+}
+
+function importActions(preview) {
+  const dup = preview.duplicate_count || 0
+  const fresh = preview.new_count || 0
+  const cancel = '<button id="cancelImportBtn" type="button" class="btn btn-ghost">取消</button>'
+  if (!dup) {
+    return `<button id="confirmImportBtn" type="button" class="btn">确认导入 ${fresh} 张</button>${cancel}`
+  }
+  return `
+    <button id="confirmImportBtn" type="button" class="btn">跳过 ${dup} 张重复，导入 ${fresh} 张</button>
+    <button id="importAllBtn" type="button" class="btn btn-warn">全部导入（含 ${dup} 张重复）</button>
+    ${cancel}
+  `
+}
+
+function importTruncateNote(preview, shownCount) {
+  const total = preview.total || 0
+  if (!total) return ''
+  if (shownCount <= IMPORT_PREVIEW_LIMIT) return ''
+  const hint = preview.duplicate_count ? '，重复行可点上方「只看重复」逐条核对' : ''
+  return `<p class="preview-more">共 ${total} 行，仅显示前 ${IMPORT_PREVIEW_LIMIT} 行${hint}。</p>`
+}
+
+function renderImportPreview(preview, onlyDuplicate) {
+  const visible = visibleImportItems(preview, onlyDuplicate)
+  const rows = visible.slice(0, IMPORT_PREVIEW_LIMIT)
+  const dup = preview.duplicate_count || 0
+  const dupChip = dup
+    ? `<button type="button" class="chip ${onlyDuplicate ? 'active' : ''}" data-action="only-duplicates">
+         ${onlyDuplicate ? '显示全部' : '只看重复 ' + dup}
+       </button>`
+    : ''
+
   $('importPreview').innerHTML = `
     <div class="preview-summary">
       <span>共 ${preview.total || 0} 行</span>
       <span class="preview-item new">新增 ${preview.new_count || 0}</span>
-      <span class="preview-item duplicate">重复 ${preview.duplicate_count || 0}</span>
-      <span class="preview-item invalid">无效 ${preview.invalid_count || 0}</span>
+      <span class="preview-item duplicate">重复 ${dup}</span>
+      <span class="preview-item invalid">缺号码 ${preview.invalid_count || 0}</span>
+      ${dupChip}
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>状态</th><th>发票号码</th><th>报销人</th><th>价税合计</th><th>说明</th></tr></thead>
-        <tbody>
-          ${(preview.items || []).slice(0, 50).map((item) => `
-            <tr class="preview-item ${esc(item.status)}">
-              <td>${esc(item.status)}</td>
-              <td>${esc(item.invoice.number)}</td>
-              <td>${esc(item.invoice.reimburser || '')}</td>
-              <td>${esc(item.invoice.total)}</td>
-              <td>${esc(item.message)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-    <div class="row" style="margin-top:10px">
-      <button id="confirmImportBtn" type="button">确认导入</button>
-      <button id="cancelImportBtn" type="button" class="secondary">取消</button>
-    </div>
+    ${importDuplicateBanner(preview)}
+    ${rows.length ? `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>序号</th><th>状态</th><th>发票号码</th><th>报销人</th><th>价税合计</th><th>说明</th></tr></thead>
+          <tbody>${rows.map((row) => importRow(row.item, row.position)).join('')}</tbody>
+        </table>
+      </div>
+    ` : '<p class="hint">没有重复行。</p>'}
+    ${importTruncateNote(preview, visible.length)}
+    <div class="row" style="margin-top:10px">${importActions(preview)}</div>
   `
 }

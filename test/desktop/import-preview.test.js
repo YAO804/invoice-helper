@@ -1,0 +1,142 @@
+/**
+ * 导入预览的重复处理回归。
+ *
+ * 重复行不允许静默跳过：必须在预览里标出来、写明跟哪张撞了，
+ * 并且把「跳过」和「全部导入」两个出口都交给用户自己选。
+ *
+ *   node test/desktop/import-preview.test.js
+ */
+
+let failCount = 0
+function check(name, actual, expected) {
+  const ok = JSON.stringify(actual) === JSON.stringify(expected)
+  if (!ok) failCount++
+  console.log((ok ? 'PASS  ' : 'FAIL  ') + name +
+    (ok ? '' : '\n      期望 ' + JSON.stringify(expected) + '\n      实际 ' + JSON.stringify(actual)))
+}
+
+function contains(name, html, needle) {
+  check(name + '（含「' + needle + '」）', html.includes(needle), true)
+}
+
+function absent(name, html, needle) {
+  check(name + '（不该有「' + needle + '」）', html.includes(needle), false)
+}
+
+const fs = require('fs')
+const path = require('path')
+const vm = require('vm')
+
+const elements = {}
+// render.js 里 $ 就是 document.getElementById 的简写，所以假的是 document
+global.document = {
+  getElementById: function (id) {
+    if (!elements[id]) elements[id] = { textContent: '', innerHTML: '', hidden: true }
+    return elements[id]
+  }
+}
+
+vm.runInThisContext(fs.readFileSync(path.join(__dirname, '../../desktop/web/time.js'), 'utf8'), { filename: 'time.js' })
+vm.runInThisContext(fs.readFileSync(path.join(__dirname, '../../desktop/web/render.js'), 'utf8'), { filename: 'render.js' })
+vm.runInThisContext(
+  fs.readFileSync(path.join(__dirname, '../../desktop/web/ledger-render.js'), 'utf8'),
+  { filename: 'ledger-render.js' }
+)
+
+function item(number, reimburser, status, extra) {
+  return Object.assign({
+    invoice: { number: number, reimburser: reimburser, total: '113.00' },
+    status: status,
+    message: status === 'duplicate' ? '发票代码与号码都已存在' : status === 'invalid' ? '缺少发票号码' : ''
+  }, extra || {})
+}
+
+function previewOf(items) {
+  return {
+    total: items.length,
+    new_count: items.filter((i) => i.status === 'new').length,
+    duplicate_count: items.filter((i) => i.status === 'duplicate').length,
+    invalid_count: items.filter((i) => i.status === 'invalid').length,
+    items: items
+  }
+}
+
+const withDup = previewOf([
+  item('N001', '甲', 'new'),
+  item('N002', '乙', 'duplicate', {
+    conflict: { id: 12, reimburser: '老张', total: '113.00' },
+    conflict_from: 'ledger'
+  }),
+  item('N002', '丙', 'duplicate', {
+    conflict: { id: 0, reimburser: '乙', total: '113.00' },
+    conflict_from: 'file'
+  }),
+  item('', '丁', 'invalid')
+])
+
+renderImportPreview(withDup, false)
+let html = elements.importPreview.innerHTML
+
+contains('有重复时给出警告条', html, 'dup-banner')
+contains('警告条说清张数', html, '发现 2 张重复发票')
+contains('警告条告诉用户要自己决定', html, '跳过它们，还是照样全部导入')
+contains('缺号码也说明不会导入', html, '缺发票号码的 1 张无论选哪种都不会导入')
+check('重复行整行标红', html.includes('preview-row duplicate'), true)
+check('无效行单独标记', html.includes('preview-row invalid'), true)
+contains('写明撞的是台账哪一张', html, '台账 #12 老张 ¥113.00 重复')
+contains('写明是本文件内部重复', html, '与本文件前面的行重复')
+
+contains('跳过出口带张数', html, '跳过 2 张重复，导入 1 张')
+contains('全量出口带张数', html, '全部导入（含 2 张重复）')
+check('两个出口的按钮 id 都在', html.includes('id="confirmImportBtn"') && html.includes('id="importAllBtn"'), true)
+contains('取消始终在', html, 'id="cancelImportBtn"')
+
+contains('状态列中文：新增', html, '<td>新增</td>')
+contains('状态列中文：重复', html, '<td>重复</td>')
+contains('状态列中文：缺号码', html, '<td>缺号码</td>')
+absent('不再直接甩英文状态', html, '<td>duplicate</td>')
+absent('不再直接甩英文状态（invalid）', html, '<td>invalid</td>')
+
+const clean = previewOf([item('N003', '甲', 'new'), item('N004', '乙', 'new')])
+renderImportPreview(clean, false)
+html = elements.importPreview.innerHTML
+absent('没有重复时不弹警告', html, 'dup-banner')
+absent('没有重复时不提供全量出口', html, 'importAllBtn')
+contains('没有重复时直接确认', html, '确认导入 2 张')
+absent('没有重复时不给「只看重复」', html, 'only-duplicates')
+
+// 只有重复行的文件：跳过出口会显示「导入 0 张」，仍然要能一眼看出结果
+const onlyDup = previewOf([item('N005', '甲', 'duplicate', { conflict_from: 'file' })])
+renderImportPreview(onlyDup, false)
+contains('全是重复时出口说清导入 0 张', elements.importPreview.innerHTML, '导入 0 张')
+
+// 「只看重复」：重复行可能排在 50 行之外，不提供入口等于把重复藏起来
+renderImportPreview(withDup, false)
+contains('提供只看重复入口', elements.importPreview.innerHTML, '只看重复 2')
+renderImportPreview(withDup, true)
+html = elements.importPreview.innerHTML
+contains('只看重复时变成显示全部', html, '显示全部')
+check('只看重复时只渲染重复行', (html.match(/preview-row/g) || []).length, 2)
+absent('只看重复时不渲染新增行', html, '>N001<')
+// 筛选后序号要指向文件里的原位置（第 2、3 条），不能从头数成 1、2
+check('只看重复时序号仍是原始位置', /<td class="muted">2<\/td>/.test(html) && /<td class="muted">3<\/td>/.test(html), true)
+
+// 60 行文件：必须承认自己只显示了一部分
+const many = previewOf(Array.from({ length: 60 }, (_, i) => item('M' + i, '甲', 'new')))
+renderImportPreview(many, false)
+contains('截断要明写', elements.importPreview.innerHTML, '共 60 行，仅显示前 50 行')
+check('最多渲染 50 行', (elements.importPreview.innerHTML.match(/preview-row/g) || []).length, 50)
+
+// 页面接线：三种决策都要有处理，且提交时把口径带给后端
+const app = fs.readFileSync(path.join(__dirname, '../../desktop/web/ledger-app.js'), 'utf8')
+contains('确认走跳过口径', app, 'confirmImport()')
+contains('全部导入有独立处理', app, 'importAllIncludingDuplicates()')
+contains('只看重复有处理', app, 'only-duplicates')
+contains('全量导入前二次确认', app, '需要去「查重」里手工清理')
+
+const api = fs.readFileSync(path.join(__dirname, '../../desktop/web/ledger-api.js'), 'utf8')
+contains('提交带 skip_duplicates', api, 'skip_duplicates=')
+check('跳过与全量分别发 1/0', api.includes("skipDuplicates ? '1' : '0'"), true)
+
+console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
+process.exit(failCount === 0 ? 0 : 1)

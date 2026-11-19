@@ -22,7 +22,7 @@ func TestPreviewAndCommitImport(t *testing.T) {
 		t.Fatalf("预览统计错误: %+v", preview)
 	}
 
-	count, err := store.CommitImport(content)
+	count, err := store.CommitImport(content, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestCommitImportSkipsDuplicates(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := store.CommitImport(content)
+	result, err := store.CommitImport(content, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestCommitImportSkipsRepeatedRowsInSameFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := store.CommitImport(content)
+	result, err := store.CommitImport(content, true)
 	if err != nil {
 		t.Fatal(err)
 	}
