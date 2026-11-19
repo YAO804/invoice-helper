@@ -120,6 +120,9 @@ check('金额表头右对齐', /\.invoice-table td\.num,\s*\.invoice-table th\.n
 check('操作表头右对齐', /\.invoice-table thead th\.col-actions[^{]*\{[^}]*text-align:\s*right/.test(css), true)
 check('表头不再统一居中', /\.invoice-table thead th[^{]*\{[^}]*text-align:\s*center/.test(css), false)
 check('金额表头与单元格同样的右内边距', /\.invoice-table td\.num,\s*\.invoice-table th\.num\s*\{[^}]*padding-right:\s*14px/.test(css), true)
+// 操作列同样贴右边界，通用 6px 会让按钮压在表格边缘上；补齐后两列共享同一条右边界
+check('操作列与表头同样补 14px 右内边距',
+  /\.invoice-table td\.col-actions,\s*\.invoice-table th\.col-actions\s*\{[^}]*padding-right:\s*14px/.test(css), true)
 check('报销人单元格不加左内边距（否则表头对不齐）',
   /\.invoice-table \.reimburser-cell\s*\{[^}]*padding-left/.test(css), false)
 

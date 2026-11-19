@@ -340,6 +340,12 @@ tbody tr:last-child td { border-bottom: 0; }
 .invoice-table td.num, .invoice-table th.num { padding-right: 14px; }
 .col-actions { text-align: right; }
 /*
+ * 操作列也右对齐，通用内边距只有 6px，按钮会压在表格右边缘上。
+ * 和金额列给同样的 14px：两列共享同一条右边界，扫视时不用来回找。
+ * 表头一起给，否则「操作」两个字仍贴着边，表头又跟按钮错开。
+ */
+.invoice-table td.col-actions, .invoice-table th.col-actions { padding-right: 14px; }
+/*
  * 表头跟随本列内容的对齐方式：文字列左对齐，金额和操作右对齐。
  * 统一居中看着整齐，实际每个标签都悬在内容中间——号码列占 17%，
  * 「发票号码」四个字离第一个号码差着半个列宽，扫视时根本对不上自己那列。
