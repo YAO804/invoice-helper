@@ -41,6 +41,7 @@ function load(file) {
   vm.runInThisContext(fs.readFileSync(path.join(WEB, file), 'utf8'), { filename: file })
 }
 
+load('time.js')
 load('render.js')
 load('events.js')
 
@@ -97,6 +98,10 @@ for (const kind of ['upload', 'put', 'delete', 'import']) {
   check('不把 ' + kind + ' 当文字显示', html.includes('>' + kind + '<'), false)
 }
 check('原始类型保留在 title 里', html.includes('title="upload"'), true)
+
+/* 6. 时间统一按北京时间显示，不再把带 Z 的 UTC 串贴到界面 */
+check('事件时间换成北京时间', html.includes('2026-11-18 10:20:00'), true)
+check('界面不出现带 Z 的原始串', /T\d{2}:\d{2}:\d{2}Z/.test(html), false)
 check('样式 class 仍是原始类型', html.includes('class="event-kind upload"'), true)
 
 /* 6. 文本转义，事件内容里有尖括号也不能当标签 */

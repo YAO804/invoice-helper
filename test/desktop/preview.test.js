@@ -83,6 +83,7 @@ function load(file) {
 }
 
 vm.runInThisContext('var filesData = null', { filename: 'fixture.js' })
+load('time.js')
 load('render.js')
 load('preview.js')
 

@@ -50,6 +50,7 @@ global.esc = function (value) {
   return String(value == null ? '' : value).replace(/[&<>"']/g, (ch) => map[ch])
 }
 
+vm.runInThisContext(fs.readFileSync(path.join(WEB, 'time.js'), 'utf8'), { filename: 'time.js' })
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'ledger-render.js'), 'utf8'), { filename: 'ledger-render.js' })
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'suggest.js'), 'utf8'), { filename: 'suggest.js' })
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'ledger-app.js'), 'utf8'), { filename: 'ledger-app.js' })

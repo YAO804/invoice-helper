@@ -25,6 +25,7 @@ global.$ = function (id) {
   return elements[id]
 }
 
+vm.runInThisContext(fs.readFileSync(path.join(__dirname, '../../desktop/web/time.js'), 'utf8'), { filename: 'time.js' })
 const source = fs.readFileSync(path.join(__dirname, '../../desktop/web/ledger-render.js'), 'utf8')
 vm.runInThisContext(source, { filename: 'ledger-render.js' })
 

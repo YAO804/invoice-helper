@@ -12,7 +12,7 @@ function renderInvoiceStats(data) {
   // 用后端给的全表最新录入时间，不看当前列表第一行：
   // 这张卡片同时是筛选入口，值必须稳定，不能跟着筛选结果漂
   $('invLatestDate').textContent = latestDateText(data.latest_created_at) || '—'
-  $('lastInvoiceRefresh').textContent = '更新于 ' + new Date().toLocaleTimeString()
+  $('lastInvoiceRefresh').textContent = '更新于 ' + beijingClock()
 }
 
 /**
@@ -91,7 +91,9 @@ function copyCell(value) {
 
 /** 录入时间拆两行（日期在上、时间在下）：宽度几乎减半，信息一点没少 */
 function createdCell(value) {
-  const text = String(value || '')
+  // 后端目前存的是本地文本，beijingTime 对这类输入原样返回；
+  // 万一哪天改成 RFC3339，这里也不用再改
+  const text = String(beijingTime(value) || '')
   const cut = text.indexOf(' ')
   if (cut < 0) return `<td class="col-created">${esc(text)}</td>`
   return `<td class="col-created" title="${esc(text)}">${esc(text.slice(0, cut))}` +
@@ -165,7 +167,7 @@ function renderDuplicatePanel(groups) {
                 <td>${esc(item.issue_date)}</td>
                 <td class="${item.reimburser ? '' : 'changed'}">${esc(item.reimburser || '（待补录）')}</td>
                 <td>${esc(item.total)}</td>
-                <td>${esc(item.created_at)}</td>
+                <td>${esc(beijingTime(item.created_at))}</td>
                 <td><button type="button" class="link danger" data-action="delete-invoice" data-id="${item.id}">删除这张</button></td>
               </tr>
             `).join('')}

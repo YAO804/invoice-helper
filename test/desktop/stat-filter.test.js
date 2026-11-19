@@ -61,6 +61,7 @@ function load(file) {
 }
 
 load('render.js')
+load('time.js')
 load('ledger-render.js')
 load('ledger-stats.js')
 

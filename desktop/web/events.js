@@ -36,7 +36,7 @@ function renderEvents(list) {
     <div class="event-row">
       <span class="event-kind ${eventClass(item.kind)}" title="${esc(item.kind)}">${esc(eventLabel(item.kind))}</span>
       <span>${esc(item.text)}</span>
-      <span class="muted tiny">${esc(item.at)}</span>
+      <span class="muted tiny">${esc(beijingTime(item.at))}</span>
     </div>
   `).join('')
 }

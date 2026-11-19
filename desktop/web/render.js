@@ -51,7 +51,7 @@ function renderStatus(data) {
   $('todayBytes').textContent = human(stats.today_bytes)
   $('outgoingCount').textContent = stats.outgoing_count || 0
   $('outgoingBytes').textContent = human(stats.outgoing_bytes)
-  $('lastRefresh').textContent = '更新于 ' + new Date().toLocaleTimeString()
+  $('lastRefresh').textContent = '更新于 ' + beijingClock()
 }
 
 function renderAddresses(data) {
@@ -138,7 +138,7 @@ function renderIncoming(list, keyword) {
       <td>${fileNameCell(item)}</td>
       <td>${human(item.size)}</td>
       <td>${esc(item.source)}</td>
-      <td>${esc(item.uploaded_at)}</td>
+      <td>${esc(beijingTime(item.uploaded_at))}</td>
       <td>
         <a href="/api/incoming/${encodeURIComponent(item.id)}/download">下载</a>
         <button type="button" class="link danger delete-btn" data-kind="incoming" data-id="${esc(item.id)}">删除</button>
@@ -158,7 +158,7 @@ function renderOutgoing(list, keyword) {
     <tr>
       <td>${esc(item.name)}</td>
       <td>${human(item.size)}</td>
-      <td>${esc(item.modified_at)}</td>
+      <td>${esc(beijingTime(item.modified_at))}</td>
       <td>
         <a href="/api/outgoing/${encodeURIComponent(item.name)}/download">下载</a>
         <button type="button" class="link danger delete-btn" data-kind="outgoing" data-name="${esc(item.name)}">删除</button>
