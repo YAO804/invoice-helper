@@ -215,6 +215,25 @@ async function main() {
   check('状态变已连接', page.data.status, 'ok')
   check('结果写在卡片上，不只在 toast 里', page.data.discoverTip, '已连通 192.168.1.20:8765')
 
+  console.log('\n--- 过期的探活结果不许盖掉刚连上的成功 ---')
+  page = newPage(); reset()
+  storage.desktop_base_url = 'http://192.168.1.20:8765'
+  let finishProbe = null
+  lanservice.probe = () => new Promise((resolve) => { finishProbe = resolve })
+  // 扫码是原生页面，扫完回来会再触发 onShow，这一轮探的还是旧地址
+  const inFlight = page.refreshStatus()
+  check('探活期间显示正在连', page.data.status, 'checking')
+  page.setStatus('ok')          // 扫码回调先回来，已经连上
+  finishProbe(false)            // 旧地址两秒后超时
+  await inFlight
+  check('仍然是已连接', page.data.status, 'ok')
+  check('大字结论没被改口', page.data.statusTitle, '已连接')
+
+  console.log('\n--- 但新的一次探活失败照常改口 ---')
+  lanservice.probe = () => Promise.resolve(false)
+  await page.refreshStatus()
+  check('连不上就是连不上', page.data.status, 'fail')
+
   console.log('\n--- 断开连接：清地址、状态改口 ---')
   page = newPage(); reset()
   storage.desktop_base_url = 'http://192.168.1.20:8765'

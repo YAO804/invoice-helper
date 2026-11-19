@@ -59,19 +59,32 @@ Page({
    * 状态只能由真实请求改写。以前这里写的是「状态：已配置」——那只是说
    * 存过地址，电脑关机、换了 WiFi 照样显示已配置，用户看着这行字根本
    * 判断不出能不能收票。
+   *
+   * 探活是异步的，回来时状态可能已经被别的动作改过（扫码页是原生页面，
+   * 扫完回来会再触发一次 onShow，此时探的还是旧地址）。所以每次写状态都
+   * 领一个号，探活回来发现号变了就把结果丢掉——否则旧地址的超时失败会
+   * 盖掉刚扫码连上的成功，界面显示「连不上」但提示语写着「已连接」。
    */
   refreshStatus() {
     const base = lanservice.getBase()
     if (!base) {
-      this.applyStatus('none')
+      this.setStatus('none')
       return Promise.resolve(false)
     }
-    this.applyStatus('checking')
+    const token = this.setStatus('checking')
     const that = this
     return lanservice.probe().then(function (ok) {
+      if (that.statusToken !== token) return ok
       that.applyStatus(ok ? 'ok' : 'fail')
       return ok
     })
+  },
+
+  /** 所有状态改写都走这里：写状态的同时作废在途的探活 */
+  setStatus(status) {
+    this.statusToken = (this.statusToken || 0) + 1
+    this.applyStatus(status)
+    return this.statusToken
   },
 
   /** 张数与同步时间取自台账内存镜像：别的页面同步过就顺手显示，不必再拉一次 */
@@ -113,7 +126,7 @@ Page({
         if (!res.confirm) return
         lanservice.setBase('')
         that.setData({ desktopUrl: '', discoverTip: '已断开电脑' })
-        that.applyStatus('none')
+        that.setStatus('none')
         wx.showToast({ title: '已断开', icon: 'none' })
       }
     })
@@ -157,7 +170,7 @@ Page({
   onSaveDesktop() {
     const url = lanservice.setBase(this.data.desktopUrl)
     if (!url) {
-      this.applyStatus('none')
+      this.setStatus('none')
       wx.showToast({ title: '请先填写地址', icon: 'none' })
       return
     }
@@ -179,7 +192,7 @@ Page({
         discoverTip: '已找到电脑：' + url,
         discovering: false
       })
-      this.applyStatus('ok')
+      this.setStatus('ok')
       wx.showToast({ title: '已自动连接', icon: 'none' })
     } catch (e) {
       if (isCancelled(e)) {
@@ -217,7 +230,7 @@ Page({
           : '已连接电脑：' + base + '；如需登录网页，请扫电脑网页登录二维码',
         scanning: false
       })
-      this.applyStatus('ok')
+      this.setStatus('ok')
       wx.showToast({ title: login ? '连接并登录成功' : '已连接电脑', icon: 'none' })
     } catch (e) {
       if (isCancelled(e)) {
@@ -308,7 +321,7 @@ Page({
     }
     this.setData({ desktopUrl: url })
     const ok = await lanservice.probe()
-    this.applyStatus(ok ? 'ok' : 'fail')
+    this.setStatus(ok ? 'ok' : 'fail')
     if (ok) {
       this.setData({ discoverTip: '已连通 ' + hint.hostText(url) })
       wx.showToast({ title: '连接成功', icon: 'none' })
