@@ -8,6 +8,15 @@ import (
 	"strings"
 )
 
+// parseInvoices 按文件内容分流：ZIP 魔数是 xlsx，其余按 CSV 处理。
+// 两条路都产出同样的 []Invoice，后续表头映射与判重完全共用。
+func parseInvoices(content []byte) ([]Invoice, error) {
+	if isXLSX(content) {
+		return parseXLSX(content)
+	}
+	return parseCSV(content)
+}
+
 func parseCSV(content []byte) ([]Invoice, error) {
 	text := strings.TrimPrefix(string(content), "\ufeff")
 	reader := csv.NewReader(strings.NewReader(text))

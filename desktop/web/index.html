@@ -184,8 +184,9 @@
         <div class="toolbar">
           <div class="toolbar-left">
             <button id="invoiceCreateBtn" type="button" class="btn">新增发票</button>
-            <button id="invoiceImportBtn" type="button" class="btn">导入 CSV</button>
-            <input id="invoiceImportFile" type="file" accept=".csv,text/csv" hidden>
+            <button id="invoiceImportBtn" type="button" class="btn">导入 Excel / CSV</button>
+            <input id="invoiceImportFile" type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" hidden>
+            <a class="btn btn-ghost" href="/发票导入模板.xlsx" download="发票导入模板.xlsx" title="下载标准表头的 Excel 模板">下载导入模板</a>
             <button id="invoiceExportAllBtn" type="button" class="btn btn-ghost">导出全部</button>
             <button id="invoiceExportSelectedBtn" type="button" class="btn btn-ghost">导出选中</button>
             <button id="invoiceFillReimburserBtn" type="button" class="btn btn-ghost">批量填报销人</button>

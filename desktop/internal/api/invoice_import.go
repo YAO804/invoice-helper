@@ -41,7 +41,7 @@ func (d *deps) importInvoices(w http.ResponseWriter, r *http.Request) {
 
 	preview, err := d.ledger.PreviewImport(content)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "解析 CSV 失败: "+err.Error())
+		writeError(w, http.StatusBadRequest, "解析导入文件失败: "+err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, preview)

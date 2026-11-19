@@ -276,7 +276,7 @@ function scheduleLedgerRefresh() {
 async function previewImport() {
   const file = $('invoiceImportFile').files[0]
   if (!file) {
-    alert('请先选择 CSV 文件')
+    alert('请先选择 Excel（.xlsx）或 CSV 文件')
     return
   }
   try {

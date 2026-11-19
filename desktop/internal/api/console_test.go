@@ -154,6 +154,25 @@ func TestIndexWiresPreviewScript(t *testing.T) {
 	}
 }
 
+// 导入模板必须 embed 进二进制并能下载，否则同事拿不到模板就还是会填错表头。
+func TestImportTemplateIsEmbedded(t *testing.T) {
+	handler, _ := newTestHandler(t)
+
+	rec := request(t, handler, http.MethodGet, "/", nil, "")
+	if !strings.Contains(rec.Body.String(), "/发票导入模板.xlsx") {
+		t.Fatal("首页缺少导入模板下载入口")
+	}
+
+	tmpl := request(t, handler, http.MethodGet, "/发票导入模板.xlsx", nil, "")
+	if tmpl.Code != http.StatusOK {
+		t.Fatalf("模板下载状态码错误: %d", tmpl.Code)
+	}
+	// xlsx 是 ZIP，魔数必须是 PK，防止 embed 漏配后返回 HTML 首页
+	if !bytes.HasPrefix(tmpl.Body.Bytes(), []byte("PK")) {
+		t.Fatal("模板内容不是 xlsx，检查 embed 指令")
+	}
+}
+
 func TestPortFromAddr(t *testing.T) {
 	if got := portFromAddr(":9000"); got != "9000" {
 		t.Fatalf("端口解析错误: %s", got)

@@ -15,7 +15,7 @@ type ImportPreview struct {
 }
 
 func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
-	incoming, err := parseCSV(content)
+	incoming, err := parseInvoices(content)
 	if err != nil {
 		return ImportPreview{}, err
 	}
@@ -54,7 +54,7 @@ func (s *Store) PreviewImport(content []byte) (ImportPreview, error) {
 }
 
 func (s *Store) CommitImport(content []byte) (int, error) {
-	incoming, err := parseCSV(content)
+	incoming, err := parseInvoices(content)
 	if err != nil {
 		return 0, err
 	}
