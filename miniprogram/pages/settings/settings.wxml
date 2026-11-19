@@ -13,7 +13,15 @@
     <view wx:if="{{statusMeta}}" class="status-line">{{statusMeta}}</view>
     <view class="btn-row" style="margin-top:20rpx">
       <view class="btn {{status == 'checking' ? 'btn-off' : ''}}" bindtap="onPrimary" hover-class="{{status == 'checking' ? 'none' : 'btn-hover'}}">{{primaryLabel}}</view>
-      <view wx:if="{{hasBase}}" class="btn btn-grey" bindtap="onDisconnect" hover-class="btn-hover">断开</view>
+    </view>
+    <!--
+      只要本机存着地址，重扫入口就必须一直在。之前只在「未连接」时给扫码，
+      结果是「连不上」（地址填错、换了电脑、电脑换了 IP）反而得先断开才能重扫——
+      而这恰恰是最想重扫的时候。
+    -->
+    <view wx:if="{{hasBase && status != 'none'}}" class="btn-row" style="margin-top:4rpx">
+      <view class="btn btn-grey" bindtap="onScanConnect" hover-class="btn-hover">扫码连接电脑</view>
+      <view class="btn btn-grey" bindtap="onDisconnect" hover-class="btn-hover">断开</view>
     </view>
     <view wx:if="{{discoverTip}}" class="status-tip">{{discoverTip}}</view>
   </view>
@@ -36,7 +44,7 @@
   <view class="card">
     <view class="card-t">其它连接方式</view>
     <view class="tiny muted" style="margin:10rpx 0 16rpx;line-height:1.7">
-      扫码最省事——就是上面那个主按钮。要换一台电脑，先点「断开」，主按钮会变回「扫码连接电脑」。扫码不方便时用下面这些。
+      扫码最省事——就是上面那个主按钮；本机已经存过地址时，状态卡里也有「扫码连接电脑」，直接换一台就行。
     </view>
 
     <view wx:if="{{canDiscover}}" class="btn btn-ghost btn-block" bindtap="onDiscover" hover-class="btn-hover">{{discovering ? '正在搜索…' : '自动搜索电脑'}}</view>

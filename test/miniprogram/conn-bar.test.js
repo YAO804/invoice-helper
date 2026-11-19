@@ -70,10 +70,16 @@ const settingsJs = read('pages/settings/settings.js')
 check('状态卡排在第一块（先看状态再谈怎么改）',
   settingsWxml.indexOf('status-card') >= 0 && settingsWxml.indexOf('status-card') < settingsWxml.indexOf('card-t'), true)
 check('主按钮绑到 onPrimary', settingsWxml.indexOf('bindtap="onPrimary"') >= 0, true)
-check('断开只在有地址时出现', settingsWxml.indexOf('wx:if="{{hasBase}}"') >= 0, true)
+check('断开只在有地址时出现', settingsWxml.indexOf('{{hasBase') >= 0, true)
 check('断开要二次确认，别一键清掉', settingsJs.indexOf('onDisconnect') >= 0 && settingsJs.indexOf('断开这台电脑') >= 0, true)
 check('旧的「状态：已配置」不许回来', settingsWxml.indexOf('已配置') < 0, true)
 check('状态文案仍然来自 connect-hint', settingsJs.indexOf('hint.cardView') >= 0, true)
+// 只在「未连接」时给扫码，等于「连不上」时反而得先断开才能重扫——顺序反了
+check('存过地址就常驻重扫入口（不按状态藏按钮）',
+  settingsWxml.indexOf('bindtap="onScanConnect"') >= 0 &&
+  settingsWxml.indexOf("hasBase && status != 'none'") >= 0, true)
+check('断开仍在同一行（换电脑一步到位）',
+  settingsWxml.indexOf('bindtap="onDisconnect"') >= 0, true)
 
 console.log('\n--- 各页不再自己写一套状态 ---')
 const transferWxml = read('pages/transfer/transfer.wxml')

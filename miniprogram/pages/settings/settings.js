@@ -162,7 +162,8 @@ Page({
       return
     }
     lanservice.startAutoHeartbeat()
-    this.setData({ desktopUrl: url })
+    // 换了地址，上一条「已找到电脑：旧地址」就成了矛盾信息，一起清掉
+    this.setData({ desktopUrl: url, discoverTip: '' })
     wx.showToast({ title: '已保存', icon: 'none' })
     // 保存只是把地址写到本机，能不能用还得探一下，别让状态停在「已配置」
     this.refreshStatus()
@@ -309,6 +310,7 @@ Page({
     const ok = await lanservice.probe()
     this.applyStatus(ok ? 'ok' : 'fail')
     if (ok) {
+      this.setData({ discoverTip: '已连通 ' + hint.hostText(url) })
       wx.showToast({ title: '连接成功', icon: 'none' })
       return
     }

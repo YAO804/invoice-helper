@@ -207,6 +207,14 @@ async function main() {
   page.applyStatus('checking')
   check('检测中主按钮不可用', page.data.primaryLabel, '正在检测')
 
+  console.log('\n--- 测试连接：结果写回状态卡 ---')
+  page = newPage(); reset()
+  lanservice.probe = () => Promise.resolve(true)
+  page.setData({ desktopUrl: 'http://192.168.1.20:8765' })
+  await page.onTestDesktop()
+  check('状态变已连接', page.data.status, 'ok')
+  check('结果写在卡片上，不只在 toast 里', page.data.discoverTip, '已连通 192.168.1.20:8765')
+
   console.log('\n--- 断开连接：清地址、状态改口 ---')
   page = newPage(); reset()
   storage.desktop_base_url = 'http://192.168.1.20:8765'
