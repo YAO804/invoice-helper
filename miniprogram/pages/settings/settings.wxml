@@ -1,27 +1,59 @@
 <view class="page">
 
-  <view class="card">
-    <view class="card-t">桌面端连接与登录</view>
-    <view class="tiny muted" style="margin:8rpx 0 14rpx">首次使用：① 设置 PIN → ② 点「扫码连接电脑」扫网页上的二维码。扫登录码会同时连地址并授权浏览器，扫「连接小程序」里的码只连地址，一个按钮都认得。之后 PIN 自动带上，无感连接。</view>
+  <!--
+    状态卡放第一屏第一块：设置页要先回答「现在能不能收票」，再谈怎么改。
+    主按钮跟着状态换词，避免已连接时还在催「扫码连接电脑」。
+  -->
+  <view class="status-card t-{{statusTone}}">
+    <view class="status-head">
+      <view class="status-dot"></view>
+      <text class="status-title">{{statusTitle}}</text>
+    </view>
+    <view wx:if="{{statusHost}}" class="status-line status-host">{{statusHost}}</view>
+    <view wx:if="{{statusMeta}}" class="status-line">{{statusMeta}}</view>
+    <view class="btn-row" style="margin-top:20rpx">
+      <view class="btn {{status == 'checking' ? 'btn-off' : ''}}" bindtap="onPrimary" hover-class="{{status == 'checking' ? 'none' : 'btn-hover'}}">{{primaryLabel}}</view>
+      <view wx:if="{{hasBase}}" class="btn btn-grey" bindtap="onDisconnect" hover-class="btn-hover">断开</view>
+    </view>
+    <view wx:if="{{discoverTip}}" class="status-tip">{{discoverTip}}</view>
+  </view>
 
-    <view class="tiny muted" style="margin:6rpx 0 10rpx">登录 PIN：{{pinMask}}</view>
-    <view class="btn-row">
+  <view class="card">
+    <view class="card-t">登录 PIN</view>
+    <view class="tiny muted" style="margin:10rpx 0 16rpx;line-height:1.7">
+      连接时自动带上，不用每次输。改 PIN 之后，电脑网页那边的登录会话会失效，需要重新扫码。
+    </view>
+    <view class="row small">
+      <text class="muted">当前</text>
+      <text>{{pinMask}}</text>
+    </view>
+    <view class="btn-row" style="margin-top:16rpx">
       <view class="btn" bindtap="onSetupPIN" hover-class="btn-hover">{{pinSet ? '重设本机 PIN' : '设置 PIN'}}</view>
       <view class="btn btn-ghost" bindtap="onChangePIN" hover-class="btn-hover">修改 PIN</view>
     </view>
+  </view>
 
-    <view wx:if="{{canDiscover}}" class="btn btn-block" style="margin-top:16rpx" bindtap="onDiscover" hover-class="btn-hover">{{discovering ? '正在搜索…' : '自动搜索电脑'}}</view>
-    <view wx:if="{{discovering}}" class="btn btn-block btn-ghost" style="margin-top:12rpx" bindtap="onCancelDiscover" hover-class="btn-hover">停止搜索</view>
-    <view class="btn btn-block" style="margin-top:12rpx" bindtap="onScanConnect" hover-class="btn-hover">{{scanning ? '正在扫码…' : '扫码连接电脑'}}</view>
-    <view wx:if="{{discoverTip}}" class="tiny muted" style="margin:10rpx 0">{{discoverTip}}</view>
+  <view class="card">
+    <view class="card-t">其它连接方式</view>
+    <view class="tiny muted" style="margin:10rpx 0 16rpx;line-height:1.7">
+      扫码最省事——就是上面那个主按钮。要换一台电脑，先点「断开」，主按钮会变回「扫码连接电脑」。扫码不方便时用下面这些。
+    </view>
+
+    <view wx:if="{{canDiscover}}" class="btn btn-ghost btn-block" bindtap="onDiscover" hover-class="btn-hover">{{discovering ? '正在搜索…' : '自动搜索电脑'}}</view>
+    <view wx:if="{{discovering}}" class="btn btn-ghost btn-block" style="margin-top:12rpx" bindtap="onCancelDiscover" hover-class="btn-hover">停止搜索</view>
+
     <view class="divider"></view>
     <view class="tiny muted" style="margin-bottom:12rpx">手动填地址（最后手段）：在电脑网页「连接小程序」里能看到可用地址。</view>
     <input class="input" value="{{desktopUrl}}" bindinput="onDesktopUrlInput" placeholder="http://192.168.1.20:8765" />
     <view class="btn-row" style="margin-top:16rpx">
-      <view class="btn" bindtap="onSaveDesktop" hover-class="btn-hover">保存地址</view>
+      <view class="btn btn-ghost" bindtap="onSaveDesktop" hover-class="btn-hover">保存地址</view>
       <view class="btn btn-ghost" bindtap="onTestDesktop" hover-class="btn-hover">测试连接</view>
     </view>
-    <view class="tiny muted" style="margin-top:12rpx">状态：{{desktopStatus}}</view>
+
+    <view class="divider"></view>
+    <view class="tiny muted" style="line-height:1.7">
+      首次使用：先在上面设一个 PIN → 点「扫码连接电脑」→ 扫电脑网页上的二维码。扫登录码会顺手授权网页，扫「连接小程序」里的码只连地址，一个按钮都认得。
+    </view>
   </view>
 
   <view class="card">

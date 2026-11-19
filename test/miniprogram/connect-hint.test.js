@@ -111,5 +111,24 @@ check('时间不会算成负数', hint.agoText(NOW, NOW + 60000), '刚刚')
 check('地址去掉协议和尾斜杠', hint.hostText('https://pc.local:9000/'), 'pc.local:9000')
 check('地址为空时不写', hint.hostText(''), '')
 
+console.log('\n--- 设置页状态卡 ---')
+check('未连接时主按钮是去扫码', hint.cardView('none').primary, '扫码连接电脑')
+check('未连接不显示地址（本来就没有）', hint.cardView('none').host, '')
+check('未连接说清缺什么', hint.cardView('none').meta, '扫码收票前要先连上电脑')
+check('已连接时主按钮改成重新检测', hint.cardView('ok').primary, '重新检测')
+check('已连接把地址单独一行',
+  hint.cardView('ok', { base: 'http://192.168.1.20:8765' }).host, '192.168.1.20:8765')
+check('已连接副行是张数与时间',
+  hint.cardView('ok', { count: 12, syncedAt: NOW - 3 * 60 * 1000, now: NOW }).meta, '12 张 · 3 分钟前')
+check('刚连上还没同步时不说「还没同步过」',
+  hint.cardView('ok', { base: 'http://192.168.1.20:8765' }).meta, '电脑有响应')
+check('连不上用警示色', hint.cardView('fail').tone, 'bad')
+check('连不上时地址仍要留着（好让人核对）',
+  hint.cardView('fail', { base: 'http://192.168.1.20:8765' }).host, '192.168.1.20:8765')
+check('连不上给出排查方向', hint.cardView('fail').meta.indexOf('同一个 Wi-Fi') >= 0, true)
+check('连接中主按钮不可用（点也白点）', hint.cardView('checking').primary, '正在检测')
+check('卡片与状态条说同一句话', hint.cardView('ok').title, hint.barView('ok').badge)
+check('连不上时也与状态条一致', hint.cardView('fail').title, hint.barView('fail').badge)
+
 console.log(failCount === 0 ? '\n全部通过' : '\n失败 ' + failCount + ' 项')
 process.exit(failCount === 0 ? 0 : 1)

@@ -1,6 +1,7 @@
 const lanservice = require('../../utils/lanservice')
 const discover = require('../../utils/discover')
 const auth = require('../../utils/auth')
+const ledger = require('../../utils/ledger')
 const hint = require('../../utils/connect-hint')
 
 /** 弹输入框要 PIN；取消或位数不够都返回空串，由调用方决定怎么提示 */
@@ -32,7 +33,13 @@ function isCancelled(error) {
 Page({
   data: {
     desktopUrl: '',
-    desktopStatus: '未配置',
+    status: 'none',
+    statusTone: 'warn',
+    statusTitle: '未连接电脑',
+    statusHost: '',
+    statusMeta: '',
+    primaryLabel: '扫码连接电脑',
+    hasBase: false,
     canDiscover: false,
     discovering: false,
     scanning: false,
@@ -44,10 +51,78 @@ Page({
   onShow() {
     const url = lanservice.getBase()
     this.refreshPINStatus()
+    this.setData({ canDiscover: discover.supported(), desktopUrl: url })
+    this.refreshStatus()
+  },
+
+  /**
+   * 状态只能由真实请求改写。以前这里写的是「状态：已配置」——那只是说
+   * 存过地址，电脑关机、换了 WiFi 照样显示已配置，用户看着这行字根本
+   * 判断不出能不能收票。
+   */
+  refreshStatus() {
+    const base = lanservice.getBase()
+    if (!base) {
+      this.applyStatus('none')
+      return Promise.resolve(false)
+    }
+    this.applyStatus('checking')
+    const that = this
+    return lanservice.probe().then(function (ok) {
+      that.applyStatus(ok ? 'ok' : 'fail')
+      return ok
+    })
+  },
+
+  /** 张数与同步时间取自台账内存镜像：别的页面同步过就顺手显示，不必再拉一次 */
+  applyStatus(status) {
+    const base = lanservice.getBase()
+    const snap = status === 'ok' ? ledger.snapshot() : { total: 0, syncedAt: 0 }
+    const view = hint.cardView(status, {
+      base: base,
+      count: snap.total,
+      syncedAt: snap.syncedAt,
+      now: Date.now()
+    })
     this.setData({
-      desktopUrl: url,
-      desktopStatus: url ? '已配置' : '未配置',
-      canDiscover: discover.supported()
+      status: status,
+      statusTone: view.tone,
+      statusTitle: view.title,
+      statusHost: view.host,
+      statusMeta: view.meta,
+      primaryLabel: view.primary,
+      hasBase: !!base
+    })
+  },
+
+  /** 状态卡上那个主按钮：没连上就是去连，连上或连不上就是重新探一次 */
+  onPrimary() {
+    if (this.data.status === 'checking') return
+    if (this.data.status === 'none') return this.onScanConnect()
+    this.onRetry()
+  },
+
+  /** 断开只清本机记的地址，电脑端数据一概不动 */
+  onDisconnect() {
+    const that = this
+    wx.showModal({
+      title: '断开这台电脑？',
+      content: '只清掉本机记的地址，电脑端的发票和文件都不受影响。要恢复收票得重新扫码或搜索。',
+      confirmText: '断开',
+      success(res) {
+        if (!res.confirm) return
+        lanservice.setBase('')
+        that.setData({ desktopUrl: '', discoverTip: '已断开电脑' })
+        that.applyStatus('none')
+        wx.showToast({ title: '已断开', icon: 'none' })
+      }
+    })
+  },
+
+  onRetry() {
+    if (this.data.status === 'checking') return
+    this.refreshStatus().then(function (ok) {
+      if (ok) wx.showToast({ title: '电脑有响应', icon: 'none' })
     })
   },
 
@@ -82,13 +157,15 @@ Page({
   onSaveDesktop() {
     const url = lanservice.setBase(this.data.desktopUrl)
     if (!url) {
-      this.setData({ desktopStatus: '未配置' })
+      this.applyStatus('none')
       wx.showToast({ title: '请先填写地址', icon: 'none' })
       return
     }
     lanservice.startAutoHeartbeat()
-    this.setData({ desktopUrl: url, desktopStatus: '已配置' })
+    this.setData({ desktopUrl: url })
     wx.showToast({ title: '已保存', icon: 'none' })
+    // 保存只是把地址写到本机，能不能用还得探一下，别让状态停在「已配置」
+    this.refreshStatus()
   },
 
   async onDiscover() {
@@ -98,10 +175,10 @@ Page({
       const url = await lanservice.autoConnect({ settleMs: 2500 })
       this.setData({
         desktopUrl: url,
-        desktopStatus: '已自动连接',
         discoverTip: '已找到电脑：' + url,
         discovering: false
       })
+      this.applyStatus('ok')
       wx.showToast({ title: '已自动连接', icon: 'none' })
     } catch (e) {
       if (isCancelled(e)) {
@@ -134,12 +211,12 @@ Page({
       lanservice.startAutoHeartbeat()
       this.setData({
         desktopUrl: base,
-        desktopStatus: login ? '已扫码登录' : '已扫码连接',
         discoverTip: login
           ? '已连接并登录电脑网页，可切到浏览器查看'
           : '已连接电脑：' + base + '；如需登录网页，请扫电脑网页登录二维码',
         scanning: false
       })
+      this.applyStatus('ok')
       wx.showToast({ title: login ? '连接并登录成功' : '已连接电脑', icon: 'none' })
     } catch (e) {
       if (isCancelled(e)) {
@@ -221,21 +298,21 @@ Page({
     })
   },
 
+  /** 测的是「电脑通不通」，用不带 PIN 的探活；PIN 错属于另一件事，别混成连不上 */
   async onTestDesktop() {
     const url = lanservice.setBase(this.data.desktopUrl)
     if (!url) {
       wx.showToast({ title: '请先填写地址', icon: 'none' })
       return
     }
-    this.setData({ desktopUrl: url, desktopStatus: '测试中' })
-    try {
-      await lanservice.heartbeat()
-      this.setData({ desktopStatus: '连接成功' })
+    this.setData({ desktopUrl: url })
+    const ok = await lanservice.probe()
+    this.applyStatus(ok ? 'ok' : 'fail')
+    if (ok) {
       wx.showToast({ title: '连接成功', icon: 'none' })
-    } catch (e) {
-      this.setData({ desktopStatus: '连接失败' })
-      wx.showToast({ title: e.message || '连接失败', icon: 'none' })
+      return
     }
+    this.showConnectFailure('连不上 ' + hint.hostText(url))
   },
 
   onExport() {

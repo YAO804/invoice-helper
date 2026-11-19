@@ -161,7 +161,8 @@ function barView(status, opts) {
   if (status === 'ok') {
     const parts = []
     if (o.count) parts.push(o.count + ' 张')
-    parts.push(agoText(o.now || Date.now(), o.syncedAt))
+    // 没同步过台账（比如在设置页刚连上）就别硬报「还没同步过」，说电脑有响应即可
+    parts.push(o.syncedAt ? agoText(o.now || Date.now(), o.syncedAt) : '电脑有响应')
     return { tone: 'ok', badge: '已连接', detail: parts.join(' · '), action: '' }
   }
   if (status === 'checking') {
@@ -178,11 +179,43 @@ function barView(status, opts) {
   return { tone: 'warn', badge: '未连接电脑', detail: '扫码收票前要先连上', action: '去连接' }
 }
 
+/**
+ * 设置页状态卡的视图模型。
+ *
+ * 和状态条共用同一套四态与配色，但版面更宽，所以拆成三行：
+ * 大字结论、地址、一句细节。主按钮也跟着状态换词——已连接时继续把
+ * 「扫码连接电脑」当主按钮，等于一直在催用户去连一个已经连上的东西。
+ */
+function cardView(status, opts) {
+  const o = opts || {}
+  const host = hostText(o.base)
+  if (status === 'ok') {
+    const parts = []
+    if (o.count) parts.push(o.count + ' 张')
+    parts.push(o.syncedAt ? agoText(o.now || Date.now(), o.syncedAt) : '电脑有响应')
+    return { tone: 'ok', title: '已连接', host: host, meta: parts.join(' · '), primary: '重新检测' }
+  }
+  if (status === 'checking') {
+    return { tone: 'idle', title: '正在连电脑', host: host, meta: '正在确认电脑有没有响应…', primary: '正在检测' }
+  }
+  if (status === 'fail') {
+    return {
+      tone: 'bad',
+      title: '连不上电脑',
+      host: host,
+      meta: '确认电脑端程序还开着、手机和电脑在同一个 Wi-Fi',
+      primary: '重新检测'
+    }
+  }
+  return { tone: 'warn', title: '未连接电脑', host: '', meta: '扫码收票前要先连上电脑', primary: '扫码连接电脑' }
+}
+
 module.exports = {
   failureTip: failureTip,
   statusView: statusView,
   viewState: viewState,
   barView: barView,
+  cardView: cardView,
   agoText: agoText,
   hostText: hostText
 }

@@ -116,7 +116,7 @@ async function main() {
   await page.onScanConnect()
   check('确认登录请求', confirmCalls, [{ base: 'http://192.168.1.20:8765', code: 'abc123' }])
   check('地址写入页面', page.data.desktopUrl, 'http://192.168.1.20:8765')
-  check('状态显示登录', page.data.desktopStatus, '已扫码登录')
+  check('状态改成已连接', page.data.status, 'ok')
   check('成功文案', toasts[0] && toasts[0].title, '连接并登录成功')
   check('心跳已启动', heartbeatCount, 1)
   check('扫码状态已复位', page.data.scanning, false)
@@ -138,7 +138,7 @@ async function main() {
   await page.onScanConnect()
   check('不请求登录', confirmCalls.length, 0)
   check('地址写入页面', page.data.desktopUrl, 'http://192.168.1.21:8765')
-  check('状态显示连接', page.data.desktopStatus, '已扫码连接')
+  check('状态改成已连接', page.data.status, 'ok')
   check('提示还要扫登录码', page.data.discoverTip.indexOf('如需登录网页') > 0, true)
   check('成功文案', toasts[0] && toasts[0].title, '已连接电脑')
 
@@ -191,6 +191,39 @@ async function main() {
   check('没弹失败框', failureModal().title, '设置 PIN')
   check('取消文案', page.data.discoverTip, '已取消扫码登录')
   check('没有发起登录请求', confirmCalls.length, 0)
+  console.log('\n--- 主按钮跟着状态换词 ---')
+  page = newPage(); reset()
+  storage.desktop_base_url = 'http://192.168.1.20:8765'
+  page.applyStatus('none')
+  check('没连上时主按钮是去扫码', page.data.primaryLabel, '扫码连接电脑')
+  page.applyStatus('ok')
+  check('已连接时主按钮变重新检测', page.data.primaryLabel, '重新检测')
+  check('已连接时才给断开入口', page.data.hasBase, true)
+  check('大字结论是已连接', page.data.statusTitle, '已连接')
+  check('地址单独一行', page.data.statusHost, '192.168.1.20:8765')
+  page.applyStatus('fail')
+  check('连不上时主按钮仍是重新检测', page.data.primaryLabel, '重新检测')
+  check('连不上也要留住地址', page.data.statusHost, '192.168.1.20:8765')
+  page.applyStatus('checking')
+  check('检测中主按钮不可用', page.data.primaryLabel, '正在检测')
+
+  console.log('\n--- 断开连接：清地址、状态改口 ---')
+  page = newPage(); reset()
+  storage.desktop_base_url = 'http://192.168.1.20:8765'
+  modalAnswer = { confirm: true }
+  page.onDisconnect()
+  check('本机地址已清空', lanservice.getBase(), '')
+  check('状态回到未连接', page.data.status, 'none')
+  check('主按钮回到扫码', page.data.primaryLabel, '扫码连接电脑')
+  check('输入框同步清空', page.data.desktopUrl, '')
+  check('结果写在状态卡上', page.data.discoverTip, '已断开电脑')
+
+  console.log('\n--- 断开确认框点取消：什么都不动 ---')
+  page = newPage(); reset()
+  storage.desktop_base_url = 'http://192.168.1.20:8765'
+  modalAnswer = { confirm: false }
+  page.onDisconnect()
+  check('地址还在', lanservice.getBase(), 'http://192.168.1.20:8765')
 }
 
 main().catch((error) => {

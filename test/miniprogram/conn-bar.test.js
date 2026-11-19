@@ -60,9 +60,20 @@ pages.forEach(function (rel) {
   check(path.dirname(rel) + ' 把 status 传下去', /<conn-bar[^>]*status=/.test(wxml), true)
 })
 
-// 详情页数据由台账页带过来，不需要单独探活；设置页本身就是连接页，顶部再挂一条只是重复
+// 详情页数据由台账页带过来，不需要单独探活；设置页本身就是连接页，顶部再挂一条状态条只是重复
 check('详情页不挂状态条', read('pages/detail/detail.wxml').indexOf('<conn-bar') < 0, true)
 check('设置页不挂状态条', read('pages/settings/settings.wxml').indexOf('<conn-bar') < 0, true)
+
+console.log('\n--- 设置页的状态卡 ---')
+const settingsWxml = read('pages/settings/settings.wxml')
+const settingsJs = read('pages/settings/settings.js')
+check('状态卡排在第一块（先看状态再谈怎么改）',
+  settingsWxml.indexOf('status-card') >= 0 && settingsWxml.indexOf('status-card') < settingsWxml.indexOf('card-t'), true)
+check('主按钮绑到 onPrimary', settingsWxml.indexOf('bindtap="onPrimary"') >= 0, true)
+check('断开只在有地址时出现', settingsWxml.indexOf('wx:if="{{hasBase}}"') >= 0, true)
+check('断开要二次确认，别一键清掉', settingsJs.indexOf('onDisconnect') >= 0 && settingsJs.indexOf('断开这台电脑') >= 0, true)
+check('旧的「状态：已配置」不许回来', settingsWxml.indexOf('已配置') < 0, true)
+check('状态文案仍然来自 connect-hint', settingsJs.indexOf('hint.cardView') >= 0, true)
 
 console.log('\n--- 各页不再自己写一套状态 ---')
 const transferWxml = read('pages/transfer/transfer.wxml')
