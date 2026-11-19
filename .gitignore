@@ -13,3 +13,6 @@ desktop/data/*
 desktop/bin/
 desktop/config.local.json
 desktop/*.exe
+
+# 发布包（编译产物 + 打包 zip），不进版本库
+release/
