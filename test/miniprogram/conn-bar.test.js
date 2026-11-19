@@ -80,6 +80,10 @@ check('存过地址就常驻重扫入口（不按状态藏按钮）',
   settingsWxml.indexOf("hasBase && status != 'none'") >= 0, true)
 check('断开仍在同一行（换电脑一步到位）',
   settingsWxml.indexOf('bindtap="onDisconnect"') >= 0, true)
+// 三个动作拆两行会多占一行高度；合并后靠 status-actions 收紧内边距才放得下
+check('三个动作共用一行（status-actions）', settingsWxml.indexOf('status-actions') >= 0, true)
+check('收紧内边距的样式有定义',
+  read('pages/settings/settings.wxss').indexOf('.status-actions .btn') >= 0, true)
 
 console.log('\n--- 各页不再自己写一套状态 ---')
 const transferWxml = read('pages/transfer/transfer.wxml')

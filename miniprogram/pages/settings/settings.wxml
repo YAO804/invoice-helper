@@ -11,17 +11,15 @@
     </view>
     <view wx:if="{{statusHost}}" class="status-line status-host">{{statusHost}}</view>
     <view wx:if="{{statusMeta}}" class="status-line">{{statusMeta}}</view>
-    <view class="btn-row" style="margin-top:20rpx">
-      <view class="btn {{status == 'checking' ? 'btn-off' : ''}}" bindtap="onPrimary" hover-class="{{status == 'checking' ? 'none' : 'btn-hover'}}">{{primaryLabel}}</view>
-    </view>
     <!--
-      只要本机存着地址，重扫入口就必须一直在。之前只在「未连接」时给扫码，
-      结果是「连不上」（地址填错、换了电脑、电脑换了 IP）反而得先断开才能重扫——
-      而这恰恰是最想重扫的时候。
+      三个动作放同一行：主按钮 + 「扫码连接电脑 / 断开」。
+      扫码入口不许只在「未连接」时出现——连不上（端口填错、换了电脑、电脑换 IP）
+      恰恰是最想重扫的时候，那时还要先断开就反了。
     -->
-    <view wx:if="{{hasBase && status != 'none'}}" class="btn-row" style="margin-top:4rpx">
-      <view class="btn btn-grey" bindtap="onScanConnect" hover-class="btn-hover">扫码连接电脑</view>
-      <view class="btn btn-grey" bindtap="onDisconnect" hover-class="btn-hover">断开</view>
+    <view class="btn-row status-actions" style="margin-top:20rpx">
+      <view class="btn {{status == 'checking' ? 'btn-off' : ''}}" bindtap="onPrimary" hover-class="{{status == 'checking' ? 'none' : 'btn-hover'}}">{{primaryLabel}}</view>
+      <view wx:if="{{hasBase && status != 'none'}}" class="btn btn-grey" bindtap="onScanConnect" hover-class="btn-hover">扫码连接电脑</view>
+      <view wx:if="{{hasBase && status != 'none'}}" class="btn btn-grey" bindtap="onDisconnect" hover-class="btn-hover">断开</view>
     </view>
     <view wx:if="{{discoverTip}}" class="status-tip">{{discoverTip}}</view>
   </view>

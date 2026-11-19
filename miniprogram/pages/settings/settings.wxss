@@ -41,6 +41,17 @@
   word-break: break-all;
 }
 
+/*
+ * 「重新检测 / 扫码连接电脑 / 断开」挤一行。
+ * 默认 16rpx 30rpx 的内边距加起来要 524rpx，虽然放得下但很挤；
+ * 收到 14rpx 22rpx 后约 476rpx，702rpx 的内容宽里留出余量。
+ * 不改成等宽 flex:1——「断开」两个字不该和六字按钮一样宽。
+ */
+.status-actions .btn {
+  padding: 14rpx 22rpx;
+  white-space: nowrap;
+}
+
 .status-host { font-family: Menlo, Consolas, monospace; }
 
 /* 上一次操作的结果（扫错码、已停止搜索…）：跟在按钮下面，不另开一块 */
