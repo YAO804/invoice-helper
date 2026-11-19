@@ -54,6 +54,7 @@ function makeNode(tag) {
       return { top: 100, bottom: 130, left: 200, width: 240, height: 30 }
     },
     contains(target) { return target === node },
+    closest() { return null },
     appendChild(child) { node.children.push(child); return child },
     dispatchEvent(event) { node.dispatch(event.type, event) },
     focus() { node.focused = true },
@@ -64,6 +65,7 @@ function makeNode(tag) {
 
 const body = makeNode('body')
 const created = []
+const docListeners = {}
 global.document = {
   body,
   createElement(tag) {
@@ -71,7 +73,15 @@ global.document = {
     created.push(node)
     return node
   },
-  addEventListener() {}
+  addEventListener(type, fn) { (docListeners[type] = docListeners[type] || []).push(fn) }
+}
+/** 模拟文档上的 scroll（捕获阶段）：target 是谁决定浮层收不收 */
+function fireScroll(target) {
+  (docListeners.scroll || []).forEach((fn) => fn({ target }))
+}
+/** 模拟松开鼠标（捕获阶段），解除「正按着浮层」的锁定 */
+function firePointerUp() {
+  (docListeners.pointerup || []).forEach((fn) => fn({}))
 }
 global.window = { innerHeight: 800, addEventListener() {} }
 global.Event = class { constructor(type) { this.type = type } }
@@ -162,5 +172,34 @@ setSuggestValues('reimburser', ['只有我'])
 check('数据刷新后已展开的浮层同步', panel.innerHTML.indexOf('只有我') >= 0, true)
 check('旧值被替换', panel.innerHTML.indexOf('A1'), -1)
 
-console.log('\n' + (pass + ' passed, ' + fail + ' failed'))
-process.exit(fail ? 1 : 0)
+console.log('\n--- 浮层自己滚动不能把浮层收掉 ---')
+// scroll 不冒泡，但捕获阶段会经过 document；之前无条件 closeSuggest，
+// 于是拖浮层自己的滚动条（或滚轮滚列表）浮层立刻消失，看起来就是「滑块拖不动」
+setSuggestValues('reimburser', ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'])
+input.value = ''
+input.dispatch('focus')
+check('先展开', panel.hidden, false)
+fireScroll(panel)
+check('浮层内部滚动（拖自己的滚动条）不收起', panel.hidden, false)
+fireScroll(panel)
+check('连续滚动仍然保持展开', panel.hidden, false)
+fireScroll(makeNode('div'))
+check('页面/弹窗滚动仍要收起（否则浮层跟输入框错位）', panel.hidden, true)
+
+// 拖浮层自己的滚动条必然让输入框失焦，失焦后 120ms 收起同样会把浮层收掉
+console.log('\n--- 按住浮层时失焦不收 ---')
+input.dispatch('focus')
+check('先展开', panel.hidden, false)
+panel.dispatch('pointerdown', { target: panel, preventDefault() {} })
+input.dispatch('blur')
+
+setTimeout(function () {
+  check('按在滚动条上失焦后浮层仍在', panel.hidden, false)
+  firePointerUp()
+  input.dispatch('blur')
+  setTimeout(function () {
+    check('松手后失焦恢复正常收起', panel.hidden, true)
+    console.log('\n' + (pass + ' passed, ' + fail + ' failed'))
+    process.exit(fail ? 1 : 0)
+  }, 200)
+}, 200)

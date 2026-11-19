@@ -3,6 +3,7 @@ let selectedInvoices = new Set()
 let pendingImportFile = null
 let invoiceSearchTimer = null
 let editingId = 0
+let editingIssueRaw = ''   // 选择器认不出的旧开票日期原文，用户没重挑就原样存回
 
 const EDIT_FIELDS = [
   ['number', 'editNumber'], ['code', 'editCode'], ['kind', 'editKind'],
@@ -319,20 +320,44 @@ async function confirmBatchReimburser() {
 /** 补录与新增复用同一个弹窗：editingId 为 0 表示新增 */
 function openForm(item) {
   EDIT_FIELDS.forEach(([field, id]) => { $(id).value = (item && item[field]) || '' })
+  // 开票日期是原生日期选择器，只认 YYYY-MM-DD。台账里存的是无格式约束的字符串
+  // （Excel 导入常见 2024/10/28、20241028，也有 111111 这种脏数据），直接塞给
+  // 选择器会显示成空——所以先归一，认不出的原文记下来，保存时不能丢。
+  const raw = (item && item.issue_date) || ''
+  $('editIssueDate').value = dateInputValue(raw)
+  editingIssueRaw = dateInputValue(raw) ? '' : raw
   editingId = item ? item.id : 0
   $('editModalTitle').textContent = item ? '补录发票信息' : '新增发票'
   $('saveEditBtn').textContent = item ? '保存补录' : '保存新增'
   $('invoiceEditModal').hidden = false
 }
 
+/** 日期选择器只认 YYYY-MM-DD；常见的 2024/10/28、2024.10.28、20241028 先归一 */
+function dateInputValue(value) {
+  const text = String(value || '').trim()
+  if (!text) return ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text
+  const digits = text.replace(/\D/g, '')
+  if (digits.length !== 8) return ''
+  return digits.slice(0, 4) + '-' + digits.slice(4, 6) + '-' + digits.slice(6)
+}
+
+/** 用户挑了新日期就用新的；没挑且旧值认不出，就原样存回（换控件不抹老数据） */
+function dateSaveValue(raw, picked) {
+  if (picked) return picked
+  return dateInputValue(raw) ? '' : String(raw || '').trim()
+}
+
 function closeEdit() {
   editingId = 0
+  editingIssueRaw = ''
   $('invoiceEditModal').hidden = true
 }
 
 async function saveEdit() {
   const payload = {}
   EDIT_FIELDS.forEach(([field, id]) => { payload[field] = ($(id).value || '').trim() })
+  payload.issue_date = dateSaveValue(editingIssueRaw, payload.issue_date)
   if (!payload.number) return alert('发票号码不能为空')
 
   const creating = !editingId

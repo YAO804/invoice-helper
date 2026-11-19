@@ -23,6 +23,7 @@ let suggestOwner = null
 let suggestKey = ''
 let suggestFilter = false   // 打字才按输入内容过滤；单纯点进来应该看到全部历史值
 let suggestPicking = false  // 正在回填选中值，别把这次赋值当成「用户又在打字」
+let suggestHeld = false     // 鼠标按在浮层上（含拖滚动条）：输入框会失焦，但浮层不能收
 
 /** 台账数据变化后刷新某一类建议 */
 function setSuggestValues(key, values) {
@@ -50,15 +51,25 @@ function ensureSuggestPanel() {
   // 用 pointerdown 抢在输入框 blur 之前选中：输入框不会先失焦，
   // 行内编辑的「失焦即保存」也就不会把半截输入存下去。
   suggestPanel.addEventListener('pointerdown', (event) => {
+    // 按在浮层任意位置都先记一笔：拖滚动条、点空白都会让输入框失焦，
+    // 失焦后 120ms 收起会把浮层连同滚动条一起收掉，看着就是「滑块拖不动」
+    suggestHeld = true
     const item = event.target.closest('.suggest-item')
     if (!item) return
     event.preventDefault()
     pickSuggest(item.dataset.value)
   })
+  // 松手就解除，之后点别处仍按正常逻辑收起
+  document.addEventListener('pointerup', () => { suggestHeld = false }, true)
 
   window.addEventListener('resize', closeSuggest)
-  // 表格/弹窗一滚动浮层就会跟输入框错位，直接收起比跟着飘更省事
-  document.addEventListener('scroll', closeSuggest, true)
+  // 表格/弹窗一滚动浮层就会跟输入框错位，直接收起比跟着飘更省事。
+  // 但浮层自己滚动（历史值超过 8 条、列表超高的那种）不算——scroll 不冒泡，
+  // 却在捕获阶段经过 document，不排除掉的话一拖滚动条就把浮层收没了。
+  document.addEventListener('scroll', (event) => {
+    if (suggestPanel && suggestPanel.contains(event.target)) return
+    closeSuggest()
+  }, true)
   document.addEventListener('pointerdown', (event) => {
     if (!suggestPanel || suggestPanel.hidden) return
     if (suggestPanel.contains(event.target) || event.target === suggestOwner) return
@@ -109,12 +120,17 @@ function closeSuggest() {
   suggestActive = -1
   suggestOwner = null
   suggestKey = ''
+  suggestHeld = false
 }
 
 function markActive() {
   if (!suggestPanel) return
   Array.prototype.forEach.call(suggestPanel.children, (item, index) => {
-    item.classList.toggle('active', index === suggestActive)
+    const active = index === suggestActive
+    item.classList.toggle('active', active)
+    // 列表最高 216px，8 条装不下。键盘往下走到看不见的项要跟着滚，
+    // 否则高亮移到了视口外，屏幕上没变化，用户会以为方向键坏了。
+    if (active && item.scrollIntoView) item.scrollIntoView({ block: 'nearest' })
   })
 }
 
@@ -182,6 +198,9 @@ function attachSuggest(input, key) {
     showSuggest(input, key, true)
   })
   input.addEventListener('keydown', (event) => suggestKeydown(event, input, key))
-  // 失焦后等一下再收：否则点浮层里的选项时浮层先消失，点了个寂寞
-  input.addEventListener('blur', () => setTimeout(closeSuggest, 120))
+  // 失焦后等一下再收：否则点浮层里的选项时浮层先消失，点了个寂寞；
+  // 正按着浮层（拖滚动条）更不能收，那时输入框必然已经失焦
+  input.addEventListener('blur', () => setTimeout(() => {
+    if (!suggestHeld) closeSuggest()
+  }, 120))
 }

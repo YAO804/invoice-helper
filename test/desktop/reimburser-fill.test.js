@@ -145,6 +145,26 @@ async function batchEmptyClears() {
   check('传给接口的是空串', updates[0].payload.reimburser, '')
 }
 
+console.log('\n--- 开票日期用日期选择器 ---')
+// 原来是个文本框让用户手敲 YYYY-MM-DD：格式全靠自觉，敲成 2024/10/28 之后
+// 后端按字符串比较日期筛选就悄悄失效。换成原生日期选择器，只到天。
+const html = fs.readFileSync(path.join(WEB, 'index.html'), 'utf8')
+check('开票日期是原生日期选择器', /id="editIssueDate"[^>]*type="date"/.test(html), true)
+check('不再留手输格式提示', /id="editIssueDate"[^>]*placeholder/.test(html), false)
+
+// 选择器只认 YYYY-MM-DD，台账里却存着 Excel 导入的原样字符串
+check('已经是 ISO 的原样返回', dateInputValue('2026-11-18'), '2026-11-18')
+check('斜杠日期归一', dateInputValue('2024/10/28'), '2024-10-28')
+check('点号日期归一', dateInputValue('2024.10.28'), '2024-10-28')
+check('八位数字归一', dateInputValue('20241028'), '2024-10-28')
+check('带空白也认', dateInputValue('  2024/10/28  '), '2024-10-28')
+check('认不出的脏数据给空（选择器填不进去）', dateInputValue('111111'), '')
+check('空值给空', dateInputValue(''), '')
+// 填不进去的旧值不能被静默抹掉：用户没重挑就原样存回
+check('认不出的旧值保存时原样保留', dateSaveValue('111111', ''), '111111')
+check('用户重挑了就用新日期', dateSaveValue('111111', '2026-03-01'), '2026-03-01')
+check('用户清掉原本合法的日期就清空', dateSaveValue('2026-11-18', ''), '')
+
 batchNoSelection().then(batchFillsAll).then(batchCancelKeepsData).then(batchEmptyClears).then(function () {
   console.log('\n' + (failCount === 0 ? '全部通过' : failCount + ' 项失败'))
   process.exit(failCount === 0 ? 0 : 1)

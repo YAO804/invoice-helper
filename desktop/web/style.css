@@ -143,7 +143,9 @@ input[type="text"] { min-width: 180px; }
   position: fixed;
   z-index: 70;
   padding: 4px;
-  max-height: 216px;
+  /* 一条 33px 左右，8 条（SUGGEST_MAX）+ 内边距刚好放下：默认不用滚也能看全，
+     真出现滚动时由 suggest.js 的滚动监听放行，不再一拖就收 */
+  max-height: 280px;
   overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--border);
