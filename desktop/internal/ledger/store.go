@@ -6,12 +6,14 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 type Store struct {
-	path      string
-	backupDir string
-	mu        sync.Mutex
+	path         string
+	backupDir    string
+	backupPolicy BackupPolicy
+	mu           sync.Mutex
 }
 
 func New(dataDir string) (*Store, error) {
@@ -27,9 +29,15 @@ func New(dataDir string) (*Store, error) {
 		return nil, err
 	}
 	return &Store{
-		path:      filepath.Join(dataDir, FileName),
-		backupDir: backupDir,
+		path:         filepath.Join(dataDir, FileName),
+		backupDir:    backupDir,
+		backupPolicy: DefaultBackupPolicy(0),
 	}, nil
+}
+
+// SetBackupPolicy 由启动配置注入；不设置时用默认保留期。
+func (s *Store) SetBackupPolicy(policy BackupPolicy) {
+	s.backupPolicy = policy
 }
 
 func (s *Store) Path() string {
@@ -69,7 +77,14 @@ func (s *Store) save(list []Invoice) error {
 	if err != nil {
 		return err
 	}
-	return replaceFile(tmp, s.path)
+	if err := replaceFile(tmp, s.path); err != nil {
+		return err
+	}
+
+	// 备份清理是附带动作：台账已经写成功了，不能因为清理失败把这次写入报成失败。
+	// 每写一次都会重试，暂时删不掉的旧备份下一轮还能删。
+	_, _ = pruneBackups(s.backupDir, time.Now(), s.backupPolicy)
+	return nil
 }
 
 func (s *Store) All() ([]Invoice, error) {

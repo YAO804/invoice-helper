@@ -23,6 +23,7 @@ func NewServer(cfg config.Config) (http.Handler, *files.Store, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	invoiceLedger.SetBackupPolicy(ledger.DefaultBackupPolicy(cfg.BackupKeepDays))
 
 	deviceRegistry, err := registry.New(cfg.DataDir)
 	if err != nil {

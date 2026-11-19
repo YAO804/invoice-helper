@@ -2,7 +2,6 @@ package ledger
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,7 +16,6 @@ func (s *Store) backup() error {
 		return err
 	}
 
-	now := time.Now()
-	name := fmt.Sprintf("invoices-%s-%03d.csv", now.Format("20060102-150405"), now.Nanosecond()/1000000)
+	name := backupName(time.Now())
 	return os.WriteFile(filepath.Join(s.backupDir, name), content, 0644)
 }
