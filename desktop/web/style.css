@@ -211,10 +211,17 @@ input[type="text"] { min-width: 180px; }
 .address-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 10px; margin: 12px 0; }
 .address-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; background: var(--canvas); }
 .address-label { font-size: 13px; color: #57606a; margin-bottom: 4px; }
-/* 扫码连接：二维码固定 160px，地址可能很长，允许换行不撑破卡片 */
+/* 扫码连接：二维码放大到 240px，手机一举就能扫中；地址可能很长，允许换行不撑破卡片 */
 .connect-box { display: flex; align-items: center; gap: 16px; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 12px 0; background: var(--canvas); }
-.connect-qr { flex: none; width: 160px; height: 160px; padding: 6px; background: #fff; border: 1px solid var(--border); border-radius: 6px; image-rendering: pixelated; }
+.connect-qr { flex: none; width: 240px; height: 240px; padding: 6px; background: #fff; border: 1px solid var(--border); border-radius: 6px; image-rendering: pixelated; }
 .connect-info { display: grid; gap: 6px; min-width: 0; }
+
+/* 新手引导：三步列表放在登录卡和首个连接卡上，扫读比一段话快 */
+.steps { margin: 12px 0 16px; padding: 0 0 0 22px; text-align: left; font-size: 13px; line-height: 1.9; color: var(--text); }
+.steps li { margin: 4px 0; }
+.steps strong { color: var(--accent); }
+.login-card .steps { margin: 16px 0 20px; }
+.connect-card { border-color: var(--accent-soft); background: linear-gradient(180deg, #f6fbff, var(--surface) 120px); }
 .connect-info code { display: block; overflow-wrap: anywhere; font-size: 12px; color: var(--muted); }
 code { background: var(--canvas); padding: 2px 5px; border-radius: 4px; }
 .drop-zone { border: 2px dashed #a7d3f7; border-radius: 8px; padding: 24px; text-align: center; background: #f6fbff; margin-bottom: 12px; }
@@ -533,6 +540,9 @@ tbody tr:last-child td { border-bottom: 0; }
   .stat-grid, .grid, .filter-grid { grid-template-columns: 1fr; }
   .progress-row { grid-template-columns: 1fr; }
   .progress-text { text-align: left; }
+  /* 240px 二维码在窄屏会和地址挤成一列，改成上下排布 */
+  .connect-box { flex-direction: column; align-items: flex-start; }
+  .connect-qr { width: 200px; height: 200px; }
 }
 
 /* ---------- Login mask ---------- */
