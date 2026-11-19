@@ -54,10 +54,10 @@ vm.runInThisContext(fs.readFileSync(path.join(WEB, 'ledger-app.js'), 'utf8'), { 
 const params = () => vm.runInThisContext('buildInvoiceParams()')
 
 console.log('--- 查询参数 ---')
-// 空面板只带排序
+// 空面板只带排序和分页（分页是常驻参数，不受筛选影响）
 $('invSort').value = 'created'
 let p = params()
-check('空面板只有 sort', p.toString(), 'sort=created')
+check('空面板只有 sort 和分页', p.toString(), 'sort=created&page=1&page_size=20')
 
 // 录入时间起止
 $('invCreatedFrom').value = '2026-11-18'

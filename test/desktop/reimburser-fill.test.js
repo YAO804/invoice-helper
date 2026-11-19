@@ -84,56 +84,45 @@ const withoutName = reimburserCell({ id: 2, reimburser: '' })
 check('待补录不给复制按钮', withoutName.indexOf('reimburser-copy') >= 0, false)
 check('待补录仍可点击编辑', withoutName.indexOf('edit-reimburser') >= 0, true)
 
-console.log('\n--- 建议列表填充 ---')
-vm.runInThisContext("invoiceData = { items: [" +
-  "{ id: 1, reimburser: '张三', kind: '数电票' }," +
-  "{ id: 2, reimburser: '张三', kind: '普通发票' }," +
-  "{ id: 3, reimburser: '', kind: '数电票' }" +
-  '], duplicates: [] }')
+console.log('\n--- 建议池来自后端全表统计 ---')
+// 分页之后 items 只剩一页，建议池必须用后端按整份台账算好的那份。
+// 这里故意让 items 里一个报销人都没有，模拟翻到最后一页的情形。
+vm.runInThisContext("invoiceData = {" +
+  " items: [{ id: 3, reimburser: '', kind: '数电票' }]," +
+  " suggestions: {" +
+  "  reimburser: [{ value: '张三', count: 2, last_at: '2026-11-18 03:00:00' }]," +
+  "  kind: [{ value: '数电票', count: 2, last_at: '2026-11-18 03:00:00' }," +
+  "         { value: '普通发票', count: 1, last_at: '2026-11-18 02:00:00' }]" +
+  " }, duplicates: [] }")
 refreshSuggestions()
-check('报销人建议去重', suggestStore.reimburser, ['张三'])
-check('票种建议按出现次数排序（数电票 2 次在前）', suggestStore.kind, ['数电票', '普通发票'])
+check('当前页没有报销人，建议里仍有人名', suggestStore.reimburser, ['张三'])
+check('票种按整表次数排序（数电票 2 次在前）', suggestStore.kind, ['数电票', '普通发票'])
 check('建议不再塞进原生 datalist', elements.reimburserSuggestions, undefined)
 
 console.log('\n--- 建议排序：常用优先 ---')
 // 报销人一多，前 8 条就是全部能选的东西。按次数排能把常用的顶上来，
 // 误填进这一列的一次性脏值（截图里 1/111/122 那些）自然落到后面。
 vm.runInThisContext('suggestionPool.reimburser.clear(); suggestionPool.kind.clear()')
-vm.runInThisContext("invoiceData = { items: [" +
-  "{ id: 1, reimburser: '张三', kind: '', created_at: '2026-11-18T01:00:00Z' }," +
-  "{ id: 2, reimburser: '李四', kind: '', created_at: '2026-11-18T02:00:00Z' }," +
-  "{ id: 3, reimburser: '张三', kind: '', created_at: '2026-11-18T03:00:00Z' }," +
-  "{ id: 4, reimburser: '赵六', kind: '', created_at: '2026-11-19T01:00:00Z' }" +
-  '], duplicates: [] }')
+vm.runInThisContext("invoiceData = { items: [], suggestions: { reimburser: [" +
+  "{ value: '张三', count: 2, last_at: '2026-11-18 03:00:00' }," +
+  "{ value: '李四', count: 1, last_at: '2026-11-18 02:00:00' }," +
+  "{ value: '赵六', count: 1, last_at: '2026-11-19 01:00:00' }" +
+  "], kind: [] }, duplicates: [] }")
 refreshSuggestions()
 check('出现次数多的排最前', suggestStore.reimburser[0], '张三')
 check('次数相同时最近录入的在前', suggestStore.reimburser[1], '赵六')
 check('三条都在，没丢人', suggestStore.reimburser.length, 3)
 
-// 有筛选时结果只是子集，重建会把常用值冲掉，所以那时只合并不清理
-elements.invReimburser.value = '张三'
-vm.runInThisContext("invoiceData = { items: [" +
-  "{ id: 9, reimburser: '', kind: '', created_at: '2026-11-19T02:00:00Z' }" +
-  '], duplicates: [] }')
-refreshSuggestions()
-check('筛选时建议池不缩水', suggestStore.reimburser.length, 3)
-check('常用名仍在第一位', suggestStore.reimburser[0], '张三')
-elements.invReimburser.value = ''
-
 console.log('\n--- 改名后旧值要能消失 ---')
-// 没筛选时拿到的就是全量，池子按它重建：报销人改完名，旧名字不能赖在下拉里
-vm.runInThisContext("invoiceData = { items: [" +
-  "{ id: 1, reimburser: '旧名字', kind: '', created_at: '2026-11-18T01:00:00Z' }," +
-  "{ id: 2, reimburser: '旧名字', kind: '', created_at: '2026-11-18T02:00:00Z' }" +
-  '], duplicates: [] }')
+// 后端每次都按当前台账重算统计，所以池子整份重建是安全的：旧名字不会赖在下拉里
+vm.runInThisContext("invoiceData = { items: [], suggestions: { reimburser: [" +
+  "{ value: '旧名字', count: 2, last_at: '2026-11-18 02:00:00' }], kind: [] }, duplicates: [] }")
 refreshSuggestions()
 check('改名前的值在池子里', suggestStore.reimburser, ['旧名字'])
-vm.runInThisContext("invoiceData = { items: [" +
-  "{ id: 1, reimburser: '新名字', kind: '', created_at: '2026-11-18T01:00:00Z' }," +
-  "{ id: 2, reimburser: '新名字', kind: '', created_at: '2026-11-18T02:00:00Z' }" +
-  '], duplicates: [] }')
+vm.runInThisContext("invoiceData = { items: [], suggestions: { reimburser: [" +
+  "{ value: '新名字', count: 2, last_at: '2026-11-18 02:00:00' }], kind: [] }, duplicates: [] }")
 refreshSuggestions()
-check('全量刷新后旧值消失', suggestStore.reimburser, ['新名字'])
+check('后端换成新名字后旧值消失', suggestStore.reimburser, ['新名字'])
 check('新值出现', suggestStore.reimburser.indexOf('新名字'), 0)
 
 console.log('\n--- 批量填报销人 ---')

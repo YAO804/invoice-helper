@@ -7,6 +7,18 @@ let invoiceSearchTimer = null
 let editingId = 0
 let editingIssueRaw = ''   // 选择器认不出的旧开票日期原文，用户没重挑就原样存回
 
+/** 每页条数。两万行时一次全量返回 4.7MB，浏览器渲染直接卡住 */
+const INVOICE_PAGE_SIZE = 20
+let invoicePage = 1
+
+/**
+ * 本次筛选下「见过的所有发票 id」。
+ *
+ * 分页之后不能拿当前页去判断选中项还在不在——翻页会把上一页勾的票当成已消失清掉。
+ * 换筛选条件时清空它，等于换了一份列表，之前在其他页勾的票不再属于当前视图。
+ */
+let knownInvoiceIds = new Set()
+
 const EDIT_FIELDS = [
   ['number', 'editNumber'], ['code', 'editCode'], ['kind', 'editKind'],
   ['issue_date', 'editIssueDate'], ['total', 'editTotal'],
@@ -22,39 +34,11 @@ function showToast(message) {
 }
 
 /**
- * 建议池：只增不减，同时记下出现次数和最近一次录入时间。
- * 直接拿当前列表会受筛选影响——一筛「待补录」就只剩空值，
- * 建议池反而丢了最常用的历史报销人。
+ * 建议池：值 → { count, lastAt }，由后端按整份台账统计好后灌进来。
+ * 不能拿当前列表自己算——分页只剩一页，筛选后又只剩空值，
+ * 两种情况下都会把最常用的历史报销人挤掉。
  */
 const suggestionPool = { reimburser: new Map(), kind: new Map() }
-
-/** 统计一批台账里某个字段的出现次数与最近录入时间 */
-function countValues(items, field) {
-  const stats = new Map()
-  items.forEach((item) => {
-    const value = String(item[field] || '').trim()
-    if (!value) return
-    const entry = stats.get(value) || { count: 0, lastAt: '' }
-    entry.count++
-    const at = String(item.created_at || '')
-    if (at > entry.lastAt) entry.lastAt = at
-    stats.set(value, entry)
-  })
-  return stats
-}
-
-/** 合并历次统计：次数取历史最大值（筛选后变少也别把常用值降级），时间取最新 */
-function mergeStats(pool, stats) {
-  stats.forEach((entry, value) => {
-    const old = pool.get(value)
-    if (!old) {
-      pool.set(value, entry)
-      return
-    }
-    old.count = Math.max(old.count, entry.count)
-    if (entry.lastAt > old.lastAt) old.lastAt = entry.lastAt
-  })
-}
 
 /**
  * 次数降序 → 最近录入降序 → 字典序兜底。
@@ -74,21 +58,25 @@ function orderedValues(stats) {
 /**
  * 把台账里已有的报销人/票种收进建议池，补录时可直接下拉选。
  *
- * 没筛选时 invoiceData.items 就是全量，直接拿它重建池子——报销人改名、发票删掉
- * 之后旧值必须能消失，否则下拉里会一直挂着一个台账里早就不存在的名字。
- * 有筛选时结果只是子集，重建会把常用值冲掉，所以那种情况只合并不清理。
+ * 统计口径来自后端（`suggestions` 字段，按整份台账算）。分页之后前端手里只有
+ * 一页数据，再拿 items 重建就会把「常用报销人」缩水成「这一页出现过的报销人」。
+ * 后端给的是全量，所以每次都能整份重建：报销人改名、发票删掉之后旧值会干净消失。
  */
 function refreshSuggestions() {
-  const items = (invoiceData && invoiceData.items) || []
-  const complete = activeFilterCount() === 0
-  if (complete) {
-    suggestionPool.reimburser.clear()
-    suggestionPool.kind.clear()
-  }
-  mergeStats(suggestionPool.reimburser, countValues(items, 'reimburser'))
-  mergeStats(suggestionPool.kind, countValues(items, 'kind'))
-  setSuggestValues('reimburser', orderedValues(suggestionPool.reimburser))
-  setSuggestValues('kind', orderedValues(suggestionPool.kind))
+  const suggestions = (invoiceData && invoiceData.suggestions) || {}
+  rebuildSuggestPool('reimburser', suggestions.reimburser)
+  rebuildSuggestPool('kind', suggestions.kind)
+}
+
+function rebuildSuggestPool(key, entries) {
+  const stats = suggestionPool[key]
+  stats.clear()
+  ;(entries || []).forEach((entry) => {
+    const value = String(entry.value || '').trim()
+    if (!value) return
+    stats.set(value, { count: entry.count || 0, lastAt: entry.last_at || '' })
+  })
+  setSuggestValues(key, orderedValues(stats))
 }
 
 async function copyInvoiceValue(button) {
@@ -200,6 +188,7 @@ function resetFilters() {
     .forEach((id) => { $(id).value = '' })
   $('invOnlyDuplicates').checked = false
   $('invOnlyNeedFill').checked = false
+  resetInvoiceView()
   syncFilterCount()
   refreshLedger()
 }
@@ -234,23 +223,49 @@ function buildInvoiceParams() {
   if ($('invOnlyDuplicates').checked) params.set('only_duplicates', '1')
   if ($('invOnlyNeedFill').checked) params.set('only_need_fill', '1')
   params.set('sort', $('invSort').value)
+  params.set('page', String(invoicePage))
+  params.set('page_size', String(INVOICE_PAGE_SIZE))
   return params
 }
 
+/** 换筛选条件或排序等于换了一份列表：回到第 1 页，并让旧的跨页勾选失效 */
+function resetInvoiceView() {
+  invoicePage = 1
+  knownInvoiceIds.clear()
+}
+
+/**
+ * 清掉已经不存在于任何一页的选中项。
+ *
+ * 判断依据是「本次筛选下见过的 id」，不是「当前页的 id」：翻页时上一页勾的票
+ * 必须留着，否则跨页批量操作没法用。
+ */
 function syncSelected(items) {
-  const visible = new Set(items.map((item) => item.id))
+  items.forEach((item) => knownInvoiceIds.add(item.id))
   selectedInvoices.forEach((id) => {
-    if (!visible.has(id)) selectedInvoices.delete(id)
+    if (!knownInvoiceIds.has(id)) selectedInvoices.delete(id)
   })
+}
+
+function goInvoicePage(target) {
+  const data = invoiceData || {}
+  const count = Math.max(1, data.page_count || 1)
+  const next = Math.min(Math.max(1, Number(target) || 1), count)
+  if (next === (data.page || invoicePage)) return
+  invoicePage = next
+  refreshLedger()
 }
 
 function renderInvoiceAll() {
   if (!invoiceData) return
   const items = invoiceData.items || []
+  // 后端会把越界页码贴回有效页，前端跟着它走，免得两边对不上
+  invoicePage = invoiceData.page || invoicePage
   syncSelected(items)
   renderInvoiceStats(invoiceData)
   renderDuplicateAlert(invoiceData.duplicates || [])
   renderInvoiceTable(items, selectedInvoices)
+  renderInvoicePager(invoiceData)
   renderDuplicatePanel(invoiceData.duplicates || [])
   renderSelectionSummary(items, selectedInvoices)
   syncStatFilterState()
@@ -269,6 +284,7 @@ async function refreshLedger() {
 }
 
 function scheduleLedgerRefresh() {
+  resetInvoiceView()
   syncFilterCount()
   syncStatFilterState()
   clearTimeout(invoiceSearchTimer)
@@ -581,9 +597,15 @@ function bindLedgerEvents() {
     'invCreatedFrom', 'invCreatedTo', 'invAmountMin', 'invAmountMax'].forEach((id) => {
     $(id).addEventListener('input', scheduleLedgerRefresh)
   })
-  $('invOnlyDuplicates').addEventListener('change', () => { syncStatFilterState(); refreshLedger() })
-  $('invOnlyNeedFill').addEventListener('change', () => { syncStatFilterState(); refreshLedger() })
-  $('invSort').addEventListener('change', refreshLedger)
+  $('invOnlyDuplicates').addEventListener('change', () => { resetInvoiceView(); syncStatFilterState(); refreshLedger() })
+  $('invOnlyNeedFill').addEventListener('change', () => { resetInvoiceView(); syncStatFilterState(); refreshLedger() })
+  $('invSort').addEventListener('change', () => { resetInvoiceView(); refreshLedger() })
+
+  // 分页：换页不清选中，跨页勾选要能一起批量操作
+  $('pagerFirst').addEventListener('click', () => goInvoicePage(1))
+  $('pagerPrev').addEventListener('click', () => goInvoicePage((invoiceData && invoiceData.page ? invoiceData.page : invoicePage) - 1))
+  $('pagerNext').addEventListener('click', () => goInvoicePage((invoiceData && invoiceData.page ? invoiceData.page : invoicePage) + 1))
+  $('pagerLast').addEventListener('click', () => goInvoicePage(invoiceData ? invoiceData.page_count : 1))
 
   $('ledgerRefreshBtn').addEventListener('click', refreshLedger)
   $('filterToggleBtn').addEventListener('click', () => {
@@ -620,6 +642,7 @@ function bindLedgerEvents() {
     const statCard = event.target.closest('[data-stat-filter]')
     if (statCard) {
       if (toggleStatFilter(statCard.dataset.statFilter)) {
+        resetInvoiceView()
         syncFilterCount()
         refreshLedger()
       }

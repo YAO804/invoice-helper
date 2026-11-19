@@ -16,6 +16,30 @@ function renderInvoiceStats(data) {
 }
 
 /**
+ * 分页条。只有一页时整条隐藏——20 条以内还给用户看「1 / 1」是噪音。
+ * total 用的是后端给的筛选后总数，不是当前页条数，否则页脚会写成「共 20 张」。
+ */
+function renderInvoicePager(data) {
+  const box = $('invoicePager')
+  if (!box) return
+
+  const count = Math.max(1, data.page_count || 1)
+  const page = Math.min(Math.max(1, data.page || 1), count)
+  box.hidden = count <= 1
+
+  $('pagerSummary').textContent = '共 ' + (data.total || 0) + ' 张 · 每页 ' + (data.page_size || 0) + ' 张'
+  $('pagerPosition').textContent = page + ' / ' + count
+
+  // 到头了就别让按钮看起来还能点
+  const atStart = page <= 1
+  const atEnd = page >= count
+  $('pagerFirst').disabled = atStart
+  $('pagerPrev').disabled = atStart
+  $('pagerNext').disabled = atEnd
+  $('pagerLast').disabled = atEnd
+}
+
+/**
  * 台账金额是字符串（"287.61"），求和必须换算成分。
  * 直接累加浮点，几十张之后就会出现 2982.3399999999997 这种尾巴。
  * 顺手去掉千分位逗号：CSV 导入的数据里可能有 "1,234.56"。
