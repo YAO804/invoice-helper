@@ -13,14 +13,34 @@ type ListMeta struct {
 	LatestCreatedAt string
 }
 
+// ListResult 是一次列表查询的全部结果。
+//
+// 除了筛选后的行，还要带出**全表**：统计卡片、补录建议池都要按整份台账算，
+// 分页之后前端手里只有一页，这些数只能由后端给。
+type ListResult struct {
+	Items  []Invoice
+	Groups []DuplicateGroup
+	Meta   ListMeta
+	All    []Invoice
+}
+
 // ListWithMeta 除了筛选结果，额外给出整表的汇总信息。
 //
 // 这里的值必须是**全表**的：卡片上的数字和日期同时是筛选入口，
 // 如果从筛选结果里取第一行，一点筛选它就跟着变，用户没法用它来筛。
 func (s *Store) ListWithMeta(query Query) ([]Invoice, []DuplicateGroup, ListMeta, error) {
-	all, err := s.All()
+	result, err := s.ListFull(query)
 	if err != nil {
 		return nil, nil, ListMeta{}, err
+	}
+	return result.Items, result.Groups, result.Meta, nil
+}
+
+// ListFull 多带回一份全表快照，供需要按全量统计的调用方（分页后的建议池）使用。
+func (s *Store) ListFull(query Query) (ListResult, error) {
+	all, err := s.All()
+	if err != nil {
+		return ListResult{}, err
 	}
 
 	groups := duplicateGroups(all)
@@ -29,7 +49,7 @@ func (s *Store) ListWithMeta(query Query) ([]Invoice, []DuplicateGroup, ListMeta
 	all = markDuplicates(all, groups)
 	all = markNeedFill(all)
 	all = sortInvoices(all, query.Sort)
-	return filter(all, query), groups, meta, nil
+	return ListResult{Items: filter(all, query), Groups: groups, Meta: meta, All: all}, nil
 }
 
 // LatestBatch 返回「最近一次导入/发送」的批次号。
