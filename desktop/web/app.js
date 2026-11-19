@@ -160,12 +160,52 @@ function scheduleRefresh() {
 }
 
 /**
+ * 新手引导的展开/收起只由用户点标题决定，不跟在线状态联动。
+ * mini.online 按 45 秒心跳窗口判定，手机锁屏或切后台就会抖动；
+ * 一旦绑上去，引导卡会在用户眼前反复开合，比一直展开更烦。
+ */
+const GUIDE_STATE_KEY = 'ih_connect_guide_open'
+
+function guideStorage() {
+  try {
+    return window.localStorage || null
+  } catch (e) {
+    return null // 隐私模式下访问 localStorage 会抛错，保持默认展开即可
+  }
+}
+
+function initConnectGuide() {
+  const guide = document.getElementById('connectGuide')
+  if (!guide) return
+  const store = guideStorage()
+  if (store) {
+    try {
+      if (store.getItem(GUIDE_STATE_KEY) === 'closed') guide.open = false
+    } catch (e) {
+      // 读不到偏好就保持默认展开
+    }
+  }
+
+  guide.addEventListener('toggle', function () {
+    const s = guideStorage()
+    if (!s) return
+    try {
+      if (guide.open) s.removeItem(GUIDE_STATE_KEY)
+      else s.setItem(GUIDE_STATE_KEY, 'closed')
+    } catch (e) {
+      // 存不进去不影响本次使用，下次打开回到默认展开
+    }
+  })
+}
+
+/**
  * 登录成功后由 login.js 调用，才开始拉业务数据。
  * 未登录时接口会返回 401，提前拉只会得到一堆错误和空白界面。
  */
 function startDesktopApp() {
   if (window.__desktopStarted) return
   window.__desktopStarted = true
+  initConnectGuide()
   bindEvents()
   refresh()
   scheduleRefresh()

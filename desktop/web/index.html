@@ -43,21 +43,23 @@
   <main>
     <div id="pageConsole">
       <section class="card connect-card">
-        <h2>手机怎么连？三步就好</h2>
-        <ol class="steps">
-          <li>手机和电脑连<strong>同一个 WiFi</strong>，电脑保持开机、别休眠。</li>
-          <li>打开小程序 →「设置」→「扫码连接电脑」，扫下面这张大图。</li>
-          <li>扫不出来也没关系：下面列了电脑地址，在小程序「设置」里手动填进去就行。</li>
-        </ol>
-        <div id="connectBox" class="connect-box" hidden>
-          <img id="connectQr" class="connect-qr" alt="小程序扫码连接这台电脑" width="240" height="240">
-          <div class="connect-info">
-            <div class="address-label">手机扫码直连</div>
-            <code id="connectCode"></code>
-            <p class="hint">扫码后会先探一次健康检查，通了才保存地址。</p>
+        <details id="connectGuide" class="connect-guide" open>
+          <summary class="guide-summary"><span>手机怎么连？三步就好</span><span class="guide-toggle-hint">点标题可收起 / 展开</span></summary>
+          <ol class="steps">
+            <li>手机和电脑连<strong>同一个 WiFi</strong>，电脑保持开机、别休眠。</li>
+            <li>打开小程序 →「设置」→「扫码连接电脑」，扫下面这张大图。</li>
+            <li>扫不出来也没关系：下面列了电脑地址，在小程序「设置」里手动填进去就行。</li>
+          </ol>
+          <div id="connectBox" class="connect-box" hidden>
+            <img id="connectQr" class="connect-qr" alt="小程序扫码连接这台电脑" width="240" height="240">
+            <div class="connect-info">
+              <div class="address-label">手机扫码直连</div>
+              <code id="connectCode"></code>
+              <p class="hint">扫码后会先探一次健康检查，通了才保存地址。</p>
+            </div>
           </div>
-        </div>
-        <div id="addressList" class="address-list"></div>
+          <div id="addressList" class="address-list"></div>
+        </details>
 
         <h3 class="section-title">最近设备</h3>
         <table>

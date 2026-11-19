@@ -222,6 +222,24 @@ input[type="text"] { min-width: 180px; }
 .steps strong { color: var(--accent); }
 .login-card .steps { margin: 16px 0 20px; }
 .connect-card { border-color: var(--accent-soft); background: linear-gradient(180deg, #f6fbff, var(--surface) 120px); }
+
+/*
+ * 新手引导可折叠：只由用户点标题决定，不跟在线状态联动。
+ * mini.online 按 45 秒心跳窗口判定，锁屏/切后台会抖，绑上去会反复开合。
+ */
+.connect-guide > .guide-summary {
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+  list-style: none; margin: 0 0 12px; padding: 0;
+  font-size: 16px; font-weight: 600; color: var(--text);
+}
+.connect-guide > .guide-summary::-webkit-details-marker { display: none; }
+.guide-summary::before {
+  content: ''; flex: none; width: 7px; height: 7px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg); transition: transform .15s ease;
+}
+.connect-guide[open] > .guide-summary::before { transform: rotate(-135deg); }
+.guide-toggle-hint { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--muted); }
 .connect-info code { display: block; overflow-wrap: anywhere; font-size: 12px; color: var(--muted); }
 code { background: var(--canvas); padding: 2px 5px; border-radius: 4px; }
 .drop-zone { border: 2px dashed #a7d3f7; border-radius: 8px; padding: 24px; text-align: center; background: #f6fbff; margin-bottom: 12px; }
