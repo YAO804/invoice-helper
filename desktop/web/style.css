@@ -338,21 +338,18 @@ tbody tr:last-child td { border-bottom: 0; }
 .invoice-table td.num, .invoice-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
 /* 金额右对齐后紧贴下一列，给右边多留一点，别和报销人糊在一起 */
 .invoice-table td.num, .invoice-table th.num { padding-right: 14px; }
-.invoice-table .reimburser-cell { padding-left: 10px; }
 .col-actions { text-align: right; }
 /*
- * 表头统一居中（数据行不动：文字左对齐、金额和操作右对齐）。
- * 表头跟着列左对齐时，宽屏上标签全挤在列首、右边留一大片空白，
- * 看着就像没对齐；居中后每个标签都落在自己那列的内容上方。
- * 金额/操作也一起居中——这两列内容几乎铺满列宽，居中后跟数据仍然对得上。
- * 选择器要写满 `thead th`：不加的话 `.invoice-table th.num` 的特异性更高，
- * 金额表头会继续右对齐，一行里就剩它俩不居中。
+ * 表头跟随本列内容的对齐方式：文字列左对齐，金额和操作右对齐。
+ * 统一居中看着整齐，实际每个标签都悬在内容中间——号码列占 17%，
+ * 「发票号码」四个字离第一个号码差着半个列宽，扫视时根本对不上自己那列。
+ * 表头左对齐后标签正好压在第一行文字的正上方。
+ * 金额不用单独写：`.invoice-table th.num` 的特异性比下面这条高，仍是右对齐；
+ * 操作要显式补一条，否则会被 `thead th` 盖回左对齐。
+ * 报销人单元格不再单独加左内边距，表头才能和姓名严格对齐。
  */
-.invoice-table thead th,
-.invoice-table thead th.num,
-.invoice-table thead th.col-actions { text-align: center; }
-/* 金额列为了拉开和报销人的距离多给了 8px 右内边距，表头居中时会偏左 4px，还回来 */
-.invoice-table thead th.num { padding-right: 6px; }
+.invoice-table thead th { text-align: left; }
+.invoice-table thead th.col-actions { text-align: right; }
 /* 号码/代码被截断时，文字部分自己省略，复制图标不能被挤掉 */
 .invoice-table .copy-cell { max-width: 100%; }
 .invoice-table .copy-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
