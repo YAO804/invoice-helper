@@ -1,14 +1,17 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"invoice-helper/desktop/internal/api"
 	"invoice-helper/desktop/internal/config"
 	"invoice-helper/desktop/internal/discovery"
 	"invoice-helper/desktop/internal/files"
+	"invoice-helper/desktop/internal/instance"
 )
 
 // retentionInterval 是后台清理的检查间隔。保留期以天为单位，6 小时足够及时。
@@ -16,6 +19,19 @@ const retentionInterval = 6 * time.Hour
 
 func main() {
 	cfg := config.Load()
+
+	// 同一份数据目录只允许一个实例。没有这道保护时，开两个窗口会各自把整份台账
+	// 读进内存、各自整份覆盖回去，后写的那个把前一个刚录的票悄悄抹掉。
+	lock, err := instance.Acquire(cfg.DataDir)
+	if err != nil {
+		log.Print(err)
+		if errors.Is(err, instance.ErrAlreadyRunning) {
+			// 这条最容易被用户看到的是"双击了没反应"，所以额外弹个框说清楚
+			notifyUser(err.Error())
+		}
+		os.Exit(1)
+	}
+	defer lock.Release()
 
 	handler, fileStore, err := api.NewServer(cfg)
 	if err != nil {
