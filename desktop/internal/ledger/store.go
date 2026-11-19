@@ -64,11 +64,12 @@ func (s *Store) save(list []Invoice) error {
 	if err != nil {
 		return err
 	}
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, content, 0644); err != nil {
+
+	tmp, err := writeTempFile(s.path, content)
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, s.path)
+	return replaceFile(tmp, s.path)
 }
 
 func (s *Store) All() ([]Invoice, error) {

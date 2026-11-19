@@ -275,6 +275,12 @@ function scheduleLedgerRefresh() {
   invoiceSearchTimer = setTimeout(refreshLedger, 250)
 }
 
+/** 后端文案往往自带动作前缀（「导入失败: …」），前端再拼一次就成了「导入失败：导入失败: …」 */
+function alertFailure(prefix, error) {
+  const message = (error && error.message) || String(error)
+  alert(message.indexOf(prefix) >= 0 ? message : prefix + '：' + message)
+}
+
 async function previewImportFile(file) {
   if (!file) {
     alert('请先选择 Excel（.xlsx）文件')
@@ -286,7 +292,7 @@ async function previewImportFile(file) {
     importOnlyDuplicate = false
     renderImportPreview(pendingImportPreview, importOnlyDuplicate)
   } catch (error) {
-    alert('预览失败：' + error.message)
+    alertFailure('预览失败', error)
   }
 }
 
@@ -340,7 +346,7 @@ async function commitPendingImport(skipDuplicates) {
     await refreshLedger()
     if (window.refresh) window.refresh()
   } catch (error) {
-    alert('导入失败：' + error.message)
+    alertFailure('导入失败', error)
   }
 }
 
@@ -369,7 +375,7 @@ async function removeInvoices(ids) {
     await refreshLedger()
     if (window.refresh) window.refresh()
   } catch (error) {
-    alert('删除失败：' + error.message)
+    alertFailure('删除失败', error)
   }
 }
 
@@ -550,7 +556,7 @@ function purgeRange(confirm) {
       ? '已清理 ' + result.removed + ' 张发票。'
       : '该时间段有 ' + result.removed + ' 张发票，确认后将删除。'
     if (confirm) return refreshLedger()
-  }).catch((error) => alert('清理失败：' + error.message))
+  }).catch((error) => alertFailure('清理失败', error))
 }
 
 function openDrawer() {

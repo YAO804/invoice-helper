@@ -213,15 +213,21 @@ function conflictHint(item) {
   return parts.length ? '与' + parts.join(' ') + ' 重复' : '与台账已有记录重复'
 }
 
+/** 预览要把台账的字段都摊开：少了代码/票种/开票日期，用户没法核对，
+ *  也看不出「号码列填成了代码」这种串列问题。 */
 function importRow(item, position) {
+  const invoice = item.invoice
   const hint = conflictHint(item)
   return `
     <tr class="preview-row ${esc(item.status)}">
       <td class="muted">${position}</td>
       <td>${esc(IMPORT_STATUS_LABEL[item.status] || item.status)}</td>
-      <td>${esc(item.invoice.number)}</td>
-      <td>${esc(item.invoice.reimburser || '')}</td>
-      <td>${esc(item.invoice.total)}</td>
+      <td>${esc(invoice.number)}</td>
+      <td class="muted">${esc(invoice.code)}</td>
+      <td>${esc(invoice.kind)}</td>
+      <td>${esc(invoice.issue_date)}</td>
+      <td>${esc(invoice.total)}</td>
+      <td>${esc(invoice.reimburser)}</td>
       <td>${esc(item.message)}${hint ? `<span class="conflict-hint">${esc(hint)}</span>` : ''}</td>
     </tr>
   `
@@ -292,7 +298,10 @@ function renderImportPreview(preview, onlyDuplicate) {
     ${rows.length ? `
       <div class="table-wrap">
         <table>
-          <thead><tr><th>序号</th><th>状态</th><th>发票号码</th><th>报销人</th><th>价税合计</th><th>说明</th></tr></thead>
+          <thead><tr>
+            <th>序号</th><th>状态</th><th>发票号码</th><th>发票代码</th>
+            <th>票种</th><th>开票日期</th><th>价税合计</th><th>报销人</th><th>说明</th>
+          </tr></thead>
           <tbody>${rows.map((row) => importRow(row.item, row.position)).join('')}</tbody>
         </table>
       </div>

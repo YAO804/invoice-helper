@@ -45,7 +45,14 @@ vm.runInThisContext(
 
 function item(number, reimburser, status, extra) {
   return Object.assign({
-    invoice: { number: number, reimburser: reimburser, total: '113.00' },
+    invoice: {
+      number: number,
+      code: '03200' + (number || 'X'),
+      kind: '电子发票',
+      issue_date: '2024-10-28',
+      reimburser: reimburser,
+      total: '113.00'
+    },
     status: status,
     message: status === 'duplicate' ? '发票代码与号码都已存在' : status === 'invalid' ? '缺少发票号码' : ''
   }, extra || {})
@@ -96,6 +103,14 @@ contains('状态列中文：重复', html, '<td>重复</td>')
 contains('状态列中文：缺号码', html, '<td>缺号码</td>')
 absent('不再直接甩英文状态', html, '<td>duplicate</td>')
 absent('不再直接甩英文状态（invalid）', html, '<td>invalid</td>')
+
+// 缺列会让用户没法核对，甚至看不出「号码列填成了代码」这种串列
+contains('表头有发票代码', html, '<th>发票代码</th>')
+contains('表头有票种', html, '<th>票种</th>')
+contains('表头有开票日期', html, '<th>开票日期</th>')
+contains('发票代码值渲染出来', html, '<td class="muted">03200N001</td>')
+contains('票种值渲染出来', html, '<td>电子发票</td>')
+contains('开票日期值渲染出来', html, '<td>2024-10-28</td>')
 
 const clean = previewOf([item('N003', '甲', 'new'), item('N004', '乙', 'new')])
 renderImportPreview(clean, false)

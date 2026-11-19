@@ -311,6 +311,11 @@ code { background: var(--canvas); padding: 2px 5px; border-radius: 4px; }
 .preview-item.duplicate { color: var(--danger); }
 .preview-item.invalid { color: var(--warn); }
 
+/* 预览比台账多一列状态，9 列挤在窄屏会折行折断号码；宁可横向滚，也不要断字 */
+.import-preview table { min-width: 900px; }
+.import-preview th, .import-preview td { white-space: nowrap; }
+.import-preview td:last-child { white-space: normal; }
+
 /* 重复行必须一眼看见：整行淡红 + 左侧色条，不只靠文字颜色（色盲也要能分辨） */
 .preview-row.duplicate td { background: var(--danger-soft); }
 .preview-row.duplicate td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
