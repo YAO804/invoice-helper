@@ -49,7 +49,7 @@ func TestParseXLSXUsesHeaderNames(t *testing.T) {
 	content := buildXLSX(t, map[string][][]string{
 		"发票": {
 			{"发票号码", "发票代码", "票种", "开票日期", "价税合计", "报销人"},
-			{"032002300911", "00813251", "电子发票", "2024-10-28", "176.99", "张三"},
+			{"00813251", "032002300911", "电子发票", "2024-10-28", "176.99", "张三"},
 		},
 	})
 
@@ -61,7 +61,7 @@ func TestParseXLSXUsesHeaderNames(t *testing.T) {
 		t.Fatalf("解析数量错误: %+v", invoices)
 	}
 	got := invoices[0]
-	if got.Number != "032002300911" || got.Code != "00813251" ||
+	if got.Number != "00813251" || got.Code != "032002300911" ||
 		got.Total != "176.99" || got.Reimburser != "张三" || got.IssueDate != "2024-10-28" {
 		t.Fatalf("表头映射错误: %+v", got)
 	}

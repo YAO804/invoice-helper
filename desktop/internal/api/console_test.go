@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/xuri/excelize/v2"
 )
 
 func jsonBody(t *testing.T, payload any) io.Reader {
@@ -170,6 +172,49 @@ func TestImportTemplateIsEmbedded(t *testing.T) {
 	// xlsx 是 ZIP，魔数必须是 PK，防止 embed 漏配后返回 HTML 首页
 	if !bytes.HasPrefix(tmpl.Body.Bytes(), []byte("PK")) {
 		t.Fatal("模板内容不是 xlsx，检查 embed 指令")
+	}
+}
+
+// 模板示例把号码和代码写反，用户就会照着填反——这事真实发生过一次。
+// 所以示例必须符合真实位数，且粘贴框的示例要跟模板保持一致。
+func TestImportTemplateSampleIsNotSwapped(t *testing.T) {
+	handler, _ := newTestHandler(t)
+
+	rec := request(t, handler, http.MethodGet, "/发票导入模板.xlsx", nil, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("模板下载状态码错误: %d", rec.Code)
+	}
+	file, err := excelize.OpenReader(bytes.NewReader(rec.Body.Bytes()))
+	if err != nil {
+		t.Fatalf("模板打不开: %v", err)
+	}
+	defer file.Close()
+
+	rows, err := file.GetRows("发票台账")
+	if err != nil || len(rows) < 2 || len(rows[1]) < 2 {
+		t.Fatalf("模板缺表头或示例行: err=%v rows=%d", err, len(rows))
+	}
+	if rows[0][0] != "发票号码" || rows[0][1] != "发票代码" {
+		t.Fatalf("表头顺序应为「发票号码、发票代码」: %v", rows[0][:2])
+	}
+
+	number, code := rows[1][0], rows[1][1]
+	assertSampleDigits(t, number, code)
+
+	body := request(t, handler, http.MethodGet, "/", nil, "").Body.String()
+	if !strings.Contains(body, number+"\t"+code) {
+		t.Fatalf("粘贴框示例应与模板一致（号码 %s 在代码 %s 前），现在对不上", number, code)
+	}
+}
+
+// assertSampleDigits 按真实位数校验示例：发票代码 10 或 12 位，发票号码 8 位（全电 20 位）。
+func assertSampleDigits(t *testing.T, number, code string) {
+	t.Helper()
+	if len(code) != 10 && len(code) != 12 {
+		t.Fatalf("示例发票代码应为 10 或 12 位，实际 %q（%d 位）", code, len(code))
+	}
+	if len(number) != 8 && len(number) != 20 {
+		t.Fatalf("示例发票号码应为 8 位或 20 位，实际 %q（%d 位）", number, len(number))
 	}
 }
 

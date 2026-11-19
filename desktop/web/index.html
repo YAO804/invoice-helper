@@ -318,8 +318,9 @@
         <button id="closePasteBtn" type="button" class="btn btn-ghost">关闭</button>
       </div>
       <div class="modal-body one-col">
-        <p class="hint">在 Excel 里选中表格（含表头）复制，粘贴到下面。列名要用模板里的标准表头，如「发票号码、发票代码、票种、开票日期、价税合计、报销人」。</p>
-        <textarea id="pasteImportText" rows="10" placeholder="发票号码	发票代码	票种	开票日期	价税合计	报销人&#10;032002300911	00813251	电子发票	2024-10-28	176.99	张三" aria-label="从 Excel 粘贴的表格数据"></textarea>
+        <p class="hint">在 Excel 里选中表格（含表头）复制，粘贴到下面。列名要用模板里的标准表头，如「发票号码、发票代码、票种、开票日期、价税合计、报销人」。<br>
+          注意别把号码和代码填反：代码是 10 位或 12 位（如 032002300911），号码是 8 位（如 00813251）。</p>
+        <textarea id="pasteImportText" rows="10" placeholder="发票号码	发票代码	票种	开票日期	价税合计	报销人&#10;00813251	032002300911	电子发票	2024-10-28	176.99	张三" aria-label="从 Excel 粘贴的表格数据"></textarea>
         <p id="pasteImportHint" class="hint"></p>
       </div>
       <div class="row modal-actions">
