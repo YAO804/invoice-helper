@@ -684,14 +684,8 @@ function bindLedgerEvents() {
   $('selectAll').addEventListener('change', (event) => toggleSelectAll(event.target.checked))
 
   document.addEventListener('keydown', (event) => {
-    // 浮层开着时 Esc 在输入框上就被 suggest.js 吃掉了，到不了这里；
-    // 能到这里的 Esc 才是「关窗」。确认框最优先：此时 Esc = 继续填写。
-    if (event.key === 'Escape') {
-      if (!$('confirmModal').hidden) return answerConfirm(false)
-      if (!$('batchReimburserModal').hidden) return requestCloseBatchReimburser()
-      if (!$('invoiceEditModal').hidden) return requestCloseEdit()
-      return
-    }
+    // 弹窗只认按钮关闭：Esc / 点遮罩都不关，避免误操作丢掉填了一半的内容。
+    // suggest 浮层的 Esc 由它在输入框上自行处理，与这里的弹窗无关。
     if (event.key !== 'Enter' && event.key !== ' ') return
     const target = event.target
     if (!target || typeof target.closest !== 'function') return
@@ -793,22 +787,6 @@ function bindLedgerEvents() {
     }
   })
 
-  $('duplicateDrawer').addEventListener('click', (event) => {
-    if (event.target.id === 'duplicateDrawer') closeDrawer()
-  })
-
-  $('invoiceEditModal').addEventListener('click', (event) => {
-    if (event.target.id === 'invoiceEditModal') requestCloseEdit()
-  })
-
-  $('batchReimburserModal').addEventListener('click', (event) => {
-    if (event.target.id === 'batchReimburserModal') requestCloseBatchReimburser()
-  })
-
-  // 确认框点遮罩等同于「继续填写」：误点不该丢掉内容
-  $('confirmModal').addEventListener('click', (event) => {
-    if (event.target.id === 'confirmModal') answerConfirm(false)
-  })
   $('batchReimburserInput').addEventListener('keydown', (event) => {
     if (event.key === 'Enter') confirmBatchReimburser()
   })
