@@ -384,6 +384,22 @@
     </div>
   </div>
 
+  <!-- 表单改过内容后的放弃确认：复用同一套 modal 样式，不用浏览器原生 confirm -->
+  <div id="confirmModal" class="modal confirm-modal" hidden>
+    <div class="modal-panel compact">
+      <div class="drawer-head">
+        <h2>放弃未保存的内容？</h2>
+      </div>
+      <div class="modal-body one-col">
+        <p id="confirmMessage" class="confirm-message"></p>
+      </div>
+      <div class="row modal-actions">
+        <button id="confirmDiscardBtn" type="button" class="btn btn-danger">放弃内容</button>
+        <button id="confirmKeepBtn" type="button" class="btn btn-ghost">继续填写</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/api.js"></script>
   <script src="/time.js"></script>
   <script src="/login.js"></script>

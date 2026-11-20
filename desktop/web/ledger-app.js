@@ -423,9 +423,9 @@ function closeBatchReimburser() {
   $('batchReimburserModal').hidden = true
 }
 
-function requestCloseBatchReimburser() {
-  if (!allowDiscard(fieldsDirty(batchSnapshot, [['reimburser', 'batchReimburserInput']]),
-    '报销人还没提交，确定放弃吗？')) return
+async function requestCloseBatchReimburser() {
+  if (!await allowDiscard(fieldsDirty(batchSnapshot, [['reimburser', 'batchReimburserInput']]),
+    '报销人还没提交，关闭后这次填写会丢失。')) return
   closeBatchReimburser()
 }
 
@@ -532,9 +532,9 @@ function closeEdit() {
   $('invoiceEditModal').hidden = true
 }
 
-/** 遮罩、取消、Esc 都走这里：改过内容要用户点头才丢 */
-function requestCloseEdit() {
-  if (!allowDiscard(fieldsDirty(editSnapshot, EDIT_FIELDS), '已填的内容还没保存，确定放弃吗？')) return
+/** 遮罩、取消、Esc 都走这里：改过内容要用户在确认框里点头才丢 */
+async function requestCloseEdit() {
+  if (!await allowDiscard(fieldsDirty(editSnapshot, EDIT_FIELDS), '已填的内容还没保存，关闭后这些改动会丢失。')) return
   closeEdit()
 }
 
@@ -685,8 +685,9 @@ function bindLedgerEvents() {
 
   document.addEventListener('keydown', (event) => {
     // 浮层开着时 Esc 在输入框上就被 suggest.js 吃掉了，到不了这里；
-    // 能到这里的 Esc 才是「关弹窗」。两个表单不会同时开，先后顺序无所谓的。
+    // 能到这里的 Esc 才是「关窗」。确认框最优先：此时 Esc = 继续填写。
     if (event.key === 'Escape') {
+      if (!$('confirmModal').hidden) return answerConfirm(false)
       if (!$('batchReimburserModal').hidden) return requestCloseBatchReimburser()
       if (!$('invoiceEditModal').hidden) return requestCloseEdit()
       return
@@ -711,6 +712,10 @@ function bindLedgerEvents() {
   })
 
   document.addEventListener('click', (event) => {
+    // 确认框盖在最上层，它的按钮要先处理并吃掉事件，别穿透到底层弹窗
+    if (event.target.closest('#confirmDiscardBtn')) { answerConfirm(true); return }
+    if (event.target.closest('#confirmKeepBtn')) { answerConfirm(false); return }
+
     // 统计卡片：点一下筛一类，再点一次取消。条件写回筛选面板，两处共用一份状态
     const statCard = event.target.closest('[data-stat-filter]')
     if (statCard) {
@@ -798,6 +803,11 @@ function bindLedgerEvents() {
 
   $('batchReimburserModal').addEventListener('click', (event) => {
     if (event.target.id === 'batchReimburserModal') requestCloseBatchReimburser()
+  })
+
+  // 确认框点遮罩等同于「继续填写」：误点不该丢掉内容
+  $('confirmModal').addEventListener('click', (event) => {
+    if (event.target.id === 'confirmModal') answerConfirm(false)
   })
   $('batchReimburserInput').addEventListener('keydown', (event) => {
     if (event.key === 'Enter') confirmBatchReimburser()
