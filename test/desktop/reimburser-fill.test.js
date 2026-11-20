@@ -54,6 +54,7 @@ vm.runInThisContext(fs.readFileSync(path.join(WEB, 'time.js'), 'utf8'), { filena
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'ledger-render.js'), 'utf8'), { filename: 'ledger-render.js' })
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'suggest.js'), 'utf8'), { filename: 'suggest.js' })
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'modal-guard.js'), 'utf8'), { filename: 'modal-guard.js' })
+vm.runInThisContext(fs.readFileSync(path.join(WEB, 'form-validate.js'), 'utf8'), { filename: 'form-validate.js' })
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'ledger-app.js'), 'utf8'), { filename: 'ledger-app.js' })
 
 console.log('--- 粘贴解析 ---')

@@ -52,14 +52,72 @@ func TestCreateInvoiceRejectsEmptyNumber(t *testing.T) {
 	}
 }
 
+func TestCreateInvoiceRequiresAllButReimburser(t *testing.T) {
+	handler, _ := newTestHandler(t)
+	full := map[string]any{
+		"number": "M300", "code": "C300", "kind": "数电票",
+		"issue_date": "2026-11-18", "total": "66.00", "reimburser": "",
+	}
+	rec := request(t, handler, http.MethodPost, "/api/invoices/manual", jsonBody(t, full), "application/json")
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("报销人空着也应能新增，得到 %d: %s", rec.Code, rec.Body.String())
+	}
+
+	for _, field := range []string{"number", "code", "kind", "issue_date", "total"} {
+		payload := map[string]any{}
+		for key, value := range full {
+			payload[key] = value
+		}
+		delete(payload, field)
+		rec := request(t, handler, http.MethodPost, "/api/invoices/manual", jsonBody(t, payload), "application/json")
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("缺 %s 应返回 400，得到 %d", field, rec.Code)
+		}
+	}
+}
+
+func TestCreateInvoiceRejectsNonNumericTotal(t *testing.T) {
+	handler, _ := newTestHandler(t)
+	for _, total := range []string{"一百元", "100元", "1,234.00", "1e3"} {
+		payload := map[string]any{
+			"number": "M400", "code": "C400", "kind": "数电票",
+			"issue_date": "2026-11-18", "total": total,
+		}
+		rec := request(t, handler, http.MethodPost, "/api/invoices/manual", jsonBody(t, payload), "application/json")
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("金额 %q 应返回 400，得到 %d", total, rec.Code)
+		}
+	}
+}
+
+func TestCreateInvoiceAcceptsNumericTotal(t *testing.T) {
+	handler, _ := newTestHandler(t)
+	for _, total := range []string{"123", "176.99", "-88.00", " 66.5 "} {
+		payload := map[string]any{
+			"number": "M500", "code": "C500", "kind": "数电票",
+			"issue_date": "2026-11-18", "total": total,
+		}
+		rec := request(t, handler, http.MethodPost, "/api/invoices/manual", jsonBody(t, payload), "application/json")
+		if rec.Code != http.StatusCreated {
+			t.Errorf("金额 %q 应能新增，得到 %d: %s", total, rec.Code, rec.Body.String())
+		}
+	}
+}
+
 func TestCreateInvoiceFlagsDuplicate(t *testing.T) {
 	handler, _ := newTestHandler(t)
 
-	first := map[string]any{"number": "M200", "code": "C200", "total": "10.00"}
+	first := map[string]any{
+		"number": "M200", "code": "C200", "kind": "数电票",
+		"issue_date": "2026-11-18", "total": "10.00",
+	}
 	request(t, handler, http.MethodPost, "/api/invoices/manual", jsonBody(t, first), "application/json")
 
 	// 金额不同也应该判重复：判重只看代码+号码
-	second := map[string]any{"number": "M200", "code": "C200", "total": "12.00"}
+	second := map[string]any{
+		"number": "M200", "code": "C200", "kind": "数电票",
+		"issue_date": "2026-11-18", "total": "12.00",
+	}
 	rec := request(t, handler, http.MethodPost, "/api/invoices/manual", jsonBody(t, second), "application/json")
 	var created struct {
 		Invoice ledger.Invoice `json:"invoice"`

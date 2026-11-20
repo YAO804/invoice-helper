@@ -456,6 +456,15 @@ async function confirmBatchReimburser() {
   if (window.refresh) window.refresh()
 }
 
+/** 只有新增要求填全；补录时把星号和说明藏起来，免得误导 */
+function toggleRequiredMarks(creating) {
+  const body = $('editFormBody')
+  if (!body) return
+  body.querySelectorAll('.required').forEach((node) => { node.hidden = !creating })
+  const hint = $('requiredHint')
+  if (hint) hint.hidden = !creating
+}
+
 /** 补录与新增复用同一个弹窗：editingId 为 0 表示新增 */
 function openForm(item) {
   EDIT_FIELDS.forEach(([field, id]) => { $(id).value = (item && item[field]) || '' })
@@ -468,6 +477,7 @@ function openForm(item) {
   editingId = item ? item.id : 0
   $('editModalTitle').textContent = item ? '补录发票信息' : '新增发票'
   $('saveEditBtn').textContent = item ? '保存补录' : '保存新增'
+  toggleRequiredMarks(!item)
   editSnapshot = captureFields(EDIT_FIELDS)
   $('invoiceEditModal').hidden = false
   refreshNumberWarning()
@@ -542,9 +552,11 @@ async function saveEdit() {
   const payload = {}
   EDIT_FIELDS.forEach(([field, id]) => { payload[field] = ($(id).value || '').trim() })
   payload.issue_date = dateSaveValue(editingIssueRaw, payload.issue_date)
-  if (!payload.number) return alert('发票号码不能为空')
 
   const creating = !editingId
+  const problems = creating ? validateNewInvoice(payload) : (payload.number ? [] : ['发票号码不能为空'])
+  if (problems.length) return alert(problems.join('\n'))
+
   try {
     const response = creating ? await createInvoice(payload) : await updateInvoice(editingId, payload)
     markSuggestRecent('reimburser', payload.reimburser)

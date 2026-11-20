@@ -55,7 +55,10 @@ func TestCreateAndUpdateReturnNumberWarning(t *testing.T) {
 	handler, _ := newTestHandler(t)
 
 	created := request(t, handler, http.MethodPost, "/api/invoices/manual",
-		jsonBody(t, map[string]any{"number": "032002300911", "code": "00813251"}), "application/json")
+		jsonBody(t, map[string]any{
+			"number": "032002300911", "code": "00813251", "kind": "数电票",
+			"issue_date": "2026-11-18", "total": "66.00",
+		}), "application/json")
 	if created.Code != http.StatusCreated {
 		t.Fatalf("新增状态码错误: %d", created.Code)
 	}

@@ -30,6 +30,7 @@ function makeEl(id) {
     addEventListener(type, fn) { (listeners[type] || (listeners[type] = [])).push(fn) },
     fire(type, event) { (listeners[type] || []).forEach((fn) => fn(event)) },
     setAttribute() {}, removeAttribute() {}, focus() {},
+    querySelectorAll() { return [] },
     classList: { add() {}, remove() {}, toggle() {} }
   }
 }
@@ -61,6 +62,7 @@ global.fetchInvoices = async function () { return { items: [], duplicates: [] } 
 
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'suggest.js'), 'utf8'), { filename: 'suggest.js' })
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'modal-guard.js'), 'utf8'), { filename: 'modal-guard.js' })
+vm.runInThisContext(fs.readFileSync(path.join(WEB, 'form-validate.js'), 'utf8'), { filename: 'form-validate.js' })
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'ledger-app.js'), 'utf8'), { filename: 'ledger-app.js' })
 
 const run = (code) => vm.runInThisContext(code)

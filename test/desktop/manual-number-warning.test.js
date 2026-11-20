@@ -46,6 +46,7 @@ global.requestJSON = function (url) {
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'ledger-api.js'), 'utf8'), { filename: 'ledger-api.js' })
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'suggest.js'), 'utf8'), { filename: 'suggest.js' })
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'modal-guard.js'), 'utf8'), { filename: 'modal-guard.js' })
+vm.runInThisContext(fs.readFileSync(path.join(WEB, 'form-validate.js'), 'utf8'), { filename: 'form-validate.js' })
 vm.runInThisContext(fs.readFileSync(path.join(WEB, 'ledger-app.js'), 'utf8'), { filename: 'ledger-app.js' })
 
 const run = (code) => vm.runInThisContext(code)
@@ -105,7 +106,10 @@ $('editCode').value = '00813251'
   check('代码输入绑定提示', app.includes("editCode').addEventListener('input', scheduleNumberWarning"), true)
   check('打开表单就检查已有值', app.includes('refreshNumberWarning()'), true)
   check('保存结果带位数提示的兜底', app.includes('response.number_warning'), true)
-  check('提示不拦住保存（没有 return 挡在写入前）', /if \(!payload\.number\) return alert/.test(app), true)
+  // 保存前的 return 只来自必填校验，位数提示（number_warning）绝不能变成拦截条件
+  const validate = fs.readFileSync(path.join(WEB, 'form-validate.js'), 'utf8')
+  check('位数提示不参与必填校验', /number_warning/.test(validate), false)
+  check('校验在写入前挡住不合规字段', /const problems = creating \? validateNewInvoice\(payload\)/.test(app), true)
 
   const html = fs.readFileSync(path.join(WEB, 'index.html'), 'utf8')
   check('号码提示条嵌在号码输入框下', /发票号码[\s\S]{0,160}id="editNumberWarning"[\s\S]{0,160}发票代码/.test(html), true)

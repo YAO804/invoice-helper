@@ -347,17 +347,18 @@
         <h2 id="editModalTitle">补录发票信息</h2>
         <button id="closeEditBtn" type="button" class="btn btn-ghost">关闭</button>
       </div>
-      <div class="modal-body">
-        <label>发票号码 <input id="editNumber" type="text">
+      <div id="editFormBody" class="modal-body">
+        <label>发票号码 <span class="required">*</span> <input id="editNumber" type="text">
           <span id="editNumberWarning" class="number-note" hidden></span>
         </label>
-        <label>发票代码 <input id="editCode" type="text">
+        <label>发票代码 <span class="required">*</span> <input id="editCode" type="text">
           <span id="editCodeWarning" class="number-note" hidden></span>
         </label>
-        <label>票种 <input id="editKind" type="text"></label>
-        <label>开票日期 <input id="editIssueDate" type="date"></label>
-        <label>价税合计 <input id="editTotal" type="text" placeholder="0.00"></label>
+        <label>票种 <span class="required">*</span> <input id="editKind" type="text"></label>
+        <label>开票日期 <span class="required">*</span> <input id="editIssueDate" type="date"></label>
+        <label>价税合计 <span class="required">*</span> <input id="editTotal" type="text" placeholder="0.00"></label>
         <label>报销人 <input id="editReimburser" type="text" placeholder="由报销人自行补录"></label>
+        <p id="requiredHint" class="required-hint">带 <span class="required">*</span> 的字段新增时必填</p>
       </div>
       <div class="row modal-actions">
         <button id="saveEditBtn" type="button" class="btn">保存补录</button>
@@ -413,6 +414,7 @@
   <script src="/ledger-render.js"></script>
   <script src="/ledger-stats.js"></script>
   <script src="/modal-guard.js"></script>
+  <script src="/form-validate.js"></script>
   <script src="/ledger-app.js"></script>
 </body>
 </html>

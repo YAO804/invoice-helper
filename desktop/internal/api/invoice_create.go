@@ -23,8 +23,8 @@ func (d *deps) createInvoice(w http.ResponseWriter, r *http.Request) {
 	request.IssueDate = ledger.NormalizeIssueDate(request.IssueDate)
 	request.Total = strings.TrimSpace(request.Total)
 	request.Reimburser = strings.TrimSpace(request.Reimburser)
-	if request.Number == "" {
-		writeError(w, http.StatusBadRequest, "发票号码不能为空")
+	if problems := ledger.ValidateManualNew(request); len(problems) > 0 {
+		writeError(w, http.StatusBadRequest, strings.Join(problems, "；"))
 		return
 	}
 

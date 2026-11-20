@@ -35,6 +35,7 @@ vm.runInThisContext(fs.readFileSync(path.join(__dirname, '../../desktop/web/rend
 vm.runInThisContext(fs.readFileSync(path.join(__dirname, '../../desktop/web/time.js'), 'utf8'), { filename: 'time.js' })
 vm.runInThisContext(fs.readFileSync(path.join(__dirname, '../../desktop/web/ledger-render.js'), 'utf8'), { filename: 'ledger-render.js' })
 vm.runInThisContext(fs.readFileSync(path.join(__dirname, '../../desktop/web/modal-guard.js'), 'utf8'), { filename: 'modal-guard.js' })
+vm.runInThisContext(fs.readFileSync(path.join(__dirname, '../../desktop/web/form-validate.js'), 'utf8'), { filename: 'form-validate.js' })
 vm.runInThisContext(fs.readFileSync(path.join(__dirname, '../../desktop/web/ledger-app.js'), 'utf8'), { filename: 'ledger-app.js' })
 
 alertFailure('导入失败', new Error('导入失败: 台账文件正被别的程序占用，写不进去'))
