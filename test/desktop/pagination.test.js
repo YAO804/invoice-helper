@@ -59,6 +59,7 @@ load('time.js')
 load('suggest.js')
 load('ledger-api.js')
 load('ledger-render.js')
+load('modal-guard.js')
 load('ledger-app.js')
 
 const run = (code) => vm.runInThisContext(code)

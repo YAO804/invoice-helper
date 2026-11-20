@@ -7,6 +7,9 @@ let importOnly = ''
 let invoiceSearchTimer = null
 let editingId = 0
 let editingIssueRaw = ''   // 选择器认不出的旧开票日期原文，用户没重挑就原样存回
+// 两个弹窗各自的字段快照：非空说明这次打开改过内容，关之前要问一句
+let editSnapshot = null
+let batchSnapshot = null
 let numberWarningTimer = null
 let numberWarningSeq = 0   // 关掉弹窗或又改了值时，作废在途的提示请求
 
@@ -408,6 +411,7 @@ function fillReimburserForSelected() {
 
   const input = $('batchReimburserInput')
   input.value = ''
+  batchSnapshot = captureFields([['reimburser', 'batchReimburserInput']])
   $('batchReimburserHint').textContent =
     '将把选中的 ' + ids.length + ' 张发票的报销人统一设为该姓名；留空表示清空。'
   $('batchReimburserModal').hidden = false
@@ -415,7 +419,14 @@ function fillReimburserForSelected() {
 }
 
 function closeBatchReimburser() {
+  batchSnapshot = null
   $('batchReimburserModal').hidden = true
+}
+
+function requestCloseBatchReimburser() {
+  if (!allowDiscard(fieldsDirty(batchSnapshot, [['reimburser', 'batchReimburserInput']]),
+    '报销人还没提交，确定放弃吗？')) return
+  closeBatchReimburser()
 }
 
 /**
@@ -457,6 +468,7 @@ function openForm(item) {
   editingId = item ? item.id : 0
   $('editModalTitle').textContent = item ? '补录发票信息' : '新增发票'
   $('saveEditBtn').textContent = item ? '保存补录' : '保存新增'
+  editSnapshot = captureFields(EDIT_FIELDS)
   $('invoiceEditModal').hidden = false
   refreshNumberWarning()
 }
@@ -514,9 +526,16 @@ function dateSaveValue(raw, picked) {
 function closeEdit() {
   editingId = 0
   editingIssueRaw = ''
+  editSnapshot = null
   numberWarningSeq++
   renderNumberWarning(null)
   $('invoiceEditModal').hidden = true
+}
+
+/** 遮罩、取消、Esc 都走这里：改过内容要用户点头才丢 */
+function requestCloseEdit() {
+  if (!allowDiscard(fieldsDirty(editSnapshot, EDIT_FIELDS), '已填的内容还没保存，确定放弃吗？')) return
+  closeEdit()
 }
 
 async function saveEdit() {
@@ -665,6 +684,13 @@ function bindLedgerEvents() {
   $('selectAll').addEventListener('change', (event) => toggleSelectAll(event.target.checked))
 
   document.addEventListener('keydown', (event) => {
+    // 浮层开着时 Esc 在输入框上就被 suggest.js 吃掉了，到不了这里；
+    // 能到这里的 Esc 才是「关弹窗」。两个表单不会同时开，先后顺序无所谓的。
+    if (event.key === 'Escape') {
+      if (!$('batchReimburserModal').hidden) return requestCloseBatchReimburser()
+      if (!$('invoiceEditModal').hidden) return requestCloseEdit()
+      return
+    }
     if (event.key !== 'Enter' && event.key !== ' ') return
     const target = event.target
     if (!target || typeof target.closest !== 'function') return
@@ -713,10 +739,10 @@ function bindLedgerEvents() {
     }
     if (event.target.closest('#invoiceCreateBtn')) return openForm(null)
     if (event.target.closest('#saveEditBtn')) return saveEdit()
-    if (event.target.closest('#closeEditBtn') || event.target.closest('#cancelEditBtn')) return closeEdit()
+    if (event.target.closest('#closeEditBtn') || event.target.closest('#cancelEditBtn')) return requestCloseEdit()
     if (event.target.closest('#confirmBatchReimburserBtn')) return confirmBatchReimburser()
     if (event.target.closest('#closeBatchReimburserBtn') || event.target.closest('#cancelBatchReimburserBtn')) {
-      return closeBatchReimburser()
+      return requestCloseBatchReimburser()
     }
     if (event.target.closest('#invoicePurgePreviewBtn')) return purgeRange(false)
     if (event.target.closest('#invoicePurgeBtn')) return purgeRange(true)
@@ -767,11 +793,11 @@ function bindLedgerEvents() {
   })
 
   $('invoiceEditModal').addEventListener('click', (event) => {
-    if (event.target.id === 'invoiceEditModal') closeEdit()
+    if (event.target.id === 'invoiceEditModal') requestCloseEdit()
   })
 
   $('batchReimburserModal').addEventListener('click', (event) => {
-    if (event.target.id === 'batchReimburserModal') closeBatchReimburser()
+    if (event.target.id === 'batchReimburserModal') requestCloseBatchReimburser()
   })
   $('batchReimburserInput').addEventListener('keydown', (event) => {
     if (event.key === 'Enter') confirmBatchReimburser()
