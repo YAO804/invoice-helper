@@ -605,6 +605,11 @@ tbody tr:last-child td { border-bottom: 0; }
 .modal-actions { padding: 0 20px 16px; }
 .empty { color: #8c959f; text-align: center; padding: 24px; }
 
+/* 提示框要在最上层，消息可能含换行（如逐条列出的问题） */
+.alert-modal { z-index: 80; }
+.alert-modal .modal-panel { width: min(460px, 92vw); }
+.alert-message { margin: 0; font-size: 14px; line-height: 1.7; color: var(--text); white-space: pre-line; }
+
 /* 放弃确认要盖在表单弹窗（z-index 50）之上 */
 .confirm-modal { z-index: 70; }
 .confirm-modal .modal-panel { width: min(400px, 92vw); }
